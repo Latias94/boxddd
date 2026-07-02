@@ -1,10 +1,10 @@
 use crate::core::{box3d_lock, callback_state};
 use crate::debug_draw::{
-    DebugDraw, DebugDrawCommand, DebugDrawOptions, DebugShape, HexColor, with_debug_draw,
+    CollectDebugDraw, DebugDraw, DebugDrawCommand, DebugDrawOptions, with_debug_draw,
 };
 use crate::error::{Error, Result};
 use crate::query::QueryFilter;
-use crate::types::{Aabb, BodyId, Pos, ShapeId, Vec3, WorldTransform};
+use crate::types::{Aabb, BodyId, Pos, ShapeId, Vec3};
 use crate::world::World;
 use boxddd_sys::ffi;
 use std::ffi::{CStr, CString};
@@ -530,85 +530,11 @@ impl RecPlayer {
         query_index: Option<i32>,
         selected_index: Option<i32>,
     ) -> Result<()> {
-        struct Collector<'a> {
-            commands: &'a mut Vec<DebugDrawCommand>,
-        }
-
-        impl DebugDraw for Collector<'_> {
-            fn draw_shape(
-                &mut self,
-                shape: Option<DebugShape>,
-                transform: WorldTransform,
-                color: HexColor,
-            ) -> bool {
-                self.commands.push(DebugDrawCommand::Shape {
-                    shape,
-                    transform,
-                    color,
-                });
-                true
-            }
-
-            fn draw_segment(&mut self, p1: Pos, p2: Pos, color: HexColor) {
-                self.commands
-                    .push(DebugDrawCommand::Segment { p1, p2, color });
-            }
-
-            fn draw_transform(&mut self, transform: WorldTransform) {
-                self.commands.push(DebugDrawCommand::Transform(transform));
-            }
-
-            fn draw_point(&mut self, position: Pos, size: f32, color: HexColor) {
-                self.commands.push(DebugDrawCommand::Point {
-                    position,
-                    size,
-                    color,
-                });
-            }
-
-            fn draw_sphere(&mut self, center: Pos, radius: f32, color: HexColor, alpha: f32) {
-                self.commands.push(DebugDrawCommand::Sphere {
-                    center,
-                    radius,
-                    color,
-                    alpha,
-                });
-            }
-
-            fn draw_capsule(&mut self, p1: Pos, p2: Pos, radius: f32, color: HexColor, alpha: f32) {
-                self.commands.push(DebugDrawCommand::Capsule {
-                    p1,
-                    p2,
-                    radius,
-                    color,
-                    alpha,
-                });
-            }
-
-            fn draw_bounds(&mut self, aabb: Aabb, color: HexColor) {
-                self.commands.push(DebugDrawCommand::Bounds { aabb, color });
-            }
-
-            fn draw_box(&mut self, extents: Vec3, transform: WorldTransform, color: HexColor) {
-                self.commands.push(DebugDrawCommand::Box {
-                    extents,
-                    transform,
-                    color,
-                });
-            }
-
-            fn draw_string(&mut self, position: Pos, text: &str, color: HexColor) {
-                self.commands.push(DebugDrawCommand::String {
-                    position,
-                    text: text.to_owned(),
-                    color,
-                });
-            }
-        }
-
         out.clear();
-        let mut collector = Collector { commands: out };
-        self.draw_frame_queries(&mut collector, options, query_index, selected_index)
+        let mut collector = CollectDebugDraw::new(out);
+        self.draw_frame_queries(&mut collector, options, query_index, selected_index)?;
+        collector.finish();
+        Ok(())
     }
 
     pub fn draw_frame_queries(

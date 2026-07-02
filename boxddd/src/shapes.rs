@@ -437,11 +437,10 @@ impl Hull {
         {
             return Err(Error::InvalidArgument);
         }
-        let raw_points: Vec<_> = points.iter().map(|point| point.into_raw()).collect();
         let ptr = unsafe {
             ffi::b3CreateHull(
-                raw_points.as_ptr(),
-                raw_points.len() as i32,
+                points.as_ptr().cast(),
+                points.len() as i32,
                 max_vertex_count,
             )
         };

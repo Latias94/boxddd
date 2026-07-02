@@ -280,17 +280,17 @@ fn apply_options(draw: &mut ffi::b3DebugDraw, options: DebugDrawOptions, context
     draw.context = context;
 }
 
-struct CollectDebugDraw<'a> {
+pub(crate) struct CollectDebugDraw<'a> {
     commands: &'a mut Vec<DebugDrawCommand>,
     len: usize,
 }
 
 impl<'a> CollectDebugDraw<'a> {
-    fn new(commands: &'a mut Vec<DebugDrawCommand>) -> Self {
+    pub(crate) fn new(commands: &'a mut Vec<DebugDrawCommand>) -> Self {
         Self { commands, len: 0 }
     }
 
-    fn finish(self) {
+    pub(crate) fn finish(self) {
         self.commands.truncate(self.len);
     }
 

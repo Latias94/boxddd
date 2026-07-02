@@ -2349,7 +2349,7 @@ fn validate_length_range(lower: f32, upper: f32) -> Result<()> {
 
 #[inline]
 fn check_body_valid_raw(body_id: BodyId) -> Result<()> {
-    if unsafe { ffi::b3Body_IsValid(body_id.into_raw()) } {
+    if body_id.is_valid() {
         Ok(())
     } else {
         Err(Error::InvalidBodyId)
@@ -2358,7 +2358,7 @@ fn check_body_valid_raw(body_id: BodyId) -> Result<()> {
 
 #[inline]
 fn check_joint_valid_raw(joint_id: JointId) -> Result<()> {
-    if unsafe { ffi::b3Joint_IsValid(joint_id.into_raw()) } {
+    if joint_id.is_valid() {
         Ok(())
     } else {
         Err(Error::InvalidJointId)

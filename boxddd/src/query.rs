@@ -142,7 +142,7 @@ impl World {
             panicked: false,
         };
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         let stats = unsafe {
             ffi::b3World_OverlapAABB(
                 self.raw(),
@@ -196,13 +196,13 @@ impl World {
     {
         callback_state::check_not_in_callback()?;
         let origin = origin.into().validate()?;
-        let raw_proxy = proxy_raw(proxy);
+        let raw_proxy = proxy.raw();
         let mut ctx = OverlapContext {
             visitor,
             panicked: false,
         };
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         let stats = unsafe {
             ffi::b3World_OverlapShape(
                 self.raw(),
@@ -263,7 +263,7 @@ impl World {
             panicked: false,
         };
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         let stats = unsafe {
             ffi::b3World_CastRay(
                 self.raw(),
@@ -291,7 +291,7 @@ impl World {
         let origin = origin.into().validate()?;
         let translation = translation.into().validate()?;
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         let raw = unsafe {
             ffi::b3World_CastRayClosest(
                 self.raw(),
@@ -354,13 +354,13 @@ impl World {
     {
         callback_state::check_not_in_callback()?;
         let origin = origin.into().validate()?;
-        let raw_input = input_raw(&input);
+        let raw_input = input.raw();
         let mut ctx = CastContext {
             visitor,
             panicked: false,
         };
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         let stats = unsafe {
             ffi::b3World_CastShape(
                 self.raw(),
@@ -391,7 +391,7 @@ impl World {
         let translation = translation.into().validate()?;
         mover.validate()?;
         let _guard = box3d_lock::lock();
-        check_world_valid(self)?;
+        self.check_world_valid_locked()?;
         Ok(unsafe {
             ffi::b3World_CastMover(
                 self.raw(),
@@ -467,30 +467,5 @@ where
             ctx.panicked = true;
             0.0
         }
-    }
-}
-
-fn check_world_valid(world: &World) -> Result<()> {
-    if unsafe { ffi::b3World_IsValid(world.raw()) } {
-        Ok(())
-    } else {
-        Err(Error::InvalidWorldId)
-    }
-}
-
-fn proxy_raw(proxy: &ShapeProxy) -> ffi::b3ShapeProxy {
-    ffi::b3ShapeProxy {
-        points: proxy.points().as_ptr().cast(),
-        count: proxy.points().len() as i32,
-        radius: proxy.radius(),
-    }
-}
-
-fn input_raw(input: &ShapeCastInput) -> ffi::b3ShapeCastInput {
-    ffi::b3ShapeCastInput {
-        proxy: proxy_raw(&input.proxy),
-        translation: input.translation.into_raw(),
-        maxFraction: input.max_fraction,
-        canEncroach: input.can_encroach,
     }
 }

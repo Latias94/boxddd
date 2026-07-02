@@ -30,14 +30,11 @@ def run(cmd: list[str], cwd: Path, env: dict[str, str], dry_run: bool) -> int:
 
 def find_bindings(target_dir: Path, profile: str) -> Optional[Path]:
     build_dir = target_dir / profile / "build"
-    if not build_dir.exists():
-        return None
-    candidates = sorted(
+    return max(
         build_dir.glob("boxddd-sys-*/out/bindings.rs"),
         key=lambda path: path.stat().st_mtime,
-        reverse=True,
+        default=None,
     )
-    return candidates[0] if candidates else None
 
 
 def generate(repo_root: Path, mode: str, profile: str, dry_run: bool) -> int:

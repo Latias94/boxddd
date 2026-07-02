@@ -1,6 +1,6 @@
 use crate::body::{BodyDef, BodyType};
 use crate::callbacks::WorldCallbacks;
-use crate::core::{box3d_lock, callback_state, debug_checks};
+use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec};
 use crate::debug_draw::{DebugShapeRegistry, create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
@@ -1204,13 +1204,11 @@ impl World {
         let _guard = box3d_lock::lock();
         check_body_valid_raw(body_id)?;
         let capacity = unsafe { ffi::b3Body_GetShapeCount(body_id.into_raw()) }.max(0) as usize;
-        let raw = unsafe {
-            crate::core::ffi_vec::read_from_ffi(capacity, |ptr, cap| {
-                ffi::b3Body_GetShapes(body_id.into_raw(), ptr, cap)
+        unsafe {
+            ffi_vec::fill_from_ffi(out, capacity, |ptr, cap| {
+                ffi::b3Body_GetShapes(body_id.into_raw(), ptr.cast(), cap)
             })
         };
-        out.clear();
-        out.extend(raw.into_iter().map(ShapeId::from_raw));
         Ok(())
     }
 
@@ -1225,13 +1223,11 @@ impl World {
         let _guard = box3d_lock::lock();
         check_body_valid_raw(body_id)?;
         let capacity = unsafe { ffi::b3Body_GetJointCount(body_id.into_raw()) }.max(0) as usize;
-        let raw = unsafe {
-            crate::core::ffi_vec::read_from_ffi(capacity, |ptr, cap| {
-                ffi::b3Body_GetJoints(body_id.into_raw(), ptr, cap)
+        unsafe {
+            ffi_vec::fill_from_ffi(out, capacity, |ptr, cap| {
+                ffi::b3Body_GetJoints(body_id.into_raw(), ptr.cast(), cap)
             })
         };
-        out.clear();
-        out.extend(raw.into_iter().map(JointId::from_raw));
         Ok(())
     }
 
@@ -1541,7 +1537,7 @@ fn validate_nonnegative_scalar(value: f32) -> Result<()> {
 
 #[inline]
 fn check_body_valid_raw(body_id: BodyId) -> Result<()> {
-    if unsafe { ffi::b3Body_IsValid(body_id.into_raw()) } {
+    if body_id.is_valid() {
         Ok(())
     } else {
         Err(Error::InvalidBodyId)
@@ -1550,7 +1546,7 @@ fn check_body_valid_raw(body_id: BodyId) -> Result<()> {
 
 #[inline]
 fn check_shape_valid_raw(shape_id: ShapeId) -> Result<()> {
-    if unsafe { ffi::b3Shape_IsValid(shape_id.into_raw()) } {
+    if shape_id.is_valid() {
         Ok(())
     } else {
         Err(Error::InvalidShapeId)

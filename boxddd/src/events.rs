@@ -301,64 +301,44 @@ pub struct JointEvent {
 
 fn map_snapshot_into<T, U>(out: &mut Vec<U>, input: &[T], mut map: impl FnMut(&T) -> U) {
     out.clear();
-    out.reserve(input.len().saturating_sub(out.capacity()));
+    out.reserve(input.len());
     out.extend(input.iter().map(|value| map(value)));
 }
 
-fn body_event_slice<'a>(raw: ffi::b3BodyEvents) -> &'a [ffi::b3BodyMoveEvent] {
-    if raw.moveCount > 0 && !raw.moveEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.moveEvents, raw.moveCount as usize) }
+fn raw_event_slice<'a, T>(ptr: *const T, count: i32) -> &'a [T] {
+    if count > 0 && !ptr.is_null() {
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     } else {
         &[]
     }
+}
+
+fn body_event_slice<'a>(raw: ffi::b3BodyEvents) -> &'a [ffi::b3BodyMoveEvent] {
+    raw_event_slice(raw.moveEvents, raw.moveCount)
 }
 
 fn sensor_begin_slice<'a>(raw: ffi::b3SensorEvents) -> &'a [ffi::b3SensorBeginTouchEvent] {
-    if raw.beginCount > 0 && !raw.beginEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.beginEvents, raw.beginCount as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.beginEvents, raw.beginCount)
 }
 
 fn sensor_end_slice<'a>(raw: ffi::b3SensorEvents) -> &'a [ffi::b3SensorEndTouchEvent] {
-    if raw.endCount > 0 && !raw.endEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.endEvents, raw.endCount as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.endEvents, raw.endCount)
 }
 
 fn contact_begin_slice<'a>(raw: ffi::b3ContactEvents) -> &'a [ffi::b3ContactBeginTouchEvent] {
-    if raw.beginCount > 0 && !raw.beginEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.beginEvents, raw.beginCount as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.beginEvents, raw.beginCount)
 }
 
 fn contact_end_slice<'a>(raw: ffi::b3ContactEvents) -> &'a [ffi::b3ContactEndTouchEvent] {
-    if raw.endCount > 0 && !raw.endEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.endEvents, raw.endCount as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.endEvents, raw.endCount)
 }
 
 fn contact_hit_slice<'a>(raw: ffi::b3ContactEvents) -> &'a [ffi::b3ContactHitEvent] {
-    if raw.hitCount > 0 && !raw.hitEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.hitEvents, raw.hitCount as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.hitEvents, raw.hitCount)
 }
 
 fn joint_event_slice<'a>(raw: ffi::b3JointEvents) -> &'a [ffi::b3JointEvent] {
-    if raw.count > 0 && !raw.jointEvents.is_null() {
-        unsafe { std::slice::from_raw_parts(raw.jointEvents, raw.count as usize) }
-    } else {
-        &[]
-    }
+    raw_event_slice(raw.jointEvents, raw.count)
 }
 
 impl World {

@@ -51,7 +51,7 @@ impl ShapeProxy {
     }
 
     #[inline]
-    fn raw(&self) -> ffi::b3ShapeProxy {
+    pub(crate) fn raw(&self) -> ffi::b3ShapeProxy {
         ffi::b3ShapeProxy {
             points: self.points.as_ptr().cast(),
             count: self.points.len() as i32,
@@ -139,7 +139,7 @@ impl ShapeCastInput {
     }
 
     #[inline]
-    fn raw(&self) -> ffi::b3ShapeCastInput {
+    pub(crate) fn raw(&self) -> ffi::b3ShapeCastInput {
         ffi::b3ShapeCastInput {
             proxy: self.proxy.raw(),
             translation: self.translation.into_raw(),
@@ -498,17 +498,13 @@ fn collide(
 ) -> Result<LocalManifold> {
     transform_b_to_a.validate()?;
     let _guard = box3d_lock::lock();
-    let mut points: Vec<MaybeUninit<ffi::b3LocalManifoldPoint>> =
-        Vec::with_capacity(ffi::B3_MAX_MANIFOLD_POINTS as usize);
+    let mut points: [MaybeUninit<ffi::b3LocalManifoldPoint>; MAX_LOCAL_MANIFOLD_POINTS] =
+        [MaybeUninit::uninit(); MAX_LOCAL_MANIFOLD_POINTS];
     let mut raw: ffi::b3LocalManifold = unsafe { std::mem::zeroed() };
     raw.points = points.as_mut_ptr().cast();
     f(&mut raw, ffi::B3_MAX_MANIFOLD_POINTS as i32);
     let count = raw.pointCount.clamp(0, ffi::B3_MAX_MANIFOLD_POINTS as i32) as usize;
-    unsafe { points.set_len(count) };
-    let initialized: Vec<_> = points
-        .into_iter()
-        .map(|point| unsafe { point.assume_init() })
-        .collect();
+    let initialized = unsafe { std::slice::from_raw_parts(points.as_ptr().cast(), count) };
     Ok(unsafe { LocalManifold::from_raw(raw, &initialized) })
 }
 
