@@ -6,6 +6,7 @@
 //! explicit through `from_raw` / `into_raw`.
 
 pub mod body;
+pub mod collision;
 pub mod core {
     pub(crate) mod box3d_lock;
     pub(crate) mod callback_state;
@@ -18,6 +19,15 @@ pub mod types;
 pub mod world;
 
 pub use body::{BodyDef, BodyDefBuilder, BodyType};
+pub use collision::{
+    CastOutput, LocalManifold, RayCastInput, ShapeCastInput, ShapeProxy, collide_capsules,
+    collide_spheres, compute_capsule_aabb, compute_capsule_mass, compute_compound_aabb,
+    compute_height_field_aabb, compute_hull_aabb, compute_hull_mass, compute_mesh_aabb,
+    compute_sphere_aabb, compute_sphere_mass, overlap_capsule, overlap_compound,
+    overlap_height_field, overlap_hull, overlap_mesh, overlap_sphere, ray_cast_capsule,
+    ray_cast_compound, ray_cast_height_field, ray_cast_hollow_sphere, ray_cast_hull, ray_cast_mesh,
+    ray_cast_sphere, shape_cast_capsule, shape_cast_hull, shape_cast_sphere,
+};
 pub use error::{ApiError, ApiResult, Error, Result};
 pub use shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder, ShapeType,
