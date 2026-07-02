@@ -14,6 +14,7 @@ pub mod core {
     pub(crate) mod ffi_vec;
 }
 pub mod error;
+pub mod query;
 pub mod shapes;
 pub mod types;
 pub mod world;
@@ -29,6 +30,7 @@ pub use collision::{
     ray_cast_sphere, shape_cast_capsule, shape_cast_hull, shape_cast_sphere,
 };
 pub use error::{ApiError, ApiResult, Error, Result};
+pub use query::{QueryFilter, QueryHit, RayHit, TreeStats};
 pub use shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder, ShapeType,
     Sphere, SurfaceMaterial,

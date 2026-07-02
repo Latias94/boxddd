@@ -35,4 +35,6 @@ pub enum Error {
     NulByteInString,
     #[error("native resource lifetime would be violated")]
     ResourceLifetimeViolation,
+    #[error("Rust callback panicked and native traversal was stopped")]
+    CallbackPanicked,
 }
