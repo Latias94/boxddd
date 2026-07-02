@@ -1,17 +1,13 @@
 use crate::body::BodyDef;
+use crate::core::{box3d_lock, callback_state, debug_checks};
 use crate::error::{Error, Result};
 use crate::shapes::{BoxHull, ShapeDef, Sphere};
-use crate::types::{BodyId, Quat, ShapeId, Vec3, Version};
+use crate::types::{
+    Aabb, BodyId, Counters, Pos, Profile, Quat, ShapeId, Vec3, Version, WorldTransform,
+};
 use boxddd_sys::ffi;
 use std::marker::PhantomData;
 use std::rc::Rc;
-use std::sync::{Mutex, MutexGuard};
-
-static BOX3D_LOCK: Mutex<()> = Mutex::new(());
-
-fn lock_box3d() -> MutexGuard<'static, ()> {
-    BOX3D_LOCK.lock().expect("Box3D global lock poisoned")
-}
 
 #[derive(Clone, Debug)]
 pub struct WorldDef {
@@ -35,6 +31,21 @@ impl WorldDef {
     #[inline]
     pub fn raw(&self) -> &ffi::b3WorldDef {
         &self.raw
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        Vec3::from_raw(self.raw.gravity).validate()?;
+        if self.raw.restitutionThreshold.is_finite()
+            && self.raw.hitEventThreshold.is_finite()
+            && self.raw.contactHertz.is_finite()
+            && self.raw.contactDampingRatio.is_finite()
+            && self.raw.contactSpeed.is_finite()
+            && self.raw.maximumLinearSpeed.is_finite()
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
     }
 }
 
@@ -75,6 +86,7 @@ impl Default for WorldDefBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct World {
     raw: ffi::b3WorldId,
     _not_send_sync: PhantomData<Rc<()>>,
@@ -82,12 +94,11 @@ pub struct World {
 
 impl World {
     pub fn new(def: WorldDef) -> Result<Self> {
-        if !Vec3::from_raw(def.raw.gravity).is_valid() {
-            return Err(Error::InvalidArgument);
-        }
+        callback_state::check_not_in_callback()?;
+        def.validate()?;
 
-        let _guard = lock_box3d();
-        let raw = unsafe { ffi::b3CreateWorld(def.raw()) };
+        let _guard = box3d_lock::lock();
+        let raw = unsafe { create_world_raw(def.raw()) };
         if unsafe { ffi::b3World_IsValid(raw) } {
             Ok(Self {
                 raw,
@@ -105,30 +116,64 @@ impl World {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        let _guard = lock_box3d();
+        let _guard = box3d_lock::lock();
         unsafe { ffi::b3World_IsValid(self.raw) }
     }
 
     #[inline]
     pub fn step(&mut self, time_step: f32, sub_step_count: i32) {
-        let _guard = lock_box3d();
+        self.try_step(time_step, sub_step_count)
+            .expect("Box3D failed to step world");
+    }
+
+    #[inline]
+    pub fn try_step(&mut self, time_step: f32, sub_step_count: i32) -> Result<()> {
+        callback_state::check_not_in_callback()?;
+        if !time_step.is_finite() || time_step < 0.0 || sub_step_count < 0 {
+            return Err(Error::InvalidArgument);
+        }
+        let _guard = box3d_lock::lock();
         unsafe { ffi::b3World_Step(self.raw, time_step, sub_step_count) };
+        Ok(())
     }
 
     #[inline]
     pub fn gravity(&self) -> Vec3 {
-        let _guard = lock_box3d();
-        Vec3::from_raw(unsafe { ffi::b3World_GetGravity(self.raw) })
+        self.try_gravity().expect("invalid Box3D world")
+    }
+
+    #[inline]
+    pub fn try_gravity(&self) -> Result<Vec3> {
+        callback_state::check_not_in_callback()?;
+        let _guard = box3d_lock::lock();
+        if !unsafe { ffi::b3World_IsValid(self.raw) } {
+            return Err(Error::InvalidWorldId);
+        }
+        Ok(Vec3::from_raw(unsafe { ffi::b3World_GetGravity(self.raw) }))
     }
 
     #[inline]
     pub fn set_gravity(&mut self, gravity: impl Into<Vec3>) {
-        let _guard = lock_box3d();
-        unsafe { ffi::b3World_SetGravity(self.raw, gravity.into().into_raw()) };
+        self.try_set_gravity(gravity)
+            .expect("invalid gravity or Box3D world");
+    }
+
+    #[inline]
+    pub fn try_set_gravity(&mut self, gravity: impl Into<Vec3>) -> Result<()> {
+        callback_state::check_not_in_callback()?;
+        let gravity = gravity.into().validate()?;
+        let _guard = box3d_lock::lock();
+        if !unsafe { ffi::b3World_IsValid(self.raw) } {
+            return Err(Error::InvalidWorldId);
+        }
+        unsafe { ffi::b3World_SetGravity(self.raw, gravity.into_raw()) };
+        Ok(())
     }
 
     pub fn try_create_body(&mut self, def: BodyDef) -> Result<BodyId> {
-        let _guard = lock_box3d();
+        callback_state::check_not_in_callback()?;
+        def.validate()?;
+        let _guard = box3d_lock::lock();
         let raw = unsafe { ffi::b3CreateBody(self.raw, def.raw()) };
         if unsafe { ffi::b3Body_IsValid(raw) } {
             Ok(BodyId::from_raw(raw))
@@ -148,7 +193,11 @@ impl World {
         def: &ShapeDef,
         sphere: &Sphere,
     ) -> Result<ShapeId> {
-        let _guard = lock_box3d();
+        callback_state::check_not_in_callback()?;
+        debug_checks::check_body_valid(body_id)?;
+        def.validate()?;
+        sphere.validate()?;
+        let _guard = box3d_lock::lock();
         let raw = unsafe { ffi::b3CreateSphereShape(body_id.into_raw(), def.raw(), sphere.raw()) };
         if unsafe { ffi::b3Shape_IsValid(raw) } {
             Ok(ShapeId::from_raw(raw))
@@ -173,7 +222,10 @@ impl World {
         def: &ShapeDef,
         hull: &BoxHull,
     ) -> Result<ShapeId> {
-        let _guard = lock_box3d();
+        callback_state::check_not_in_callback()?;
+        debug_checks::check_body_valid(body_id)?;
+        def.validate()?;
+        let _guard = box3d_lock::lock();
         let raw =
             unsafe { ffi::b3CreateHullShape(body_id.into_raw(), def.raw(), hull.hull_data()) };
         if unsafe { ffi::b3Shape_IsValid(raw) } {
@@ -194,21 +246,124 @@ impl World {
     }
 
     #[inline]
-    pub fn body_position(&self, body_id: BodyId) -> Vec3 {
-        let _guard = lock_box3d();
-        Vec3::from_raw(unsafe { ffi::b3Body_GetPosition(body_id.into_raw()) })
+    pub fn body_position(&self, body_id: BodyId) -> Pos {
+        self.try_body_position(body_id).expect("invalid BodyId")
+    }
+
+    #[inline]
+    pub fn try_body_position(&self, body_id: BodyId) -> Result<Pos> {
+        debug_checks::check_body_valid(body_id)?;
+        let _guard = box3d_lock::lock();
+        Ok(Pos::from_raw(unsafe {
+            ffi::b3Body_GetPosition(body_id.into_raw())
+        }))
     }
 
     #[inline]
     pub fn body_rotation(&self, body_id: BodyId) -> Quat {
-        let _guard = lock_box3d();
-        Quat::from_raw(unsafe { ffi::b3Body_GetRotation(body_id.into_raw()) })
+        self.try_body_rotation(body_id).expect("invalid BodyId")
     }
+
+    #[inline]
+    pub fn try_body_rotation(&self, body_id: BodyId) -> Result<Quat> {
+        debug_checks::check_body_valid(body_id)?;
+        let _guard = box3d_lock::lock();
+        Ok(Quat::from_raw(unsafe {
+            ffi::b3Body_GetRotation(body_id.into_raw())
+        }))
+    }
+
+    #[inline]
+    pub fn body_transform(&self, body_id: BodyId) -> WorldTransform {
+        self.try_body_transform(body_id).expect("invalid BodyId")
+    }
+
+    #[inline]
+    pub fn try_body_transform(&self, body_id: BodyId) -> Result<WorldTransform> {
+        debug_checks::check_body_valid(body_id)?;
+        let _guard = box3d_lock::lock();
+        Ok(WorldTransform::from_raw(unsafe {
+            ffi::b3Body_GetTransform(body_id.into_raw())
+        }))
+    }
+
+    pub fn try_destroy_body(&mut self, body_id: BodyId) -> Result<()> {
+        debug_checks::check_body_valid(body_id)?;
+        let _guard = box3d_lock::lock();
+        unsafe { ffi::b3DestroyBody(body_id.into_raw()) };
+        Ok(())
+    }
+
+    #[track_caller]
+    pub fn destroy_body(&mut self, body_id: BodyId) {
+        self.try_destroy_body(body_id).expect("invalid BodyId");
+    }
+
+    #[inline]
+    pub fn bounds(&self) -> Aabb {
+        self.try_bounds().expect("invalid Box3D world")
+    }
+
+    #[inline]
+    pub fn try_bounds(&self) -> Result<Aabb> {
+        callback_state::check_not_in_callback()?;
+        let _guard = box3d_lock::lock();
+        if !unsafe { ffi::b3World_IsValid(self.raw) } {
+            return Err(Error::InvalidWorldId);
+        }
+        Ok(Aabb::from_raw(unsafe { ffi::b3World_GetBounds(self.raw) }))
+    }
+
+    #[inline]
+    pub fn profile(&self) -> Profile {
+        self.try_profile().expect("invalid Box3D world")
+    }
+
+    #[inline]
+    pub fn try_profile(&self) -> Result<Profile> {
+        callback_state::check_not_in_callback()?;
+        let _guard = box3d_lock::lock();
+        if !unsafe { ffi::b3World_IsValid(self.raw) } {
+            return Err(Error::InvalidWorldId);
+        }
+        Ok(Profile::from_raw(unsafe {
+            ffi::b3World_GetProfile(self.raw)
+        }))
+    }
+
+    #[inline]
+    pub fn counters(&self) -> Counters {
+        self.try_counters().expect("invalid Box3D world")
+    }
+
+    #[inline]
+    pub fn try_counters(&self) -> Result<Counters> {
+        callback_state::check_not_in_callback()?;
+        let _guard = box3d_lock::lock();
+        if !unsafe { ffi::b3World_IsValid(self.raw) } {
+            return Err(Error::InvalidWorldId);
+        }
+        Ok(Counters::from_raw(unsafe {
+            ffi::b3World_GetCounters(self.raw)
+        }))
+    }
+}
+
+#[cfg(not(feature = "double-precision"))]
+#[inline]
+unsafe fn create_world_raw(def: *const ffi::b3WorldDef) -> ffi::b3WorldId {
+    unsafe { ffi::b3CreateWorld(def) }
+}
+
+#[cfg(feature = "double-precision")]
+#[inline]
+unsafe fn create_world_raw(def: *const ffi::b3WorldDef) -> ffi::b3WorldId {
+    unsafe { ffi::b3CreateWorldDoublePrecision(def) }
 }
 
 impl Drop for World {
     fn drop(&mut self) {
-        let _guard = lock_box3d();
+        let _guard = box3d_lock::lock();
         if unsafe { ffi::b3World_IsValid(self.raw) } {
             unsafe { ffi::b3DestroyWorld(self.raw) };
         }
@@ -217,18 +372,18 @@ impl Drop for World {
 
 #[inline]
 pub fn version() -> Version {
-    let _guard = lock_box3d();
+    let _guard = box3d_lock::lock();
     Version::from_raw(unsafe { ffi::b3GetVersion() })
 }
 
 #[inline]
 pub fn allocated_byte_count() -> i32 {
-    let _guard = lock_box3d();
+    let _guard = box3d_lock::lock();
     unsafe { ffi::b3GetByteCount() }
 }
 
 #[inline]
 pub fn is_double_precision() -> bool {
-    let _guard = lock_box3d();
+    let _guard = box3d_lock::lock();
     unsafe { ffi::b3IsDoublePrecision() }
 }

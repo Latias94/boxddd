@@ -17,8 +17,12 @@ thiserror.workspace = true
 
 [features]
 default = []
+double-precision = ["boxddd-sys/double-precision"]
 disable-simd = ["boxddd-sys/disable-simd"]
 validate = ["boxddd-sys/validate"]
+
+[dev-dependencies]
+static_assertions = "1"
 
 [[example]]
 name = "hello_world"

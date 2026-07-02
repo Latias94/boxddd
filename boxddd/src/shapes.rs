@@ -1,4 +1,5 @@
-use crate::types::Vec3;
+use crate::error::{Error, Result};
+use crate::types::{Filter, Vec3};
 use boxddd_sys::ffi;
 
 #[repr(C)]
@@ -36,6 +37,18 @@ impl SurfaceMaterial {
             customColor: self.custom_color,
         }
     }
+
+    pub fn validate(self) -> Result<()> {
+        if self.friction.is_finite()
+            && self.restitution.is_finite()
+            && self.rolling_resistance.is_finite()
+            && self.tangent_velocity.is_valid()
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
 }
 
 impl Default for ShapeDef {
@@ -60,6 +73,22 @@ impl ShapeDef {
     #[inline]
     pub fn raw(&self) -> &ffi::b3ShapeDef {
         &self.raw
+    }
+
+    pub fn filter(&self) -> Filter {
+        Filter::from_raw(self.raw.filter)
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        SurfaceMaterial::from_raw(self.raw.baseMaterial).validate()?;
+        if self.raw.density.is_finite()
+            && self.raw.density >= 0.0
+            && self.raw.explosionScale.is_finite()
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
     }
 }
 
@@ -91,6 +120,12 @@ impl ShapeDefBuilder {
     #[inline]
     pub fn restitution(mut self, restitution: f32) -> Self {
         self.def.raw.baseMaterial.restitution = restitution;
+        self
+    }
+
+    #[inline]
+    pub fn filter(mut self, filter: Filter) -> Self {
+        self.def.raw.filter = filter.into_raw();
         self
     }
 
@@ -137,6 +172,17 @@ impl Sphere {
     #[inline]
     pub const fn raw(&self) -> &ffi::b3Sphere {
         &self.raw
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if Vec3::from_raw(self.raw.center).is_valid()
+            && self.raw.radius.is_finite()
+            && self.raw.radius > 0.0
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
     }
 }
 

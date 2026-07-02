@@ -1,4 +1,5 @@
-use crate::types::{Quat, Vec3};
+use crate::error::{Error, Result};
+use crate::types::{Pos, Quat, Vec3};
 use boxddd_sys::ffi;
 use std::ffi::CString;
 
@@ -43,6 +44,22 @@ impl BodyDef {
     pub fn raw(&self) -> &ffi::b3BodyDef {
         &self.raw
     }
+
+    pub fn validate(&self) -> Result<()> {
+        Pos::from_raw(self.raw.position).validate()?;
+        Quat::from_raw(self.raw.rotation).validate()?;
+        Vec3::from_raw(self.raw.linearVelocity).validate()?;
+        Vec3::from_raw(self.raw.angularVelocity).validate()?;
+        if is_valid_scalar(self.raw.linearDamping)
+            && is_valid_scalar(self.raw.angularDamping)
+            && is_valid_scalar(self.raw.gravityScale)
+            && is_valid_scalar(self.raw.sleepThreshold)
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -65,7 +82,7 @@ impl BodyDefBuilder {
     }
 
     #[inline]
-    pub fn position(mut self, position: impl Into<Vec3>) -> Self {
+    pub fn position(mut self, position: impl Into<Pos>) -> Self {
         self.def.raw.position = position.into().into_raw();
         self
     }
@@ -117,4 +134,9 @@ impl Default for BodyDefBuilder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[inline]
+fn is_valid_scalar(value: f32) -> bool {
+    value.is_finite()
 }
