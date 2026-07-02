@@ -1,4 +1,5 @@
 /target
+/repo-ref
 /.idea
 *.pdb
 *.ilk

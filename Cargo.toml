@@ -1,17 +1,31 @@
 [workspace]
 members = [
+    "bevy_boxddd",
     "boxddd",
     "boxddd-sys",
 ]
 resolver = "3"
 
+exclude = [
+    "repo-ref/bevy",
+]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.92"
+authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Latias94/boxddd"
 homepage = "https://github.com/Latias94/boxddd"
+documentation = "https://docs.rs/boxddd"
 
 [workspace.dependencies]
+boxddd = { version = "0.1.0", path = "boxddd" }
 boxddd-sys = { version = "0.1.0", path = "boxddd-sys" }
+bevy_app = "0.19.0"
+bevy_ecs = "0.19.0"
+bevy_math = "0.19.0"
+bevy_time = "0.19.0"
+bevy_transform = "0.19.0"
 thiserror = "2"
