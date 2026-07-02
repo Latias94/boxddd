@@ -18,6 +18,7 @@ pub mod core {
 pub mod debug_draw;
 pub mod error;
 pub mod events;
+pub mod joints;
 pub mod query;
 pub mod shapes;
 pub mod types;
@@ -41,6 +42,10 @@ pub use events::{
     ContactEndIter, ContactEndTouch, ContactEndTouchEvent, ContactEvents, ContactHit,
     ContactHitEvent, ContactHitIter, JointEvent, JointEventIter, SensorBeginIter, SensorBeginTouch,
     SensorBeginTouchEvent, SensorEndIter, SensorEndTouch, SensorEndTouchEvent, SensorEvents,
+};
+pub use joints::{
+    DistanceJointDef, FilterJointDef, JointTuning, JointType, MotorJointDef, ParallelJointDef,
+    PrismaticJointDef, RevoluteJointDef, SphericalJointDef, WeldJointDef, WheelJointDef,
 };
 pub use query::{QueryFilter, QueryHit, RayHit, TreeStats};
 pub use shapes::{
