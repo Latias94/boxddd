@@ -20,6 +20,7 @@ pub mod error;
 pub mod events;
 pub mod joints;
 pub mod query;
+pub mod recording;
 pub mod shapes;
 pub mod types;
 pub mod world;
@@ -48,6 +49,10 @@ pub use joints::{
     PrismaticJointDef, RevoluteJointDef, SphericalJointDef, WeldJointDef, WheelJointDef,
 };
 pub use query::{QueryFilter, QueryHit, RayHit, TreeStats};
+pub use recording::{
+    RecPlayer, RecPlayerInfo, RecQueryHit, RecQueryInfo, RecQueryType, Recording, ReplayWorldId,
+    validate_replay_bytes,
+};
 pub use shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder, ShapeType,
     Sphere, SurfaceMaterial,

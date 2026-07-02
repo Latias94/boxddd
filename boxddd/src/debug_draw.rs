@@ -384,6 +384,172 @@ impl DebugDraw for CollectDebugDraw<'_> {
     }
 }
 
+unsafe extern "C" fn draw_shape(
+    user_shape: *mut c_void,
+    transform: ffi::b3WorldTransform,
+    color: ffi::b3HexColor,
+    context: *mut c_void,
+) -> bool {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, false, |drawer| {
+        drawer.draw_shape(
+            debug_shape_from_user_shape(user_shape),
+            WorldTransform::from_raw(transform),
+            HexColor::from_raw(color),
+        )
+    })
+}
+
+unsafe extern "C" fn draw_segment(
+    p1: ffi::b3Pos,
+    p2: ffi::b3Pos,
+    color: ffi::b3HexColor,
+    context: *mut c_void,
+) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_segment(
+            Pos::from_raw(p1),
+            Pos::from_raw(p2),
+            HexColor::from_raw(color),
+        );
+    });
+}
+
+unsafe extern "C" fn draw_transform(transform: ffi::b3WorldTransform, context: *mut c_void) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_transform(WorldTransform::from_raw(transform));
+    });
+}
+
+unsafe extern "C" fn draw_point(
+    position: ffi::b3Pos,
+    size: f32,
+    color: ffi::b3HexColor,
+    context: *mut c_void,
+) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_point(Pos::from_raw(position), size, HexColor::from_raw(color));
+    });
+}
+
+unsafe extern "C" fn draw_sphere(
+    center: ffi::b3Pos,
+    radius: f32,
+    color: ffi::b3HexColor,
+    alpha: f32,
+    context: *mut c_void,
+) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_sphere(
+            Pos::from_raw(center),
+            radius,
+            HexColor::from_raw(color),
+            alpha,
+        );
+    });
+}
+
+unsafe extern "C" fn draw_capsule(
+    p1: ffi::b3Pos,
+    p2: ffi::b3Pos,
+    radius: f32,
+    color: ffi::b3HexColor,
+    alpha: f32,
+    context: *mut c_void,
+) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_capsule(
+            Pos::from_raw(p1),
+            Pos::from_raw(p2),
+            radius,
+            HexColor::from_raw(color),
+            alpha,
+        );
+    });
+}
+
+unsafe extern "C" fn draw_bounds(aabb: ffi::b3AABB, color: ffi::b3HexColor, context: *mut c_void) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_bounds(Aabb::from_raw(aabb), HexColor::from_raw(color));
+    });
+}
+
+unsafe extern "C" fn draw_box(
+    extents: ffi::b3Vec3,
+    transform: ffi::b3WorldTransform,
+    color: ffi::b3HexColor,
+    context: *mut c_void,
+) {
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_box(
+            Vec3::from_raw(extents),
+            WorldTransform::from_raw(transform),
+            HexColor::from_raw(color),
+        );
+    });
+}
+
+unsafe extern "C" fn draw_string(
+    position: ffi::b3Pos,
+    text: *const std::ffi::c_char,
+    color: ffi::b3HexColor,
+    context: *mut c_void,
+) {
+    if text.is_null() {
+        return;
+    }
+    let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
+    let text = unsafe { CStr::from_ptr(text) }.to_string_lossy();
+    run_debug_draw_callback(context, (), |drawer| {
+        drawer.draw_string(Pos::from_raw(position), &text, HexColor::from_raw(color));
+    });
+}
+
+pub(crate) fn with_debug_draw(
+    drawer: &mut dyn DebugDraw,
+    options: DebugDrawOptions,
+    invoke: impl FnOnce(&mut ffi::b3DebugDraw) -> Result<()>,
+) -> Result<()> {
+    callback_state::check_not_in_callback()?;
+    if !options.force_scale.is_finite()
+        || !options.joint_scale.is_finite()
+        || !options.drawing_bounds.lower_bound.is_valid()
+        || !options.drawing_bounds.upper_bound.is_valid()
+    {
+        return Err(Error::InvalidArgument);
+    }
+
+    let mut context = DebugDrawContext {
+        drawer,
+        panicked: false,
+    };
+    let mut draw = unsafe { ffi::b3DefaultDebugDraw() };
+    draw.DrawShapeFcn = Some(draw_shape);
+    draw.DrawSegmentFcn = Some(draw_segment);
+    draw.DrawTransformFcn = Some(draw_transform);
+    draw.DrawPointFcn = Some(draw_point);
+    draw.DrawSphereFcn = Some(draw_sphere);
+    draw.DrawCapsuleFcn = Some(draw_capsule);
+    draw.DrawBoundsFcn = Some(draw_bounds);
+    draw.DrawBoxFcn = Some(draw_box);
+    draw.DrawStringFcn = Some(draw_string);
+    apply_options(&mut draw, options, &mut context as *mut _ as *mut c_void);
+
+    invoke(&mut draw)?;
+    if context.panicked {
+        Err(Error::CallbackPanicked)
+    } else {
+        Ok(())
+    }
+}
+
 impl World {
     pub fn debug_draw_collect(&mut self, options: DebugDrawOptions) -> Vec<DebugDrawCommand> {
         self.try_debug_draw_collect(options)
@@ -429,174 +595,11 @@ impl World {
         drawer: &mut impl DebugDraw,
         options: DebugDrawOptions,
     ) -> Result<()> {
-        callback_state::check_not_in_callback()?;
-        if !options.force_scale.is_finite()
-            || !options.joint_scale.is_finite()
-            || !options.drawing_bounds.lower_bound.is_valid()
-            || !options.drawing_bounds.upper_bound.is_valid()
-        {
-            return Err(Error::InvalidArgument);
-        }
-
-        let mut context = DebugDrawContext {
-            drawer,
-            panicked: false,
-        };
-        let mut draw = unsafe { ffi::b3DefaultDebugDraw() };
-
-        unsafe extern "C" fn draw_shape(
-            user_shape: *mut c_void,
-            transform: ffi::b3WorldTransform,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) -> bool {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, false, |drawer| {
-                drawer.draw_shape(
-                    debug_shape_from_user_shape(user_shape),
-                    WorldTransform::from_raw(transform),
-                    HexColor::from_raw(color),
-                )
-            })
-        }
-
-        unsafe extern "C" fn draw_segment(
-            p1: ffi::b3Pos,
-            p2: ffi::b3Pos,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_segment(
-                    Pos::from_raw(p1),
-                    Pos::from_raw(p2),
-                    HexColor::from_raw(color),
-                );
-            });
-        }
-
-        unsafe extern "C" fn draw_transform(
-            transform: ffi::b3WorldTransform,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_transform(WorldTransform::from_raw(transform));
-            });
-        }
-
-        unsafe extern "C" fn draw_point(
-            position: ffi::b3Pos,
-            size: f32,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_point(Pos::from_raw(position), size, HexColor::from_raw(color));
-            });
-        }
-
-        unsafe extern "C" fn draw_sphere(
-            center: ffi::b3Pos,
-            radius: f32,
-            color: ffi::b3HexColor,
-            alpha: f32,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_sphere(
-                    Pos::from_raw(center),
-                    radius,
-                    HexColor::from_raw(color),
-                    alpha,
-                );
-            });
-        }
-
-        unsafe extern "C" fn draw_capsule(
-            p1: ffi::b3Pos,
-            p2: ffi::b3Pos,
-            radius: f32,
-            color: ffi::b3HexColor,
-            alpha: f32,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_capsule(
-                    Pos::from_raw(p1),
-                    Pos::from_raw(p2),
-                    radius,
-                    HexColor::from_raw(color),
-                    alpha,
-                );
-            });
-        }
-
-        unsafe extern "C" fn draw_bounds(
-            aabb: ffi::b3AABB,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_bounds(Aabb::from_raw(aabb), HexColor::from_raw(color));
-            });
-        }
-
-        unsafe extern "C" fn draw_box(
-            extents: ffi::b3Vec3,
-            transform: ffi::b3WorldTransform,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) {
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_box(
-                    Vec3::from_raw(extents),
-                    WorldTransform::from_raw(transform),
-                    HexColor::from_raw(color),
-                );
-            });
-        }
-
-        unsafe extern "C" fn draw_string(
-            position: ffi::b3Pos,
-            text: *const std::ffi::c_char,
-            color: ffi::b3HexColor,
-            context: *mut c_void,
-        ) {
-            if text.is_null() {
-                return;
-            }
-            let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-            let text = unsafe { CStr::from_ptr(text) }.to_string_lossy();
-            run_debug_draw_callback(context, (), |drawer| {
-                drawer.draw_string(Pos::from_raw(position), &text, HexColor::from_raw(color));
-            });
-        }
-
-        draw.DrawShapeFcn = Some(draw_shape);
-        draw.DrawSegmentFcn = Some(draw_segment);
-        draw.DrawTransformFcn = Some(draw_transform);
-        draw.DrawPointFcn = Some(draw_point);
-        draw.DrawSphereFcn = Some(draw_sphere);
-        draw.DrawCapsuleFcn = Some(draw_capsule);
-        draw.DrawBoundsFcn = Some(draw_bounds);
-        draw.DrawBoxFcn = Some(draw_box);
-        draw.DrawStringFcn = Some(draw_string);
-        apply_options(&mut draw, options, &mut context as *mut _ as *mut c_void);
-
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        unsafe { ffi::b3World_Draw(self.raw(), &mut draw, options.mask_bits) };
-        if context.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
+        with_debug_draw(drawer, options, |draw| {
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            unsafe { ffi::b3World_Draw(self.raw(), draw, options.mask_bits) };
             Ok(())
-        }
+        })
     }
 }

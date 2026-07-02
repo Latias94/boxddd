@@ -1572,6 +1572,7 @@ impl Drop for World {
         if unsafe { ffi::b3World_IsValid(self.raw) } {
             self.callbacks.clear_raw_callbacks(self.raw);
             unsafe { ffi::b3DestroyWorld(self.raw) };
+            crate::recording::detach_world_recording_locked(self.raw);
         }
     }
 }
