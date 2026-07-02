@@ -1,0 +1,25 @@
+[package]
+name = "boxddd"
+version.workspace = true
+edition.workspace = true
+description = "Safe, ergonomic Rust bindings for Box3D"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../README.md"
+documentation = "https://docs.rs/boxddd"
+keywords = ["box3d", "physics", "game", "simulation"]
+categories = ["game-engines"]
+
+[dependencies]
+boxddd-sys.workspace = true
+thiserror.workspace = true
+
+[features]
+default = []
+disable-simd = ["boxddd-sys/disable-simd"]
+validate = ["boxddd-sys/validate"]
+
+[[example]]
+name = "hello_world"
+path = "examples/hello_world.rs"

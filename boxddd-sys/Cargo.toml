@@ -1,0 +1,35 @@
+[package]
+name = "boxddd-sys"
+version.workspace = true
+edition.workspace = true
+description = "Low-level FFI bindings for Box3D built from vendored upstream sources"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+links = "box3d"
+build = "build.rs"
+documentation = "https://docs.rs/boxddd-sys"
+keywords = ["box3d", "physics", "ffi", "bindings", "game"]
+categories = ["external-ffi-bindings", "game-engines"]
+
+include = [
+    "Cargo.toml",
+    "build.rs",
+    "src/**",
+    "third-party/box3d/include/**/*.h",
+    "third-party/box3d/src/**/*.c",
+    "third-party/box3d/src/**/*.h",
+    "third-party/box3d/src/**/*.inl",
+    "third-party/box3d/LICENSE",
+]
+
+[features]
+default = ["build-from-source"]
+build-from-source = []
+bindgen = ["dep:bindgen"]
+disable-simd = []
+validate = []
+
+[build-dependencies]
+cc = "1"
+bindgen = { version = "0.72", optional = true }

@@ -1,0 +1,8 @@
+/target
+/.idea
+*.pdb
+*.ilk
+*.obj
+*.lib
+*.dll
+*.exe
