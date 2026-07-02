@@ -19,6 +19,11 @@ serde = { version = "1", features = ["derive"], optional = true }
 cgmath = { version = "0.18", optional = true }
 nalgebra = { version = "0.34", default-features = false, features = ["std"], optional = true }
 glam = { version = "0.32", optional = true }
+bevy_app = { version = "0.19.0", optional = true }
+bevy_ecs = { version = "0.19.0", optional = true }
+bevy_transform = { version = "0.19.0", optional = true }
+eframe = { version = "0.35.0", features = ["wgpu"], optional = true }
+tokio = { version = "1.52.3", features = ["macros", "rt", "sync"], optional = true }
 
 [features]
 default = []
@@ -31,6 +36,9 @@ mint = ["dep:mint"]
 cgmath = ["dep:cgmath"]
 nalgebra = ["dep:nalgebra"]
 glam = ["dep:glam"]
+bevy-example = ["dep:bevy_app", "dep:bevy_ecs", "dep:bevy_transform"]
+egui-example = ["dep:eframe"]
+tokio-example = ["dep:tokio"]
 
 [package.metadata.docs.rs]
 all-features = false
@@ -39,6 +47,7 @@ features = []
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
+anyhow = "1.0.103"
 serde_json = "1"
 static_assertions = "1"
 
@@ -50,3 +59,18 @@ path = "examples/hello_world.rs"
 name = "mint_interop"
 path = "examples/mint_interop.rs"
 required-features = ["mint"]
+
+[[example]]
+name = "bevy_ecs_integration"
+path = "examples/bevy_ecs_integration.rs"
+required-features = ["bevy-example"]
+
+[[example]]
+name = "egui_debug_draw"
+path = "examples/egui_debug_draw.rs"
+required-features = ["egui-example"]
+
+[[example]]
+name = "tokio_async_bridge"
+path = "examples/tokio_async_bridge.rs"
+required-features = ["tokio-example"]

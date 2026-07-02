@@ -64,6 +64,9 @@ world.step(1.0 / 60.0, 4);
 - `serialize`: alias for `serde`.
 - `mint`: conversions for `Vec2`, `Vec3`, `Pos`, `Quat`, `Transform`, and `WorldTransform`.
 - `glam`, `nalgebra`, `cgmath`: conversions for common 3D vector, point, quaternion, and transform representations.
+- `tokio-example`: enables the Tokio async bridge example.
+- `bevy-example`: enables the Bevy ECS integration example.
+- `egui-example`: enables the native egui/wgpu visual debug example.
 
 ## Build
 
@@ -92,11 +95,18 @@ cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay
 cargo run -p boxddd --example determinism
 cargo run -p boxddd --example mint_interop --features mint
+cargo run -p boxddd --example error_handling
+cargo run -p boxddd --example physics_thread
+cargo run -p boxddd --example tokio_async_bridge --features tokio-example
+cargo run -p boxddd --example bevy_ecs_integration --features bevy-example
+cargo run -p boxddd --example egui_debug_draw --features egui-example
 ```
 
 ## Threading
 
 `World`, native resources, and replay players are intentionally `!Send`/`!Sync`. Keep physics ownership on one thread/task. `WorldDef::builder().worker_count(n)` stores the desired Box3D worker count, but a fully safe task-system callback API is deferred until the callback/threading contract is designed separately.
+
+For app integration, create and own `World` on the physics thread or main render thread, then move plain snapshots (`BodyId` lookups converted to positions/transforms) across channels or ECS components. See `physics_thread.rs`, `tokio_async_bridge.rs`, and `bevy_ecs_integration.rs`.
 
 ## Error Handling
 
