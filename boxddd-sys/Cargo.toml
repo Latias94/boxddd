@@ -6,6 +6,7 @@ description = "Low-level FFI bindings for Box3D built from vendored upstream sou
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+authors.workspace = true
 links = "box3d"
 build = "build.rs"
 readme = "README.md"

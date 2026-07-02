@@ -5,7 +5,23 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTFLAGS: "-Cdebuginfo=0"
+
 jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -18,13 +34,41 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all --check
       - run: cargo nextest run --workspace
+
+  examples:
+    name: examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Bevy Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxxf86vm-dev \
+            mesa-common-dev \
+            pkg-config
       - run: cargo check -p boxddd --examples
-      - run: cargo run -p boxddd --example hello_world
-      - run: cargo run -p boxddd --example joints
-      - run: cargo run -p boxddd --example recording_replay
-      - run: cargo run -p boxddd --example determinism
+      - run: cargo check -p bevy_boxddd --no-default-features
+      - run: cargo check -p bevy_boxddd --examples
 
   docs-and-features:
     name: docs and feature matrix
@@ -36,6 +80,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
       - run: DOCS_RS=1 RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo doc -p boxddd --no-deps
+      - run: DOCS_RS=1 RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo doc -p bevy_boxddd --no-deps
       - run: cargo check -p boxddd --no-default-features
       - run: cargo check -p boxddd-sys --no-default-features
       - run: BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys
@@ -63,7 +108,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo package -p boxddd-sys --allow-dirty
-      - run: cargo package -p boxddd --allow-dirty
+      - run: cargo package -p boxddd-sys
+      - run: cargo package -p boxddd --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+      - run: cargo package -p bevy_boxddd --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
       - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
       - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"

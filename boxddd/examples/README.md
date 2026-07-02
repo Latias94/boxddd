@@ -24,11 +24,7 @@ need an engine/render-loop shape.
   cargo run -p boxddd --example tokio_async_bridge --features tokio-example
   ```
 
-- `bevy_ecs_integration.rs`: shows the Bevy ECS pattern for a `!Send` Box3D world: use a Bevy non-send resource and copy transforms into ECS components.
-
-  ```bash
-  cargo run -p boxddd --example bevy_ecs_integration --features bevy-example
-  ```
+- Bevy integration now lives in the sibling `bevy_boxddd` crate. Use its windowed examples when you want a real Bevy app with camera, light, meshes, messages, and gizmos.
 
 ## Visual Debugging
 
@@ -63,8 +59,8 @@ cargo run -p boxddd --example error_handling
 cargo run -p boxddd --example physics_thread
 cargo run -p boxddd --example mint_interop --features mint
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example
-cargo run -p boxddd --example bevy_ecs_integration --features bevy-example
 cargo check -p boxddd --example egui_debug_draw --features egui-example
+cargo check -p bevy_boxddd --examples
 ```
 
 ## Porting Targets From Official Box3D Samples

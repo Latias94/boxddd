@@ -1,17 +1,22 @@
 # boxddd
 
-Safe, ergonomic Rust bindings for Box3D.
+[![CI](https://github.com/Latias94/boxddd/actions/workflows/ci.yml/badge.svg)](https://github.com/Latias94/boxddd/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/boxddd.svg)](https://crates.io/crates/boxddd)
+[![Docs.rs](https://docs.rs/boxddd/badge.svg)](https://docs.rs/boxddd)
 
-`boxddd` is a sibling of `boxdd`, not a 3D feature flag on the 2D crate. Box3D has its own Rust-facing model: 3D vectors, quaternions, hulls, meshes, height fields, compounds, typed joints, allocation-aware queries, debug draw, and deterministic recording/replay.
+`boxddd` is a Rust binding workspace for [Box3D](https://github.com/erincatto/box3d), Erin Catto's 3D physics engine announced in [Announcing Box3D](https://box2d.org/posts/2026/06/announcing-box3d/). It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feature flag on the 2D crate.
 
 ## Crates
 
-- `boxddd-sys`: low-level FFI for the vendored Box3D C API.
-- `boxddd`: safe Rust layer over worlds, bodies, shapes, joints, queries, events, debug draw, recording, and common value types.
+| Crate | Purpose |
+|---|---|
+| `boxddd-sys` | Low-level FFI for the vendored Box3D C API. |
+| `boxddd` | Engine-agnostic safe Rust layer over worlds, bodies, shapes, joints, queries, events, debug draw, recording, and common value types. |
+| `bevy_boxddd` | First-party Bevy 0.19 plugin crate with components, fixed-step systems, messages, and visible 3D examples. |
 
 ## Status
 
-Experimental `0.1.0` release candidate. The safe layer covers the current staged roadmap slice:
+Experimental `0.1.0` release candidate. The safe layer currently covers:
 
 - world/body creation, stepping, runtime tuning, counters, profiles, and id validation
 - sphere, capsule, hull, mesh, height-field, and compound shape creation/resource ownership
@@ -55,17 +60,65 @@ world.step(1.0 / 60.0, 4);
 # Ok::<(), boxddd::Error>(())
 ```
 
+## Bevy Quickstart
+
+```rust
+use bevy::prelude::*;
+use bevy_boxddd::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugins(BoxdddPhysicsPlugin::default())
+        .add_systems(Startup, setup)
+        .run();
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn((
+        RigidBody::Static,
+        Collider::cuboid(8.0, 0.25, 8.0),
+        Transform::from_xyz(0.0, -0.25, 0.0),
+    ));
+
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::cube(0.5),
+        Transform::from_xyz(0.0, 4.0, 0.0),
+    ));
+}
+```
+
+See [`bevy_boxddd/README.md`](bevy_boxddd/README.md) for Bevy components, messages, fixed-step behavior, and examples.
+
+## Examples
+
+Core examples are listed in [`boxddd/examples/README.md`](boxddd/examples/README.md).
+
+```bash
+cargo run -p boxddd --example hello_world
+cargo run -p boxddd --example joints
+cargo run -p boxddd --example recording_replay
+cargo run -p boxddd --example determinism
+cargo run -p boxddd --example error_handling
+cargo run -p boxddd --example physics_thread
+cargo run -p boxddd --example tokio_async_bridge --features tokio-example
+cargo run -p boxddd --example egui_debug_draw --features egui-example
+cargo run -p bevy_boxddd --example falling_stack_3d
+cargo run -p bevy_boxddd --example contact_messages_3d
+cargo run -p bevy_boxddd --example debug_gizmos_3d
+```
+
 ## Features
 
 - `double-precision`: build and bind Box3D in double-precision position mode.
 - `disable-simd`: forward `BOX3D_DISABLE_SIMD` to the native build.
 - `validate`: forward `BOX3D_VALIDATE` to the native build.
-- `serde`: derive serialization for crate-owned value/id/query/debug/replay metadata types. Native resources, event snapshots, and pointer-bearing config wrappers are not serialized implicitly.
+- `serde`: derive serialization for crate-owned value/id/query/debug/replay metadata types.
 - `serialize`: alias for `serde`.
 - `mint`: conversions for `Vec2`, `Vec3`, `Pos`, `Quat`, `Transform`, and `WorldTransform`.
 - `glam`, `nalgebra`, `cgmath`: conversions for common 3D vector, point, quaternion, and transform representations.
 - `tokio-example`: enables the Tokio async bridge example.
-- `bevy-example`: enables the Bevy ECS integration example.
 - `egui-example`: enables the native egui/wgpu visual debug example.
 
 ## Build
@@ -75,6 +128,7 @@ Default builds use vendored Box3D C sources and pregenerated bindings, so normal
 ```bash
 cargo build --workspace
 cargo nextest run --workspace
+cargo check -p bevy_boxddd --examples
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
@@ -85,33 +139,20 @@ BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
 BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
 ```
 
-## Examples
+## Threading And Async
 
-The example catalog is grouped in [`boxddd/examples/README.md`](boxddd/examples/README.md).
+`World`, native resources, and replay players are intentionally `!Send`/`!Sync`. Keep physics ownership on one thread or one Bevy non-send resource.
 
-```bash
-cargo run -p boxddd --example hello_world
-cargo run -p boxddd --example joints
-cargo run -p boxddd --example recording_replay
-cargo run -p boxddd --example determinism
-cargo run -p boxddd --example mint_interop --features mint
-cargo run -p boxddd --example error_handling
-cargo run -p boxddd --example physics_thread
-cargo run -p boxddd --example tokio_async_bridge --features tokio-example
-cargo run -p boxddd --example bevy_ecs_integration --features bevy-example
-cargo run -p boxddd --example egui_debug_draw --features egui-example
-```
+For async apps, do not hold `World` across async tasks. Use `spawn_blocking`, channels, and plain snapshots such as body positions or transforms. See `physics_thread.rs` and `tokio_async_bridge.rs`.
 
-## Threading
-
-`World`, native resources, and replay players are intentionally `!Send`/`!Sync`. Keep physics ownership on one thread/task. `WorldDef::builder().worker_count(n)` stores the desired Box3D worker count, but a fully safe task-system callback API is deferred until the callback/threading contract is designed separately.
-
-For app integration, create and own `World` on the physics thread or main render thread, then move plain snapshots (`BodyId` lookups converted to positions/transforms) across channels or ECS components. See `physics_thread.rs`, `tokio_async_bridge.rs`, and `bevy_ecs_integration.rs`.
+`bevy_boxddd` stores `boxddd::World` as a Bevy `NonSend` resource and steps it from `FixedUpdate`.
 
 ## Error Handling
 
-The terse APIs panic on misuse such as invalid stale ids. Use the `try_*` APIs at engine/tooling boundaries when invalid input, callback-lock access, or native resource lifetime violations should be handled recoverably as `boxddd::Error`.
+The terse core APIs panic on misuse such as invalid stale ids. Use the `try_*` APIs at engine/tooling boundaries when invalid input, callback-lock access, or native resource lifetime violations should be handled recoverably as `boxddd::Error`.
+
+`bevy_boxddd` reports recoverable integration failures through Bevy messages and an optional log/panic policy.
 
 ## License
 
-`boxddd` and `boxddd-sys` are licensed as MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.
+`boxddd`, `boxddd-sys`, and `bevy_boxddd` are licensed as MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.
