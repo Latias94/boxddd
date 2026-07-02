@@ -3,6 +3,7 @@ use crate::types::{Pos, Quat, Vec3};
 use boxddd_sys::ffi;
 use std::ffi::CString;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum BodyType {
     Static,

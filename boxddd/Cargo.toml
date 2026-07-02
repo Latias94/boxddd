@@ -14,16 +14,39 @@ categories = ["game-engines"]
 [dependencies]
 boxddd-sys.workspace = true
 thiserror.workspace = true
+mint = { version = "0.5", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+cgmath = { version = "0.18", optional = true }
+nalgebra = { version = "0.34", default-features = false, features = ["std"], optional = true }
+glam = { version = "0.32", optional = true }
 
 [features]
 default = []
 double-precision = ["boxddd-sys/double-precision"]
 disable-simd = ["boxddd-sys/disable-simd"]
 validate = ["boxddd-sys/validate"]
+serde = ["dep:serde"]
+serialize = ["serde"]
+mint = ["dep:mint"]
+cgmath = ["dep:cgmath"]
+nalgebra = ["dep:nalgebra"]
+glam = ["dep:glam"]
+
+[package.metadata.docs.rs]
+all-features = false
+no-default-features = false
+features = []
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
+serde_json = "1"
 static_assertions = "1"
 
 [[example]]
 name = "hello_world"
 path = "examples/hello_world.rs"
+
+[[example]]
+name = "mint_interop"
+path = "examples/mint_interop.rs"
+required-features = ["mint"]

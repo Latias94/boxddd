@@ -6,6 +6,7 @@ use std::ptr::NonNull;
 use std::rc::Rc;
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct SurfaceMaterial {
     pub friction: f32,
@@ -672,6 +673,7 @@ impl Drop for Compound {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ShapeType {
     Capsule,

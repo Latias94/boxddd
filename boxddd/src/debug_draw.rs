@@ -9,6 +9,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[repr(transparent)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct HexColor(u32);
 
@@ -45,12 +46,14 @@ impl HexColor {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct DebugShape {
     pub shape_id: ShapeId,
     pub shape_type: Option<ShapeType>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum DebugDrawCommand {
     Shape {
@@ -118,6 +121,7 @@ pub trait DebugDraw {
     fn draw_string(&mut self, _position: Pos, _text: &str, _color: HexColor) {}
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug)]
 pub struct DebugDrawOptions {
     pub drawing_bounds: Aabb,

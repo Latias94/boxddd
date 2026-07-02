@@ -7,6 +7,7 @@ use crate::world::World;
 use boxddd_sys::ffi;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct TreeStats {
     pub node_visits: i32,
@@ -23,6 +24,7 @@ impl TreeStats {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct QueryFilter {
     pub category_bits: u64,
@@ -73,11 +75,13 @@ impl Default for QueryFilter {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct QueryHit {
     pub shape_id: ShapeId,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RayHit {
     pub shape_id: ShapeId,
@@ -89,6 +93,7 @@ pub struct RayHit {
     pub child_index: i32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RayClosestHit {
     pub shape_id: ShapeId,

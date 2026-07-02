@@ -6,6 +6,7 @@ pub fn is_valid_float(value: f32) -> bool {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Vec2 {
     pub x: f32,
@@ -49,6 +50,7 @@ impl From<(f32, f32)> for Vec2 {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
@@ -115,6 +117,7 @@ impl From<(f32, f32, f32)> for Vec3 {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Quat {
     pub v: Vec3,
@@ -170,6 +173,7 @@ impl Default for Quat {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Transform {
     pub p: Vec3,
@@ -224,6 +228,7 @@ pub type PosScalar = f32;
 pub type PosScalar = f64;
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Pos {
     pub x: PosScalar,
@@ -310,6 +315,7 @@ impl From<(f64, f64, f64)> for Pos {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct WorldTransform {
     pub p: Pos,
@@ -350,6 +356,7 @@ impl WorldTransform {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Matrix3 {
     pub cx: Vec3,
@@ -378,6 +385,7 @@ impl Matrix3 {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Aabb {
     pub lower_bound: Vec3,
@@ -403,6 +411,7 @@ impl Aabb {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Plane {
     pub normal: Vec3,
@@ -428,6 +437,7 @@ impl Plane {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Filter {
     pub category_bits: u64,
@@ -462,6 +472,7 @@ impl Default for Filter {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct MassData {
     pub mass: f32,
@@ -490,6 +501,7 @@ impl MassData {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct MotionLocks {
     pub linear_x: bool,
@@ -547,6 +559,7 @@ impl MotionLocks {
 
 pub const MAX_MANIFOLD_POINTS: usize = 4;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ManifoldPoint {
     pub anchor_a: Vec3,
@@ -579,6 +592,7 @@ impl ManifoldPoint {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Manifold {
     pub points: [ManifoldPoint; MAX_MANIFOLD_POINTS],
@@ -609,6 +623,7 @@ impl Manifold {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ContactData {
     pub contact_id: ContactId,
@@ -640,6 +655,7 @@ impl ContactData {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Capacity {
     pub static_shape_count: i32,
@@ -673,6 +689,7 @@ impl Capacity {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Profile {
     pub step: f32,
@@ -731,6 +748,7 @@ impl Profile {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Counters {
     pub body_count: i32,
@@ -810,6 +828,7 @@ impl Default for Counters {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Version {
     pub major: i32,
@@ -829,6 +848,7 @@ impl Version {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct BodyId {
     pub index1: i32,
@@ -862,6 +882,7 @@ impl BodyId {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ShapeId {
     pub index1: i32,
@@ -895,6 +916,7 @@ impl ShapeId {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct JointId {
     pub index1: i32,
@@ -928,6 +950,7 @@ impl JointId {
 }
 
 #[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ContactId {
     pub index1: i32,

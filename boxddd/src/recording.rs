@@ -200,6 +200,7 @@ impl Drop for Recording {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RecQueryType {
     OverlapAabb,
@@ -226,6 +227,7 @@ impl RecQueryType {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecPlayerInfo {
     pub frame_count: i32,
@@ -250,6 +252,7 @@ impl RecPlayerInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecQueryInfo {
     pub query_type: RecQueryType,
@@ -291,6 +294,7 @@ impl RecQueryInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RecQueryHit {
     pub shape_id: ShapeId,
@@ -311,6 +315,7 @@ impl RecQueryHit {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ReplayWorldId {
     pub index1: u16,

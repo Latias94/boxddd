@@ -18,7 +18,15 @@ pub mod core {
 pub mod debug_draw;
 pub mod error;
 pub mod events;
+#[cfg(any(
+    feature = "mint",
+    feature = "glam",
+    feature = "cgmath",
+    feature = "nalgebra"
+))]
+mod interop;
 pub mod joints;
+pub mod prelude;
 pub mod query;
 pub mod recording;
 pub mod shapes;

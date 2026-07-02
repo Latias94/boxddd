@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo nextest run --workspace
+      - run: cargo check -p boxddd --examples
+      - run: cargo run -p boxddd --example hello_world
+      - run: cargo run -p boxddd --example joints
+      - run: cargo run -p boxddd --example recording_replay
+      - run: cargo run -p boxddd --example determinism
+
+  docs-and-features:
+    name: docs and feature matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+      - run: cargo check -p boxddd --no-default-features
+      - run: cargo check -p boxddd --features validate
+      - run: cargo check -p boxddd --features disable-simd
+      - run: cargo check -p boxddd --features double-precision
+      - run: cargo check -p boxddd --features serde
+      - run: cargo check -p boxddd --features mint
+      - run: cargo check -p boxddd --features glam
+      - run: cargo check -p boxddd --features nalgebra
+      - run: cargo check -p boxddd --features cgmath
+      - run: cargo check -p boxddd --all-features --tests --examples
+      - run: cargo test -p boxddd --features serde --test serde_values
+      - run: cargo test -p boxddd --features mint --test interop
+      - run: cargo test -p boxddd --features glam --test interop
+      - run: cargo test -p boxddd --features nalgebra --test interop
+      - run: cargo test -p boxddd --features cgmath --test interop
+      - run: cargo run -p boxddd --example mint_interop --features mint
+
+  package-and-bindings:
+    name: package and bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo package -p boxddd-sys --allow-dirty
+      - run: cargo package -p boxddd --allow-dirty
+      - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
+      - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
