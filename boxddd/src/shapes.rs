@@ -1,6 +1,9 @@
 use crate::error::{Error, Result};
-use crate::types::{Filter, Vec3};
+use crate::types::{Filter, Transform, Vec3};
 use boxddd_sys::ffi;
+use std::marker::PhantomData;
+use std::ptr::NonNull;
+use std::rc::Rc;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
@@ -193,6 +196,55 @@ impl PartialEq for Sphere {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Capsule {
+    raw: ffi::b3Capsule,
+}
+
+impl Capsule {
+    #[inline]
+    pub fn new(center1: impl Into<Vec3>, center2: impl Into<Vec3>, radius: f32) -> Self {
+        Self {
+            raw: ffi::b3Capsule {
+                center1: center1.into().into_raw(),
+                center2: center2.into().into_raw(),
+                radius,
+            },
+        }
+    }
+
+    #[inline]
+    pub const fn from_raw(raw: ffi::b3Capsule) -> Self {
+        Self { raw }
+    }
+
+    #[inline]
+    pub const fn raw(&self) -> &ffi::b3Capsule {
+        &self.raw
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if Vec3::from_raw(self.raw.center1).is_valid()
+            && Vec3::from_raw(self.raw.center2).is_valid()
+            && self.raw.radius.is_finite()
+            && self.raw.radius > 0.0
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+}
+
+impl PartialEq for Capsule {
+    fn eq(&self, other: &Self) -> bool {
+        raw_vec3_eq(self.raw.center1, other.raw.center1)
+            && raw_vec3_eq(self.raw.center2, other.raw.center2)
+            && self.raw.radius == other.raw.radius
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct BoxHull {
     raw: ffi::b3BoxHull,
@@ -210,6 +262,37 @@ impl BoxHull {
     pub fn new(hx: f32, hy: f32, hz: f32) -> Self {
         Self {
             raw: unsafe { ffi::b3MakeBoxHull(hx, hy, hz) },
+        }
+    }
+
+    #[inline]
+    pub fn offset(hx: f32, hy: f32, hz: f32, offset: impl Into<Vec3>) -> Self {
+        Self {
+            raw: unsafe { ffi::b3MakeOffsetBoxHull(hx, hy, hz, offset.into().into_raw()) },
+        }
+    }
+
+    #[inline]
+    pub fn transformed(hx: f32, hy: f32, hz: f32, transform: Transform) -> Self {
+        Self {
+            raw: unsafe { ffi::b3MakeTransformedBoxHull(hx, hy, hz, transform.into_raw()) },
+        }
+    }
+
+    #[inline]
+    pub fn scaled(
+        half_widths: impl Into<Vec3>,
+        transform: Transform,
+        post_scale: impl Into<Vec3>,
+    ) -> Self {
+        Self {
+            raw: unsafe {
+                ffi::b3MakeScaledBoxHull(
+                    half_widths.into().into_raw(),
+                    transform.into_raw(),
+                    post_scale.into().into_raw(),
+                )
+            },
         }
     }
 
@@ -292,4 +375,277 @@ fn raw_planes_eq(a: &[ffi::b3Plane; 6], b: &[ffi::b3Plane; 6]) -> bool {
     a.iter()
         .zip(b)
         .all(|(a, b)| raw_vec3_eq(a.normal, b.normal) && a.offset == b.offset)
+}
+
+#[derive(Debug)]
+pub struct Hull {
+    raw: NonNull<ffi::b3HullData>,
+    _not_send_sync: PhantomData<Rc<()>>,
+}
+
+impl Hull {
+    pub fn from_points(points: impl AsRef<[Vec3]>, max_vertex_count: i32) -> Result<Self> {
+        let points = points.as_ref();
+        if points.len() < 4 || max_vertex_count <= 0 || points.iter().any(|point| !point.is_valid())
+        {
+            return Err(Error::InvalidArgument);
+        }
+        let raw_points: Vec<_> = points.iter().map(|point| point.into_raw()).collect();
+        let ptr = unsafe {
+            ffi::b3CreateHull(
+                raw_points.as_ptr(),
+                raw_points.len() as i32,
+                max_vertex_count,
+            )
+        };
+        Self::from_ptr(ptr)
+    }
+
+    pub fn cylinder(height: f32, radius: f32, y_offset: f32, sides: i32) -> Result<Self> {
+        if !height.is_finite()
+            || height <= 0.0
+            || !radius.is_finite()
+            || radius <= 0.0
+            || !y_offset.is_finite()
+            || sides < 3
+        {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe { ffi::b3CreateCylinder(height, radius, y_offset, sides) })
+    }
+
+    pub fn cone(height: f32, radius1: f32, radius2: f32, slices: i32) -> Result<Self> {
+        if !height.is_finite()
+            || height <= 0.0
+            || !radius1.is_finite()
+            || radius1 < 0.0
+            || !radius2.is_finite()
+            || radius2 < 0.0
+            || slices < 3
+        {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe { ffi::b3CreateCone(height, radius1, radius2, slices) })
+    }
+
+    pub fn rock(radius: f32) -> Result<Self> {
+        if !radius.is_finite() || radius <= 0.0 {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe { ffi::b3CreateRock(radius) })
+    }
+
+    #[inline]
+    pub fn as_hull_data(&self) -> &ffi::b3HullData {
+        unsafe { self.raw.as_ref() }
+    }
+
+    #[inline]
+    pub(crate) fn as_ptr(&self) -> *const ffi::b3HullData {
+        self.raw.as_ptr()
+    }
+
+    fn from_ptr(ptr: *mut ffi::b3HullData) -> Result<Self> {
+        NonNull::new(ptr)
+            .map(|raw| Self {
+                raw,
+                _not_send_sync: PhantomData,
+            })
+            .ok_or(Error::InvalidArgument)
+    }
+}
+
+impl Drop for Hull {
+    fn drop(&mut self) {
+        unsafe { ffi::b3DestroyHull(self.raw.as_ptr()) };
+    }
+}
+
+#[derive(Debug)]
+pub struct MeshData {
+    raw: NonNull<ffi::b3MeshData>,
+    _not_send_sync: PhantomData<Rc<()>>,
+}
+
+impl MeshData {
+    pub fn box_mesh(
+        center: impl Into<Vec3>,
+        extent: impl Into<Vec3>,
+        identify_edges: bool,
+    ) -> Result<Self> {
+        let center = center.into();
+        let extent = extent.into();
+        if !center.is_valid()
+            || !extent.is_valid()
+            || extent.x <= 0.0
+            || extent.y <= 0.0
+            || extent.z <= 0.0
+        {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe {
+            ffi::b3CreateBoxMesh(center.into_raw(), extent.into_raw(), identify_edges)
+        })
+    }
+
+    pub fn grid_mesh(
+        x_count: i32,
+        z_count: i32,
+        cell_width: f32,
+        material_count: i32,
+        identify_edges: bool,
+    ) -> Result<Self> {
+        if x_count < 2
+            || z_count < 2
+            || !cell_width.is_finite()
+            || cell_width <= 0.0
+            || material_count <= 0
+        {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe {
+            ffi::b3CreateGridMesh(x_count, z_count, cell_width, material_count, identify_edges)
+        })
+    }
+
+    #[inline]
+    pub(crate) fn as_ptr(&self) -> *const ffi::b3MeshData {
+        self.raw.as_ptr()
+    }
+
+    fn from_ptr(ptr: *mut ffi::b3MeshData) -> Result<Self> {
+        NonNull::new(ptr)
+            .map(|raw| Self {
+                raw,
+                _not_send_sync: PhantomData,
+            })
+            .ok_or(Error::InvalidArgument)
+    }
+}
+
+impl Drop for MeshData {
+    fn drop(&mut self) {
+        unsafe { ffi::b3DestroyMesh(self.raw.as_ptr()) };
+    }
+}
+
+#[derive(Debug)]
+pub struct HeightField {
+    raw: NonNull<ffi::b3HeightFieldData>,
+    _not_send_sync: PhantomData<Rc<()>>,
+}
+
+impl HeightField {
+    pub fn grid(
+        row_count: i32,
+        column_count: i32,
+        scale: impl Into<Vec3>,
+        make_holes: bool,
+    ) -> Result<Self> {
+        let scale = scale.into();
+        if row_count < 2
+            || column_count < 2
+            || !scale.is_valid()
+            || scale.x <= 0.0
+            || scale.y <= 0.0
+            || scale.z <= 0.0
+        {
+            return Err(Error::InvalidArgument);
+        }
+        Self::from_ptr(unsafe {
+            ffi::b3CreateGrid(row_count, column_count, scale.into_raw(), make_holes)
+        })
+    }
+
+    #[inline]
+    pub(crate) fn as_ptr(&self) -> *const ffi::b3HeightFieldData {
+        self.raw.as_ptr()
+    }
+
+    fn from_ptr(ptr: *mut ffi::b3HeightFieldData) -> Result<Self> {
+        NonNull::new(ptr)
+            .map(|raw| Self {
+                raw,
+                _not_send_sync: PhantomData,
+            })
+            .ok_or(Error::InvalidArgument)
+    }
+}
+
+impl Drop for HeightField {
+    fn drop(&mut self) {
+        unsafe { ffi::b3DestroyHeightField(self.raw.as_ptr()) };
+    }
+}
+
+#[derive(Debug)]
+pub struct Compound {
+    raw: NonNull<ffi::b3CompoundData>,
+    _not_send_sync: PhantomData<Rc<()>>,
+}
+
+impl Compound {
+    pub fn single_sphere(sphere: Sphere, material: SurfaceMaterial) -> Result<Self> {
+        sphere.validate()?;
+        material.validate()?;
+        let mut sphere_def = ffi::b3CompoundSphereDef {
+            sphere: *sphere.raw(),
+            material: material.into_raw(),
+        };
+        let mut def = ffi::b3CompoundDef {
+            capsules: std::ptr::null_mut(),
+            capsuleCount: 0,
+            hulls: std::ptr::null_mut(),
+            hullCount: 0,
+            meshes: std::ptr::null_mut(),
+            meshCount: 0,
+            spheres: &mut sphere_def,
+            sphereCount: 1,
+        };
+        Self::from_ptr(unsafe { ffi::b3CreateCompound(&mut def) })
+    }
+
+    #[inline]
+    pub(crate) fn as_ptr(&self) -> *const ffi::b3CompoundData {
+        self.raw.as_ptr()
+    }
+
+    fn from_ptr(ptr: *mut ffi::b3CompoundData) -> Result<Self> {
+        NonNull::new(ptr)
+            .map(|raw| Self {
+                raw,
+                _not_send_sync: PhantomData,
+            })
+            .ok_or(Error::InvalidArgument)
+    }
+}
+
+impl Drop for Compound {
+    fn drop(&mut self) {
+        unsafe { ffi::b3DestroyCompound(self.raw.as_ptr()) };
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ShapeType {
+    Capsule,
+    Compound,
+    HeightField,
+    Hull,
+    Mesh,
+    Sphere,
+}
+
+impl ShapeType {
+    pub const fn from_raw(raw: ffi::b3ShapeType) -> Option<Self> {
+        match raw {
+            ffi::b3ShapeType_b3_capsuleShape => Some(Self::Capsule),
+            ffi::b3ShapeType_b3_compoundShape => Some(Self::Compound),
+            ffi::b3ShapeType_b3_heightShape => Some(Self::HeightField),
+            ffi::b3ShapeType_b3_hullShape => Some(Self::Hull),
+            ffi::b3ShapeType_b3_meshShape => Some(Self::Mesh),
+            ffi::b3ShapeType_b3_sphereShape => Some(Self::Sphere),
+            _ => None,
+        }
+    }
 }

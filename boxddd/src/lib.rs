@@ -19,7 +19,10 @@ pub mod world;
 
 pub use body::{BodyDef, BodyDefBuilder, BodyType};
 pub use error::{ApiError, ApiResult, Error, Result};
-pub use shapes::{BoxHull, ShapeDef, ShapeDefBuilder, Sphere, SurfaceMaterial};
+pub use shapes::{
+    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder, ShapeType,
+    Sphere, SurfaceMaterial,
+};
 pub use types::{
     Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, Manifold,
     ManifoldPoint, MassData, Matrix3, MotionLocks, Plane, Pos, Profile, Quat, ShapeId, Transform,
