@@ -21,8 +21,9 @@ pub use body::{BodyDef, BodyDefBuilder, BodyType};
 pub use error::{ApiError, ApiResult, Error, Result};
 pub use shapes::{BoxHull, ShapeDef, ShapeDefBuilder, Sphere, SurfaceMaterial};
 pub use types::{
-    Aabb, BodyId, Capacity, ContactId, Counters, Filter, JointId, MassData, Matrix3, Plane, Pos,
-    Profile, Quat, ShapeId, Transform, Vec2, Vec3, Version, WorldTransform, is_valid_float,
+    Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, Manifold,
+    ManifoldPoint, MassData, Matrix3, MotionLocks, Plane, Pos, Profile, Quat, ShapeId, Transform,
+    Vec2, Vec3, Version, WorldTransform, is_valid_float,
 };
 pub use world::{
     World, WorldDef, WorldDefBuilder, allocated_byte_count, is_double_precision, version,

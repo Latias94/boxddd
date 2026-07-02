@@ -19,6 +19,16 @@ impl BodyType {
             Self::Dynamic => ffi::b3BodyType_b3_dynamicBody,
         }
     }
+
+    #[inline]
+    pub const fn from_raw(raw: ffi::b3BodyType) -> Option<Self> {
+        match raw {
+            ffi::b3BodyType_b3_staticBody => Some(Self::Static),
+            ffi::b3BodyType_b3_kinematicBody => Some(Self::Kinematic),
+            ffi::b3BodyType_b3_dynamicBody => Some(Self::Dynamic),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

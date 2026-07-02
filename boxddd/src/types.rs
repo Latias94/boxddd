@@ -491,6 +491,156 @@ impl MassData {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct MotionLocks {
+    pub linear_x: bool,
+    pub linear_y: bool,
+    pub linear_z: bool,
+    pub angular_x: bool,
+    pub angular_y: bool,
+    pub angular_z: bool,
+}
+
+impl MotionLocks {
+    #[inline]
+    pub const fn new(
+        linear_x: bool,
+        linear_y: bool,
+        linear_z: bool,
+        angular_x: bool,
+        angular_y: bool,
+        angular_z: bool,
+    ) -> Self {
+        Self {
+            linear_x,
+            linear_y,
+            linear_z,
+            angular_x,
+            angular_y,
+            angular_z,
+        }
+    }
+
+    #[inline]
+    pub const fn from_raw(raw: ffi::b3MotionLocks) -> Self {
+        Self {
+            linear_x: raw.linearX,
+            linear_y: raw.linearY,
+            linear_z: raw.linearZ,
+            angular_x: raw.angularX,
+            angular_y: raw.angularY,
+            angular_z: raw.angularZ,
+        }
+    }
+
+    #[inline]
+    pub const fn into_raw(self) -> ffi::b3MotionLocks {
+        ffi::b3MotionLocks {
+            linearX: self.linear_x,
+            linearY: self.linear_y,
+            linearZ: self.linear_z,
+            angularX: self.angular_x,
+            angularY: self.angular_y,
+            angularZ: self.angular_z,
+        }
+    }
+}
+
+pub const MAX_MANIFOLD_POINTS: usize = 4;
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct ManifoldPoint {
+    pub anchor_a: Vec3,
+    pub anchor_b: Vec3,
+    pub separation: f32,
+    pub base_separation: f32,
+    pub normal_impulse: f32,
+    pub total_normal_impulse: f32,
+    pub normal_velocity: f32,
+    pub feature_id: u32,
+    pub triangle_index: i32,
+    pub persisted: bool,
+}
+
+impl ManifoldPoint {
+    #[inline]
+    pub const fn from_raw(raw: ffi::b3ManifoldPoint) -> Self {
+        Self {
+            anchor_a: Vec3::from_raw(raw.anchorA),
+            anchor_b: Vec3::from_raw(raw.anchorB),
+            separation: raw.separation,
+            base_separation: raw.baseSeparation,
+            normal_impulse: raw.normalImpulse,
+            total_normal_impulse: raw.totalNormalImpulse,
+            normal_velocity: raw.normalVelocity,
+            feature_id: raw.featureId,
+            triangle_index: raw.triangleIndex,
+            persisted: raw.persisted,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct Manifold {
+    pub points: [ManifoldPoint; MAX_MANIFOLD_POINTS],
+    pub normal: Vec3,
+    pub twist_impulse: f32,
+    pub friction_impulse: Vec3,
+    pub rolling_impulse: Vec3,
+    pub point_count: i32,
+}
+
+impl Manifold {
+    #[inline]
+    pub fn points(&self) -> &[ManifoldPoint] {
+        let count = self.point_count.clamp(0, MAX_MANIFOLD_POINTS as i32) as usize;
+        &self.points[..count]
+    }
+
+    #[inline]
+    pub fn from_raw(raw: ffi::b3Manifold) -> Self {
+        Self {
+            points: raw.points.map(ManifoldPoint::from_raw),
+            normal: Vec3::from_raw(raw.normal),
+            twist_impulse: raw.twistImpulse,
+            friction_impulse: Vec3::from_raw(raw.frictionImpulse),
+            rolling_impulse: Vec3::from_raw(raw.rollingImpulse),
+            point_count: raw.pointCount.clamp(0, MAX_MANIFOLD_POINTS as i32),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ContactData {
+    pub contact_id: ContactId,
+    pub shape_id_a: ShapeId,
+    pub shape_id_b: ShapeId,
+    pub manifolds: Vec<Manifold>,
+}
+
+impl ContactData {
+    #[inline]
+    pub unsafe fn from_raw(raw: ffi::b3ContactData) -> Self {
+        let manifolds = if raw.manifolds.is_null() || raw.manifoldCount <= 0 {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(raw.manifolds, raw.manifoldCount as usize) }
+                .iter()
+                .copied()
+                .map(Manifold::from_raw)
+                .collect()
+        };
+
+        Self {
+            contact_id: ContactId::from_raw(raw.contactId),
+            shape_id_a: ShapeId::from_raw(raw.shapeIdA),
+            shape_id_b: ShapeId::from_raw(raw.shapeIdB),
+            manifolds,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Capacity {
     pub static_shape_count: i32,
     pub dynamic_shape_count: i32,
@@ -841,6 +991,10 @@ const _: () = {
     assert!(::core::mem::align_of::<Filter>() == ::core::mem::align_of::<ffi::b3Filter>());
     assert!(::core::mem::size_of::<MassData>() == ::core::mem::size_of::<ffi::b3MassData>());
     assert!(::core::mem::align_of::<MassData>() == ::core::mem::align_of::<ffi::b3MassData>());
+    assert!(::core::mem::size_of::<MotionLocks>() == ::core::mem::size_of::<ffi::b3MotionLocks>());
+    assert!(
+        ::core::mem::align_of::<MotionLocks>() == ::core::mem::align_of::<ffi::b3MotionLocks>()
+    );
     assert!(::core::mem::size_of::<Capacity>() == ::core::mem::size_of::<ffi::b3Capacity>());
     assert!(::core::mem::align_of::<Capacity>() == ::core::mem::align_of::<ffi::b3Capacity>());
     assert!(::core::mem::size_of::<BodyId>() == ::core::mem::size_of::<ffi::b3BodyId>());
