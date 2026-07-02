@@ -13,6 +13,7 @@ fn parse_bool_env(key: &str) -> bool {
 }
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(has_pregenerated)");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=third-party/box3d/include/box3d/box3d.h");
     println!("cargo:rerun-if-changed=third-party/box3d");
@@ -22,23 +23,46 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CARGO_CFG_DOCSRS");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let _out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
     let profile = env::var("PROFILE").unwrap_or_else(|_| "release".into());
     let is_debug = profile == "debug";
     let is_docsrs = env::var("DOCS_RS").is_ok() || env::var("CARGO_CFG_DOCSRS").is_ok();
+    let pregenerated = if cfg!(feature = "double-precision") {
+        manifest_dir
+            .join("src")
+            .join("bindings_pregenerated_double.rs")
+    } else {
+        manifest_dir.join("src").join("bindings_pregenerated.rs")
+    };
+    let has_pregenerated = pregenerated.exists();
+    if has_pregenerated {
+        println!("cargo:rustc-cfg=has_pregenerated");
+    }
 
-    if parse_bool_env("BOXDDD_SYS_FORCE_BINDGEN") {
+    let force_bindgen = parse_bool_env("BOXDDD_SYS_FORCE_BINDGEN");
+    if force_bindgen || (!has_pregenerated && !is_docsrs) {
         #[cfg(feature = "bindgen")]
-        let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-        #[cfg(feature = "bindgen")]
-        generate_bindings(&manifest_dir, &out_dir);
+        generate_bindings(&manifest_dir, &_out_dir);
         #[cfg(not(feature = "bindgen"))]
-        panic!("BOXDDD_SYS_FORCE_BINDGEN=1 requires the `bindgen` feature");
+        {
+            if force_bindgen {
+                panic!("BOXDDD_SYS_FORCE_BINDGEN=1 requires the `bindgen` feature");
+            }
+            panic!(
+                "pregenerated Box3D bindings are missing for the selected ABI mode; enable `bindgen` or refresh checked-in bindings"
+            );
+        }
     }
 
     if is_docsrs || parse_bool_env("BOXDDD_SYS_SKIP_CC") {
+        if is_docsrs {
+            println!("cargo:warning=DOCS_RS detected: skipping native Box3D C build");
+        } else {
+            println!("cargo:warning=Skipping native Box3D C build due to BOXDDD_SYS_SKIP_CC");
+        }
         return;
     }
 
@@ -62,6 +86,7 @@ fn generate_bindings(manifest_dir: &Path, out_dir: &Path) {
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .clang_args(["-x", "c", "-std=c17"])
         .clang_arg(format!("-I{}", include_root.display()))
+        .clang_args(double_precision_clang_args())
         .allowlist_function("b3.*")
         .allowlist_type("b3.*")
         .allowlist_var("B3_.*")
@@ -72,6 +97,21 @@ fn generate_bindings(manifest_dir: &Path, out_dir: &Path) {
     bindings
         .write_to_file(out_dir.join("bindings.rs"))
         .expect("failed to write Box3D bindings");
+}
+
+#[cfg(feature = "bindgen")]
+fn double_precision_clang_args() -> Vec<&'static str> {
+    if cfg!(feature = "double-precision") {
+        vec!["-DBOX3D_DOUBLE_PRECISION"]
+    } else {
+        Vec::new()
+    }
+}
+
+#[cfg(not(feature = "bindgen"))]
+#[allow(dead_code)]
+fn generate_bindings(_manifest_dir: &Path, _out_dir: &Path) {
+    unreachable!("generate_bindings is only available with the `bindgen` feature enabled");
 }
 
 fn add_msvc_c_standard_flag(build: &mut cc::Build) {
@@ -127,6 +167,9 @@ fn build_box3d_from_source(manifest_dir: &Path, target_env: &str, target_os: &st
     }
     if cfg!(feature = "validate") {
         build.define("BOX3D_VALIDATE", None);
+    }
+    if cfg!(feature = "double-precision") {
+        build.define("BOX3D_DOUBLE_PRECISION", None);
     }
 
     build.compile("box3d");

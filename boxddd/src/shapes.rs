@@ -113,7 +113,7 @@ impl Default for ShapeDefBuilder {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug)]
 pub struct Sphere {
     raw: ffi::b3Sphere,
 }
@@ -140,7 +140,14 @@ impl Sphere {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+impl PartialEq for Sphere {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        raw_vec3_eq(self.raw.center, other.raw.center) && self.raw.radius == other.raw.radius
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct BoxHull {
     raw: ffi::b3BoxHull,
 }
@@ -169,4 +176,74 @@ impl BoxHull {
     pub const fn hull_data(&self) -> &ffi::b3HullData {
         &self.raw.base
     }
+}
+
+impl PartialEq for BoxHull {
+    fn eq(&self, other: &Self) -> bool {
+        raw_hull_data_eq(&self.raw.base, &other.raw.base)
+            && raw_hull_vertices_eq(&self.raw.boxVertices, &other.raw.boxVertices)
+            && raw_vec3_array_eq(&self.raw.boxPoints, &other.raw.boxPoints)
+            && raw_hull_edges_eq(&self.raw.boxEdges, &other.raw.boxEdges)
+            && raw_hull_faces_eq(&self.raw.boxFaces, &other.raw.boxFaces)
+            && raw_planes_eq(&self.raw.boxPlanes, &other.raw.boxPlanes)
+    }
+}
+
+#[inline]
+fn raw_vec3_eq(a: ffi::b3Vec3, b: ffi::b3Vec3) -> bool {
+    a.x == b.x && a.y == b.y && a.z == b.z
+}
+
+#[inline]
+fn raw_matrix3_eq(a: &ffi::b3Matrix3, b: &ffi::b3Matrix3) -> bool {
+    raw_vec3_eq(a.cx, b.cx) && raw_vec3_eq(a.cy, b.cy) && raw_vec3_eq(a.cz, b.cz)
+}
+
+#[inline]
+fn raw_aabb_eq(a: &ffi::b3AABB, b: &ffi::b3AABB) -> bool {
+    raw_vec3_eq(a.lowerBound, b.lowerBound) && raw_vec3_eq(a.upperBound, b.upperBound)
+}
+
+fn raw_hull_data_eq(a: &ffi::b3HullData, b: &ffi::b3HullData) -> bool {
+    a.version == b.version
+        && a.byteCount == b.byteCount
+        && a.hash == b.hash
+        && raw_aabb_eq(&a.aabb, &b.aabb)
+        && a.surfaceArea == b.surfaceArea
+        && a.volume == b.volume
+        && a.innerRadius == b.innerRadius
+        && raw_vec3_eq(a.center, b.center)
+        && raw_matrix3_eq(&a.centralInertia, &b.centralInertia)
+        && a.vertexCount == b.vertexCount
+        && a.vertexOffset == b.vertexOffset
+        && a.pointOffset == b.pointOffset
+        && a.edgeCount == b.edgeCount
+        && a.edgeOffset == b.edgeOffset
+        && a.faceCount == b.faceCount
+        && a.faceOffset == b.faceOffset
+        && a.planeOffset == b.planeOffset
+}
+
+fn raw_hull_vertices_eq(a: &[ffi::b3HullVertex; 8], b: &[ffi::b3HullVertex; 8]) -> bool {
+    a.iter().zip(b).all(|(a, b)| a.edge == b.edge)
+}
+
+fn raw_vec3_array_eq(a: &[ffi::b3Vec3; 8], b: &[ffi::b3Vec3; 8]) -> bool {
+    a.iter().zip(b).all(|(a, b)| raw_vec3_eq(*a, *b))
+}
+
+fn raw_hull_edges_eq(a: &[ffi::b3HullHalfEdge; 24], b: &[ffi::b3HullHalfEdge; 24]) -> bool {
+    a.iter().zip(b).all(|(a, b)| {
+        a.next == b.next && a.twin == b.twin && a.origin == b.origin && a.face == b.face
+    })
+}
+
+fn raw_hull_faces_eq(a: &[ffi::b3HullFace; 6], b: &[ffi::b3HullFace; 6]) -> bool {
+    a.iter().zip(b).all(|(a, b)| a.edge == b.edge)
+}
+
+fn raw_planes_eq(a: &[ffi::b3Plane; 6], b: &[ffi::b3Plane; 6]) -> bool {
+    a.iter()
+        .zip(b)
+        .all(|(a, b)| raw_vec3_eq(a.normal, b.normal) && a.offset == b.offset)
 }

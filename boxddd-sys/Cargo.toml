@@ -8,12 +8,14 @@ repository.workspace = true
 homepage.workspace = true
 links = "box3d"
 build = "build.rs"
+readme = "README.md"
 documentation = "https://docs.rs/boxddd-sys"
 keywords = ["box3d", "physics", "ffi", "bindings", "game"]
 categories = ["external-ffi-bindings", "game-engines"]
 
 include = [
     "Cargo.toml",
+    "README.md",
     "build.rs",
     "src/**",
     "third-party/box3d/include/**/*.h",
@@ -23,10 +25,17 @@ include = [
     "third-party/box3d/LICENSE",
 ]
 
+[package.metadata.docs.rs]
+all-features = false
+no-default-features = true
+features = []
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 default = ["build-from-source"]
 build-from-source = []
 bindgen = ["dep:bindgen"]
+double-precision = []
 disable-simd = []
 validate = []
 
