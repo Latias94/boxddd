@@ -82,6 +82,10 @@ impl ShapeDef {
         Filter::from_raw(self.raw.filter)
     }
 
+    pub fn surface_material(&self) -> SurfaceMaterial {
+        SurfaceMaterial::from_raw(self.raw.baseMaterial)
+    }
+
     pub fn validate(&self) -> Result<()> {
         SurfaceMaterial::from_raw(self.raw.baseMaterial).validate()?;
         if self.raw.density.is_finite()
@@ -133,8 +137,50 @@ impl ShapeDefBuilder {
     }
 
     #[inline]
+    pub fn surface_material(mut self, material: SurfaceMaterial) -> Self {
+        self.def.raw.baseMaterial = material.into_raw();
+        self
+    }
+
+    #[inline]
+    pub fn user_material_id(mut self, user_material_id: u64) -> Self {
+        self.def.raw.baseMaterial.userMaterialId = user_material_id;
+        self
+    }
+
+    #[inline]
     pub fn sensor(mut self, is_sensor: bool) -> Self {
         self.def.raw.isSensor = is_sensor;
+        self
+    }
+
+    #[inline]
+    pub fn enable_sensor_events(mut self, enabled: bool) -> Self {
+        self.def.raw.enableSensorEvents = enabled;
+        self
+    }
+
+    #[inline]
+    pub fn enable_contact_events(mut self, enabled: bool) -> Self {
+        self.def.raw.enableContactEvents = enabled;
+        self
+    }
+
+    #[inline]
+    pub fn enable_hit_events(mut self, enabled: bool) -> Self {
+        self.def.raw.enableHitEvents = enabled;
+        self
+    }
+
+    #[inline]
+    pub fn enable_pre_solve_events(mut self, enabled: bool) -> Self {
+        self.def.raw.enablePreSolveEvents = enabled;
+        self
+    }
+
+    #[inline]
+    pub fn enable_custom_filtering(mut self, enabled: bool) -> Self {
+        self.def.raw.enableCustomFiltering = enabled;
         self
     }
 

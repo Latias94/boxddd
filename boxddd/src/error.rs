@@ -37,4 +37,6 @@ pub enum Error {
     ResourceLifetimeViolation,
     #[error("Rust callback panicked and native traversal was stopped")]
     CallbackPanicked,
+    #[error("no callback slot is available")]
+    CallbackSlotsExhausted,
 }

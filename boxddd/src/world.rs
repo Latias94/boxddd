@@ -1,5 +1,7 @@
 use crate::body::{BodyDef, BodyType};
+use crate::callbacks::WorldCallbacks;
 use crate::core::{box3d_lock, callback_state, debug_checks};
+use crate::debug_draw::{DebugShapeRegistry, create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeType, Sphere,
@@ -95,6 +97,8 @@ impl Default for WorldDefBuilder {
 pub struct World {
     raw: ffi::b3WorldId,
     resources: Vec<ShapeResource>,
+    pub(crate) callbacks: WorldCallbacks,
+    _debug_shapes: Box<DebugShapeRegistry>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
@@ -111,12 +115,21 @@ impl World {
         callback_state::check_not_in_callback()?;
         def.validate()?;
 
+        let debug_shapes = Box::<DebugShapeRegistry>::default();
+        let mut raw_def = *def.raw();
+        raw_def.createDebugShape = Some(create_debug_shape);
+        raw_def.destroyDebugShape = Some(destroy_debug_shape);
+        raw_def.userDebugShapeContext =
+            (&*debug_shapes) as *const DebugShapeRegistry as *mut std::ffi::c_void;
+
         let _guard = box3d_lock::lock();
-        let raw = unsafe { create_world_raw(def.raw()) };
+        let raw = unsafe { create_world_raw(&raw_def) };
         if unsafe { ffi::b3World_IsValid(raw) } {
             Ok(Self {
                 raw,
                 resources: Vec::new(),
+                callbacks: WorldCallbacks::default(),
+                _debug_shapes: debug_shapes,
                 _not_send_sync: PhantomData,
             })
         } else {
@@ -148,7 +161,11 @@ impl World {
             return Err(Error::InvalidArgument);
         }
         let _guard = box3d_lock::lock();
+        self.callbacks.reset_panics();
         unsafe { ffi::b3World_Step(self.raw, time_step, sub_step_count) };
+        if self.callbacks.panicked() {
+            return Err(Error::CallbackPanicked);
+        }
         Ok(())
     }
 
@@ -1467,7 +1484,7 @@ impl World {
     }
 
     #[inline]
-    fn check_world_valid_locked(&self) -> Result<()> {
+    pub(crate) fn check_world_valid_locked(&self) -> Result<()> {
         if unsafe { ffi::b3World_IsValid(self.raw) } {
             Ok(())
         } else {
@@ -1553,6 +1570,7 @@ impl Drop for World {
     fn drop(&mut self) {
         let _guard = box3d_lock::lock();
         if unsafe { ffi::b3World_IsValid(self.raw) } {
+            self.callbacks.clear_raw_callbacks(self.raw);
             unsafe { ffi::b3DestroyWorld(self.raw) };
         }
     }
