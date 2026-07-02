@@ -44,18 +44,29 @@ fn ray_casts_report_expected_hits_and_misses() {
 #[test]
 fn shape_casts_and_local_manifolds_are_owned_values() {
     let sphere = Sphere::new(Vec3::ZERO, 1.0);
-    let moving_proxy = ShapeProxy::sphere(0.25).unwrap();
+    let moving_proxy = ShapeProxy::new(vec![Vec3::new(-3.0, 0.0, 0.0)], 0.25).unwrap();
     let cast = shape_cast_sphere(
         &sphere,
-        ShapeCastInput::new(moving_proxy.clone(), [-3.0, 0.0, 0.0]).unwrap(),
+        ShapeCastInput::new(moving_proxy, [6.0, 0.0, 0.0]).unwrap(),
     )
     .unwrap();
-    assert!(cast.hit || !cast.hit);
+    assert!(cast.hit);
+    assert!(cast.fraction > 0.0 && cast.fraction < 1.0);
+    assert!(cast.point.is_valid());
+    assert!(cast.normal.is_valid());
+
+    let miss_proxy = ShapeProxy::new(vec![Vec3::new(-3.0, 3.0, 0.0)], 0.25).unwrap();
+    let miss = shape_cast_sphere(
+        &sphere,
+        ShapeCastInput::new(miss_proxy.clone(), [6.0, 0.0, 0.0]).unwrap(),
+    )
+    .unwrap();
+    assert!(!miss.hit);
 
     let capsule = Capsule::new([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], 0.25);
     let capsule_cast = shape_cast_capsule(
         &capsule,
-        ShapeCastInput::new(moving_proxy, [0.0, 3.0, 0.0]).unwrap(),
+        ShapeCastInput::new(miss_proxy, [0.0, 3.0, 0.0]).unwrap(),
     )
     .unwrap();
     assert!(capsule_cast.fraction >= 0.0);

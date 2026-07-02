@@ -1,6 +1,6 @@
 use boxddd::{
-    Aabb, BodyDef, BodyType, BoxHull, Filter, QueryFilter, ShapeDef, ShapeProxy, Sphere, Vec3,
-    World, WorldDef,
+    Aabb, BodyDef, BodyType, BoxHull, Error, Filter, QueryFilter, ShapeDef, ShapeProxy, Sphere,
+    Vec3, World, WorldDef,
 };
 
 fn query_world() -> (World, Vec<boxddd::ShapeId>) {
@@ -101,4 +101,43 @@ fn query_filter_excludes_shapes_by_mask() {
         .overlap_aabb(aabb, QueryFilter::default().mask_bits(0b100))
         .unwrap();
     assert!(excluded.is_empty());
+}
+
+#[test]
+fn invalid_aabb_is_rejected_before_world_query() {
+    let (world, _) = query_world();
+    let inverted = Aabb {
+        lower_bound: [1.0, 0.0, 0.0].into(),
+        upper_bound: [-1.0, 0.0, 0.0].into(),
+    };
+    assert_eq!(inverted.validate(), Err(Error::InvalidArgument));
+    assert_eq!(
+        world
+            .overlap_aabb(inverted, QueryFilter::default())
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    let nan = Aabb {
+        lower_bound: [f32::NAN, 0.0, 0.0].into(),
+        upper_bound: [1.0, 1.0, 1.0].into(),
+    };
+    assert_eq!(
+        world
+            .visit_overlap_aabb(nan, QueryFilter::default(), |_| true)
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+}
+
+#[test]
+fn pure_global_and_query_defaults_are_callback_safe() {
+    let _guard = boxddd::__private::enter_callback_guard_for_test();
+
+    let filter = QueryFilter::default();
+    assert_eq!(filter.category_bits, u64::MAX);
+    assert_eq!(filter.mask_bits, u64::MAX);
+    assert_eq!(filter.id, 0);
+    let _ = boxddd::version();
+    let _ = boxddd::is_double_precision();
 }

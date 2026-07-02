@@ -1,5 +1,5 @@
 use boxddd::{
-    Capsule, Compound, Error, HeightField, Hull, MeshData, Sphere, SurfaceMaterial, Vec3,
+    Capsule, Compound, Error, HeightField, Hull, MeshData, ShapeDef, Sphere, SurfaceMaterial, Vec3,
 };
 
 #[test]
@@ -22,5 +22,37 @@ fn value_and_resource_geometry_reject_invalid_inputs() {
             SurfaceMaterial::default()
         )
         .is_err()
+    );
+    assert_eq!(
+        SurfaceMaterial {
+            friction: -1.0,
+            ..Default::default()
+        }
+        .validate(),
+        Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        SurfaceMaterial {
+            restitution: -1.0,
+            ..Default::default()
+        }
+        .validate(),
+        Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        SurfaceMaterial {
+            rolling_resistance: -1.0,
+            ..Default::default()
+        }
+        .validate(),
+        Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        ShapeDef::builder().friction(-1.0).build().validate(),
+        Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        ShapeDef::builder().restitution(-1.0).build().validate(),
+        Err(Error::InvalidArgument)
     );
 }

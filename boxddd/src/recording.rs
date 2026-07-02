@@ -8,6 +8,8 @@ use crate::types::{Aabb, BodyId, Pos, ShapeId, Vec3};
 use crate::world::World;
 use boxddd_sys::ffi;
 use std::ffi::{CStr, CString};
+use std::fs::File;
+use std::io::Write;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::ptr::NonNull;
@@ -115,17 +117,20 @@ impl Recording {
     }
 
     pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<()> {
-        let path = path_to_cstring(path)?;
+        let path = path.as_ref();
         callback_state::check_not_in_callback()?;
-        let _guard = box3d_lock::lock();
-        if self.active_world_is_valid_locked() {
-            return Err(Error::ResourceLifetimeViolation);
-        }
-        if unsafe { ffi::b3SaveRecordingToFile(self.raw.as_ptr(), path.as_ptr()) } {
-            Ok(())
-        } else {
-            Err(Error::RecordingIoFailed)
-        }
+        let bytes = {
+            let _guard = box3d_lock::lock();
+            if self.active_world_is_valid_locked() {
+                return Err(Error::ResourceLifetimeViolation);
+            }
+            unsafe { self.bytes_locked() }.to_vec()
+        };
+
+        let mut file = File::create(path).map_err(|_| Error::RecordingIoFailed)?;
+        file.write_all(&bytes)
+            .and_then(|_| file.flush())
+            .map_err(|_| Error::RecordingIoFailed)
     }
 
     pub fn len(&self) -> usize {

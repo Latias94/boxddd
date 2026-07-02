@@ -31,6 +31,18 @@ fn shape_runtime_properties_and_geometry_can_be_updated() {
         .try_set_shape_surface_material(shape, material)
         .unwrap();
     assert_eq!(world.try_shape_surface_material(shape).unwrap(), material);
+    assert_eq!(
+        world
+            .try_set_shape_surface_material(
+                shape,
+                SurfaceMaterial {
+                    rolling_resistance: -0.1,
+                    ..Default::default()
+                }
+            )
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
 
     let filter = Filter {
         category_bits: 2,

@@ -1,4 +1,4 @@
-use boxddd::{BodyDef, BodyType, MotionLocks, ShapeDef, Sphere, Vec3, World, WorldDef};
+use boxddd::{BodyDef, BodyType, Error, MotionLocks, ShapeDef, Sphere, Vec3, World, WorldDef};
 
 #[test]
 fn world_runtime_tuning_and_metrics_are_safe() {
@@ -156,4 +156,49 @@ fn body_runtime_respects_callback_guard() {
         world.try_body_linear_velocity(body).unwrap_err(),
         boxddd::Error::InCallback
     );
+}
+
+#[test]
+fn world_rejects_foreign_body_and_shape_handles() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+    let local = world.create_body(BodyDef::default());
+
+    let mut other = World::new(WorldDef::default()).unwrap();
+    let foreign_body = other.create_body(BodyDef::default());
+    let foreign_shape = other.create_sphere_shape(
+        foreign_body,
+        &ShapeDef::default(),
+        &Sphere::new(Vec3::ZERO, 0.5),
+    );
+
+    assert_eq!(
+        world.try_body_position(foreign_body).unwrap_err(),
+        Error::InvalidBodyId
+    );
+    assert_eq!(
+        world.try_destroy_body(foreign_body).unwrap_err(),
+        Error::InvalidBodyId
+    );
+    assert!(foreign_body.is_valid());
+    assert_eq!(
+        world
+            .try_create_sphere_shape(
+                foreign_body,
+                &ShapeDef::default(),
+                &Sphere::new(Vec3::ZERO, 0.5)
+            )
+            .unwrap_err(),
+        Error::InvalidBodyId
+    );
+    assert_eq!(
+        world.try_shape_body(foreign_shape).unwrap_err(),
+        Error::InvalidShapeId
+    );
+    assert_eq!(
+        world.try_destroy_shape(foreign_shape, true).unwrap_err(),
+        Error::InvalidShapeId
+    );
+    assert!(foreign_shape.is_valid());
+
+    world.destroy_body(local);
 }

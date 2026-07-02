@@ -122,6 +122,27 @@ fn create_joint_rejects_invalid_stale_and_wrong_world_bodies() {
 }
 
 #[test]
+fn world_rejects_foreign_joint_handles() {
+    let (mut world, _, _) = body_pair();
+    let (mut other_world, a, b) = body_pair();
+    let foreign_joint = other_world.create_distance_joint(DistanceJointDef::new(a, b).length(1.0));
+
+    assert_eq!(
+        world.try_joint_type(foreign_joint).unwrap_err(),
+        Error::InvalidJointId
+    );
+    assert_eq!(
+        world.try_destroy_joint(foreign_joint, true).unwrap_err(),
+        Error::InvalidJointId
+    );
+    assert!(foreign_joint.is_valid());
+    assert_eq!(
+        other_world.try_joint_type(foreign_joint).unwrap(),
+        JointType::Distance
+    );
+}
+
+#[test]
 fn distance_joint_keeps_a_simple_scene_within_a_coarse_bound() {
     let mut world = World::new(WorldDef::builder().gravity([0.0, 0.0, 0.0]).build()).unwrap();
     let anchor = world.create_body(BodyDef::builder().position([0.0, 0.0, 0.0]).build());

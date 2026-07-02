@@ -65,12 +65,10 @@ impl QueryFilter {
 
 impl Default for QueryFilter {
     fn default() -> Self {
-        let _guard = box3d_lock::lock();
-        let raw = unsafe { ffi::b3DefaultQueryFilter() };
         Self {
-            category_bits: raw.categoryBits,
-            mask_bits: raw.maskBits,
-            id: raw.id,
+            category_bits: u64::MAX,
+            mask_bits: u64::MAX,
+            id: 0,
         }
     }
 }
@@ -137,6 +135,7 @@ impl World {
         F: FnMut(ShapeId) -> bool,
     {
         callback_state::check_not_in_callback()?;
+        aabb.validate()?;
         let mut ctx = OverlapContext {
             visitor,
             panicked: false,

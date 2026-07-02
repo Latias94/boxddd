@@ -32,12 +32,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+      - run: DOCS_RS=1 RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo doc -p boxddd --no-deps
       - run: cargo check -p boxddd --no-default-features
+      - run: cargo check -p boxddd-sys --no-default-features
+      - run: BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys
       - run: cargo check -p boxddd --features validate
       - run: cargo check -p boxddd --features disable-simd
       - run: cargo check -p boxddd --features double-precision
+      - run: cargo nextest run -p boxddd-sys --features double-precision --test layout
       - run: cargo check -p boxddd --features serde
       - run: cargo check -p boxddd --features mint
       - run: cargo check -p boxddd --features glam

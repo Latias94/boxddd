@@ -60,7 +60,7 @@ world.step(1.0 / 60.0, 4);
 - `double-precision`: build and bind Box3D in double-precision position mode.
 - `disable-simd`: forward `BOX3D_DISABLE_SIMD` to the native build.
 - `validate`: forward `BOX3D_VALIDATE` to the native build.
-- `serde`: derive serialization for crate-owned value/id/event/query/debug/replay metadata types. Native resources and pointer-bearing config wrappers are not serialized implicitly.
+- `serde`: derive serialization for crate-owned value/id/query/debug/replay metadata types. Native resources, event snapshots, and pointer-bearing config wrappers are not serialized implicitly.
 - `serialize`: alias for `serde`.
 - `mint`: conversions for `Vec2`, `Vec3`, `Pos`, `Quat`, `Transform`, and `WorldTransform`.
 - `glam`, `nalgebra`, `cgmath`: conversions for common 3D vector, point, quaternion, and transform representations.

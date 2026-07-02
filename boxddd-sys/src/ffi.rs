@@ -4,11 +4,15 @@
 #![allow(rustdoc::bare_urls)]
 #![allow(rustdoc::broken_intra_doc_links)]
 
-#[cfg(all(feature = "double-precision", has_pregenerated))]
+#[cfg(all(feature = "double-precision", has_pregenerated, not(force_bindgen)))]
 include!("bindings_pregenerated_double.rs");
 
-#[cfg(all(not(feature = "double-precision"), has_pregenerated))]
+#[cfg(all(
+    not(feature = "double-precision"),
+    has_pregenerated,
+    not(force_bindgen)
+))]
 include!("bindings_pregenerated.rs");
 
-#[cfg(not(has_pregenerated))]
+#[cfg(any(force_bindgen, not(has_pregenerated)))]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));

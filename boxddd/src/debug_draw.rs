@@ -524,8 +524,7 @@ pub(crate) fn with_debug_draw(
     callback_state::check_not_in_callback()?;
     if !options.force_scale.is_finite()
         || !options.joint_scale.is_finite()
-        || !options.drawing_bounds.lower_bound.is_valid()
-        || !options.drawing_bounds.upper_bound.is_valid()
+        || !options.drawing_bounds.is_valid()
     {
         return Err(Error::InvalidArgument);
     }

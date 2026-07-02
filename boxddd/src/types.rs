@@ -1,3 +1,4 @@
+use crate::error::{Error, Result};
 use boxddd_sys::ffi;
 
 #[inline]
@@ -406,6 +407,20 @@ impl Aabb {
         ffi::b3AABB {
             lowerBound: self.lower_bound.into_raw(),
             upperBound: self.upper_bound.into_raw(),
+        }
+    }
+
+    #[inline]
+    pub fn is_valid(self) -> bool {
+        unsafe { ffi::b3IsValidAABB(self.into_raw()) }
+    }
+
+    #[inline]
+    pub fn validate(self) -> Result<Self> {
+        if self.is_valid() {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
         }
     }
 }

@@ -12,6 +12,7 @@ use crate::types::{
     Pos, Profile, Quat, ShapeId, Vec3, Version, WorldTransform,
 };
 use boxddd_sys::ffi;
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -96,18 +97,17 @@ impl Default for WorldDefBuilder {
 #[derive(Debug)]
 pub struct World {
     raw: ffi::b3WorldId,
-    resources: Vec<ShapeResource>,
+    resources: HashMap<ShapeId, ShapeResource>,
     pub(crate) callbacks: WorldCallbacks,
     _debug_shapes: Box<DebugShapeRegistry>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
 enum ShapeResource {
-    Mesh(MeshData),
-    HeightField(HeightField),
-    Compound(Compound),
+    Mesh { _data: MeshData },
+    HeightField { _data: HeightField },
+    Compound { _data: Compound },
 }
 
 impl World {
@@ -127,7 +127,7 @@ impl World {
         if unsafe { ffi::b3World_IsValid(raw) } {
             Ok(Self {
                 raw,
-                resources: Vec::new(),
+                resources: HashMap::new(),
                 callbacks: WorldCallbacks::default(),
                 _debug_shapes: debug_shapes,
                 _not_send_sync: PhantomData,
@@ -226,10 +226,9 @@ impl World {
         sphere: &Sphere,
     ) -> Result<ShapeId> {
         callback_state::check_not_in_callback()?;
-        debug_checks::check_body_valid(body_id)?;
         def.validate()?;
         sphere.validate()?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
         let raw = unsafe { ffi::b3CreateSphereShape(body_id.into_raw(), def.raw(), sphere.raw()) };
         if unsafe { ffi::b3Shape_IsValid(raw) } {
             Ok(ShapeId::from_raw(raw))
@@ -255,9 +254,8 @@ impl World {
         hull: &BoxHull,
     ) -> Result<ShapeId> {
         callback_state::check_not_in_callback()?;
-        debug_checks::check_body_valid(body_id)?;
         def.validate()?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
         let raw =
             unsafe { ffi::b3CreateHullShape(body_id.into_raw(), def.raw(), hull.hull_data()) };
         if unsafe { ffi::b3Shape_IsValid(raw) } {
@@ -361,7 +359,8 @@ impl World {
         };
         let shape_id = shape_id_from_raw(raw)?;
         drop(_guard);
-        self.resources.push(ShapeResource::Mesh(mesh));
+        self.resources
+            .insert(shape_id, ShapeResource::Mesh { _data: mesh });
         Ok(shape_id)
     }
 
@@ -383,8 +382,12 @@ impl World {
         };
         let shape_id = shape_id_from_raw(raw)?;
         drop(_guard);
-        self.resources
-            .push(ShapeResource::HeightField(height_field));
+        self.resources.insert(
+            shape_id,
+            ShapeResource::HeightField {
+                _data: height_field,
+            },
+        );
         Ok(shape_id)
     }
 
@@ -406,7 +409,8 @@ impl World {
             unsafe { ffi::b3CreateCompoundShape(body_id.into_raw(), &mut raw_def, compound_ptr) };
         let shape_id = shape_id_from_raw(raw)?;
         drop(_guard);
-        self.resources.push(ShapeResource::Compound(compound));
+        self.resources
+            .insert(shape_id, ShapeResource::Compound { _data: compound });
         Ok(shape_id)
     }
 
@@ -417,8 +421,7 @@ impl World {
 
     #[inline]
     pub fn try_body_position(&self, body_id: BodyId) -> Result<Pos> {
-        debug_checks::check_body_valid(body_id)?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
         Ok(Pos::from_raw(unsafe {
             ffi::b3Body_GetPosition(body_id.into_raw())
         }))
@@ -431,8 +434,7 @@ impl World {
 
     #[inline]
     pub fn try_body_rotation(&self, body_id: BodyId) -> Result<Quat> {
-        debug_checks::check_body_valid(body_id)?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
         Ok(Quat::from_raw(unsafe {
             ffi::b3Body_GetRotation(body_id.into_raw())
         }))
@@ -445,17 +447,20 @@ impl World {
 
     #[inline]
     pub fn try_body_transform(&self, body_id: BodyId) -> Result<WorldTransform> {
-        debug_checks::check_body_valid(body_id)?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
         Ok(WorldTransform::from_raw(unsafe {
             ffi::b3Body_GetTransform(body_id.into_raw())
         }))
     }
 
     pub fn try_destroy_body(&mut self, body_id: BodyId) -> Result<()> {
-        debug_checks::check_body_valid(body_id)?;
-        let _guard = box3d_lock::lock();
+        let _guard = self.lock_body_checked(body_id)?;
+        let shape_ids = body_shape_ids_locked(body_id);
         unsafe { ffi::b3DestroyBody(body_id.into_raw()) };
+        drop(_guard);
+        for shape_id in shape_ids {
+            self.resources.remove(&shape_id);
+        }
         Ok(())
     }
 
@@ -1202,7 +1207,7 @@ impl World {
     pub fn try_body_shapes_into(&self, body_id: BodyId, out: &mut Vec<ShapeId>) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
-        check_body_valid_raw(body_id)?;
+        self.check_body_belongs_locked(body_id)?;
         let capacity = unsafe { ffi::b3Body_GetShapeCount(body_id.into_raw()) }.max(0) as usize;
         unsafe {
             ffi_vec::fill_from_ffi(out, capacity, |ptr, cap| {
@@ -1221,7 +1226,7 @@ impl World {
     pub fn try_body_joints_into(&self, body_id: BodyId, out: &mut Vec<JointId>) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
-        check_body_valid_raw(body_id)?;
+        self.check_body_belongs_locked(body_id)?;
         let capacity = unsafe { ffi::b3Body_GetJointCount(body_id.into_raw()) }.max(0) as usize;
         unsafe {
             ffi_vec::fill_from_ffi(out, capacity, |ptr, cap| {
@@ -1244,7 +1249,7 @@ impl World {
     ) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
-        check_body_valid_raw(body_id)?;
+        self.check_body_belongs_locked(body_id)?;
         let capacity =
             unsafe { ffi::b3Body_GetContactCapacity(body_id.into_raw()) }.max(0) as usize;
         let raw = unsafe {
@@ -1263,6 +1268,8 @@ impl World {
     pub fn try_destroy_shape(&mut self, shape_id: ShapeId, update_body_mass: bool) -> Result<()> {
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3DestroyShape(shape_id.into_raw(), update_body_mass) };
+        drop(_guard);
+        self.resources.remove(&shape_id);
         Ok(())
     }
 
@@ -1475,7 +1482,8 @@ impl World {
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_SetMesh(shape_id.into_raw(), mesh_ptr, scale.into_raw()) };
         drop(_guard);
-        self.resources.push(ShapeResource::Mesh(mesh));
+        self.resources
+            .insert(shape_id, ShapeResource::Mesh { _data: mesh });
         Ok(())
     }
 
@@ -1492,7 +1500,7 @@ impl World {
     fn lock_body_checked(&self, body_id: BodyId) -> Result<std::sync::MutexGuard<'static, ()>> {
         callback_state::check_not_in_callback()?;
         let guard = box3d_lock::lock();
-        check_body_valid_raw(body_id)?;
+        self.check_body_belongs_locked(body_id)?;
         Ok(guard)
     }
 
@@ -1500,8 +1508,51 @@ impl World {
     fn lock_shape_checked(&self, shape_id: ShapeId) -> Result<std::sync::MutexGuard<'static, ()>> {
         callback_state::check_not_in_callback()?;
         let guard = box3d_lock::lock();
-        check_shape_valid_raw(shape_id)?;
+        self.check_shape_belongs_locked(shape_id)?;
         Ok(guard)
+    }
+
+    #[inline]
+    fn check_body_belongs_locked(&self, body_id: BodyId) -> Result<()> {
+        self.check_world_valid_locked()?;
+        debug_checks::check_body_valid_raw(body_id)?;
+        if body_id.world0 == self.world0_locked()? {
+            Ok(())
+        } else {
+            Err(Error::InvalidBodyId)
+        }
+    }
+
+    #[inline]
+    fn check_shape_belongs_locked(&self, shape_id: ShapeId) -> Result<()> {
+        self.check_world_valid_locked()?;
+        debug_checks::check_shape_valid_raw(shape_id)?;
+        if shape_id.world0 == self.world0_locked()? {
+            Ok(())
+        } else {
+            Err(Error::InvalidShapeId)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn check_joint_belongs_locked(&self, joint_id: JointId) -> Result<()> {
+        self.check_world_valid_locked()?;
+        debug_checks::check_joint_valid_raw(joint_id)?;
+        if joint_id.world0 == self.world0_locked()? {
+            Ok(())
+        } else {
+            Err(Error::InvalidJointId)
+        }
+    }
+
+    #[inline]
+    fn world0_locked(&self) -> Result<u16> {
+        let world0 = self
+            .raw
+            .index1
+            .checked_sub(1)
+            .ok_or(Error::InvalidWorldId)?;
+        u16::try_from(world0).map_err(|_| Error::InvalidWorldId)
     }
 }
 
@@ -1536,30 +1587,24 @@ fn validate_nonnegative_scalar(value: f32) -> Result<()> {
 }
 
 #[inline]
-fn check_body_valid_raw(body_id: BodyId) -> Result<()> {
-    if body_id.is_valid() {
-        Ok(())
-    } else {
-        Err(Error::InvalidBodyId)
-    }
-}
-
-#[inline]
-fn check_shape_valid_raw(shape_id: ShapeId) -> Result<()> {
-    if shape_id.is_valid() {
-        Ok(())
-    } else {
-        Err(Error::InvalidShapeId)
-    }
-}
-
-#[inline]
 fn shape_id_from_raw(raw: ffi::b3ShapeId) -> Result<ShapeId> {
     if unsafe { ffi::b3Shape_IsValid(raw) } {
         Ok(ShapeId::from_raw(raw))
     } else {
         Err(Error::CreateShapeFailed)
     }
+}
+
+fn body_shape_ids_locked(body_id: BodyId) -> Vec<ShapeId> {
+    let capacity = unsafe { ffi::b3Body_GetShapeCount(body_id.into_raw()) }.max(0) as usize;
+    unsafe {
+        ffi_vec::read_from_ffi(capacity, |ptr: *mut ffi::b3ShapeId, cap| {
+            ffi::b3Body_GetShapes(body_id.into_raw(), ptr.cast(), cap)
+        })
+    }
+    .into_iter()
+    .map(ShapeId::from_raw)
+    .collect()
 }
 
 impl Drop for World {
@@ -1575,18 +1620,86 @@ impl Drop for World {
 
 #[inline]
 pub fn version() -> Version {
-    let _guard = box3d_lock::lock();
     Version::from_raw(unsafe { ffi::b3GetVersion() })
 }
 
 #[inline]
 pub fn allocated_byte_count() -> i32 {
+    callback_state::assert_not_in_callback();
     let _guard = box3d_lock::lock();
     unsafe { ffi::b3GetByteCount() }
 }
 
 #[inline]
 pub fn is_double_precision() -> bool {
-    let _guard = box3d_lock::lock();
     unsafe { ffi::b3IsDoublePrecision() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn static_body(world: &mut World) -> BodyId {
+        world.create_body(BodyDef::builder().body_type(BodyType::Static).build())
+    }
+
+    #[test]
+    fn shape_resources_are_removed_on_shape_destroy_and_mesh_replace() {
+        let mut world = World::new(WorldDef::default()).unwrap();
+        let body = static_body(&mut world);
+        let shape = world
+            .try_create_mesh_shape(
+                body,
+                &ShapeDef::default(),
+                MeshData::box_mesh(Vec3::ZERO, [1.0, 1.0, 1.0], true).unwrap(),
+                [1.0, 1.0, 1.0],
+            )
+            .unwrap();
+        assert_eq!(world.resources.len(), 1);
+
+        world
+            .try_set_shape_mesh(
+                shape,
+                MeshData::box_mesh(Vec3::ZERO, [0.5, 0.5, 0.5], true).unwrap(),
+                [1.0, 1.0, 1.0],
+            )
+            .unwrap();
+        assert_eq!(world.resources.len(), 1);
+
+        world.try_destroy_shape(shape, true).unwrap();
+        assert!(world.resources.is_empty());
+    }
+
+    #[test]
+    fn shape_resources_are_removed_on_body_destroy() {
+        let mut world = World::new(WorldDef::default()).unwrap();
+        let body = static_body(&mut world);
+        world
+            .try_create_mesh_shape(
+                body,
+                &ShapeDef::default(),
+                MeshData::box_mesh(Vec3::ZERO, [1.0, 1.0, 1.0], true).unwrap(),
+                [1.0, 1.0, 1.0],
+            )
+            .unwrap();
+        world
+            .try_create_height_field_shape(
+                body,
+                &ShapeDef::default(),
+                HeightField::grid(2, 2, [1.0, 1.0, 1.0], false).unwrap(),
+            )
+            .unwrap();
+        world
+            .try_create_compound_shape(
+                body,
+                &ShapeDef::default(),
+                Compound::single_sphere(Sphere::new(Vec3::ZERO, 0.25), SurfaceMaterial::default())
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_eq!(world.resources.len(), 3);
+
+        world.try_destroy_body(body).unwrap();
+        assert!(world.resources.is_empty());
+    }
 }

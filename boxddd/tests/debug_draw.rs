@@ -1,5 +1,5 @@
 use boxddd::{
-    BodyDef, BoxHull, DebugDraw, DebugDrawCommand, DebugDrawOptions, Error, ShapeDef, World,
+    Aabb, BodyDef, BoxHull, DebugDraw, DebugDrawCommand, DebugDrawOptions, Error, ShapeDef, World,
     WorldDef,
 };
 
@@ -76,5 +76,20 @@ fn debug_draw_respects_callback_guard() {
             .try_debug_draw_collect(DebugDrawOptions::default())
             .unwrap_err(),
         Error::InCallback
+    );
+}
+
+#[test]
+fn debug_draw_rejects_invalid_bounds() {
+    let mut world = debug_world();
+    let mut options = DebugDrawOptions::default();
+    options.drawing_bounds = Aabb {
+        lower_bound: [2.0, 0.0, 0.0].into(),
+        upper_bound: [1.0, 1.0, 1.0].into(),
+    };
+
+    assert_eq!(
+        world.try_debug_draw_collect(options).unwrap_err(),
+        Error::InvalidArgument
     );
 }

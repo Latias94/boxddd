@@ -10,6 +10,7 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 ## Build
 
 - Default: builds vendored Box3D C sources with `cc`.
+- External link: disable default features to skip vendored C compilation and link an external `box3d` library instead.
 - Bindings: uses checked-in pregenerated bindings so normal builds do not require LLVM or libclang.
 - Refresh: enable the `bindgen` feature and set `BOXDDD_SYS_FORCE_BINDGEN=1`.
 - Docs.rs/offline docs: uses pregenerated bindings and skips native C compilation.
@@ -26,6 +27,8 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 
 - `BOXDDD_SYS_FORCE_BINDGEN=1`: regenerate bindings into Cargo's `OUT_DIR`; requires `--features bindgen`.
 - `BOXDDD_SYS_SKIP_CC=1`: skip native C compilation for check-only workflows.
+- `BOXDDD_SYS_LINK_LIB`: external library name used when `build-from-source` is disabled. Defaults to `box3d`.
+- `BOXDDD_SYS_LINK_SEARCH`: optional native library search directory used when `build-from-source` is disabled.
 - `DOCS_RS=1` or `--cfg docsrs`: skip native C compilation for documentation.
 
 ## Notes

@@ -44,8 +44,11 @@ impl SurfaceMaterial {
 
     pub fn validate(self) -> Result<()> {
         if self.friction.is_finite()
+            && self.friction >= 0.0
             && self.restitution.is_finite()
+            && self.restitution >= 0.0
             && self.rolling_resistance.is_finite()
+            && self.rolling_resistance >= 0.0
             && self.tangent_velocity.is_valid()
         {
             Ok(())

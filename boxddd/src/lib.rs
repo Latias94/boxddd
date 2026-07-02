@@ -8,7 +8,7 @@
 pub mod body;
 pub mod callbacks;
 pub mod collision;
-pub mod core {
+mod core {
     pub(crate) mod box3d_lock;
     pub(crate) mod callback_state;
     pub(crate) mod debug_checks;

@@ -14,11 +14,14 @@ fn parse_bool_env(key: &str) -> bool {
 
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(has_pregenerated)");
+    println!("cargo:rustc-check-cfg=cfg(force_bindgen)");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=third-party/box3d/include/box3d/box3d.h");
     println!("cargo:rerun-if-changed=third-party/box3d");
     println!("cargo:rerun-if-env-changed=BOXDDD_SYS_SKIP_CC");
     println!("cargo:rerun-if-env-changed=BOXDDD_SYS_FORCE_BINDGEN");
+    println!("cargo:rerun-if-env-changed=BOXDDD_SYS_LINK_LIB");
+    println!("cargo:rerun-if-env-changed=BOXDDD_SYS_LINK_SEARCH");
     println!("cargo:rerun-if-env-changed=DOCS_RS");
     println!("cargo:rerun-if-env-changed=CARGO_CFG_DOCSRS");
 
@@ -37,12 +40,14 @@ fn main() {
     } else {
         manifest_dir.join("src").join("bindings_pregenerated.rs")
     };
+    let force_bindgen = parse_bool_env("BOXDDD_SYS_FORCE_BINDGEN");
     let has_pregenerated = pregenerated.exists();
-    if has_pregenerated {
+    if force_bindgen {
+        println!("cargo:rustc-cfg=force_bindgen");
+    } else if has_pregenerated {
         println!("cargo:rustc-cfg=has_pregenerated");
     }
 
-    let force_bindgen = parse_bool_env("BOXDDD_SYS_FORCE_BINDGEN");
     if force_bindgen || (!has_pregenerated && !is_docsrs) {
         #[cfg(feature = "bindgen")]
         generate_bindings(&manifest_dir, &_out_dir);
@@ -71,7 +76,28 @@ fn main() {
         return;
     }
 
+    if !cfg!(feature = "build-from-source") {
+        emit_external_link_directives();
+        println!(
+            "cargo:warning=build-from-source disabled: not compiling vendored Box3D C sources"
+        );
+        return;
+    }
+
     build_box3d_from_source(&manifest_dir, &target_env, &target_os, is_debug);
+}
+
+fn emit_external_link_directives() {
+    if let Ok(path) = env::var("BOXDDD_SYS_LINK_SEARCH") {
+        if !path.is_empty() {
+            println!("cargo:rustc-link-search=native={path}");
+        }
+    }
+
+    let lib = env::var("BOXDDD_SYS_LINK_LIB").unwrap_or_else(|_| "box3d".into());
+    if !lib.is_empty() {
+        println!("cargo:rustc-link-lib={lib}");
+    }
 }
 
 #[cfg(feature = "bindgen")]
