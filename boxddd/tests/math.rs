@@ -1,6 +1,7 @@
 use boxddd::{
     Aabb, Capacity, Error, Filter, MassData, Matrix3, Plane, Pos, Quat, Transform, Vec2, Vec3,
-    WorldTransform, closest_point_on_segment, line_distance, segment_distance,
+    WorldTransform, closest_point_on_segment, compute_cos_sin, deterministic_atan2, line_distance,
+    segment_distance, steiner_inertia,
 };
 
 #[test]
@@ -141,6 +142,84 @@ fn segment_distance_helpers_validate_inputs() {
         .unwrap_err(),
         Error::InvalidArgument
     );
+}
+
+#[test]
+fn deterministic_math_helpers_validate_and_return_owned_values() {
+    assert_close(deterministic_atan2(0.0, 0.0).unwrap(), 0.0);
+    assert_close(
+        deterministic_atan2(1.0, 0.0).unwrap(),
+        std::f32::consts::FRAC_PI_2,
+    );
+    assert_eq!(
+        deterministic_atan2(f32::NAN, 1.0).unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    let zero = compute_cos_sin(0.0).unwrap();
+    assert_close(zero.cosine, 1.0);
+    assert_close(zero.sine, 0.0);
+    assert_eq!(
+        compute_cos_sin(f32::INFINITY).unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    let identity_matrix = Matrix3 {
+        cx: Vec3::X,
+        cy: Vec3::Y,
+        cz: Vec3::Z,
+    };
+    assert_eq!(identity_matrix.validate().unwrap(), identity_matrix);
+    assert_eq!(Quat::from_matrix(identity_matrix).unwrap(), Quat::IDENTITY);
+    let turn_z = Quat::between_unit_vectors(Vec3::X, Vec3::Y).unwrap();
+    assert!(turn_z.is_valid());
+
+    let steiner = steiner_inertia(2.0, Vec3::new(1.0, 2.0, 3.0)).unwrap();
+    assert!(steiner.is_valid());
+    assert_close(steiner.cx.x, 26.0);
+    assert_close(steiner.cy.y, 20.0);
+    assert_close(steiner.cz.z, 10.0);
+}
+
+#[test]
+fn deterministic_math_helpers_reject_invalid_inputs() {
+    let invalid_matrix = Matrix3 {
+        cx: Vec3::new(f32::NAN, 0.0, 0.0),
+        cy: Vec3::Y,
+        cz: Vec3::Z,
+    };
+    assert!(!invalid_matrix.is_valid());
+    assert_eq!(
+        invalid_matrix.validate().unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        Quat::from_matrix(invalid_matrix).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        Quat::between_unit_vectors(Vec3::new(2.0, 0.0, 0.0), Vec3::Y).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        steiner_inertia(-1.0, Vec3::ZERO).unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    let valid_aabb = Aabb {
+        lower_bound: [-1.0, -1.0, -1.0].into(),
+        upper_bound: [1.0, 1.0, 1.0].into(),
+    };
+    assert!(valid_aabb.is_bounded());
+    assert!(valid_aabb.is_sane());
+
+    let unbounded_aabb = Aabb {
+        lower_bound: [-1.0e31, 0.0, 0.0].into(),
+        upper_bound: [1.0, 1.0, 1.0].into(),
+    };
+    assert!(unbounded_aabb.is_valid());
+    assert!(!unbounded_aabb.is_bounded());
+    assert!(!unbounded_aabb.is_sane());
 }
 
 fn assert_vec3_close(actual: Vec3, expected: Vec3) {

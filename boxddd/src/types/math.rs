@@ -8,6 +8,60 @@ pub fn is_valid_float(value: f32) -> bool {
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct CosSin {
+    pub cosine: f32,
+    pub sine: f32,
+}
+
+impl CosSin {
+    #[inline]
+    pub const fn from_raw(raw: ffi::b3CosSin) -> Self {
+        Self {
+            cosine: raw.cosine,
+            sine: raw.sine,
+        }
+    }
+
+    #[inline]
+    pub const fn into_raw(self) -> ffi::b3CosSin {
+        ffi::b3CosSin {
+            cosine: self.cosine,
+            sine: self.sine,
+        }
+    }
+
+    #[inline]
+    fn validate(self) -> Result<Self> {
+        if is_valid_float(self.cosine) && is_valid_float(self.sine) {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+}
+
+pub fn deterministic_atan2(y: f32, x: f32) -> Result<f32> {
+    if !is_valid_float(y) || !is_valid_float(x) {
+        return Err(Error::InvalidArgument);
+    }
+    let value = unsafe { ffi::b3Atan2(y, x) };
+    if is_valid_float(value) {
+        Ok(value)
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
+pub fn compute_cos_sin(radians: f32) -> Result<CosSin> {
+    if !is_valid_float(radians) {
+        return Err(Error::InvalidArgument);
+    }
+    CosSin::from_raw(unsafe { ffi::b3ComputeCosSin(radians) }).validate()
+}
+
+#[repr(C)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -206,6 +260,15 @@ fn vec3_length_squared(value: Vec3) -> f32 {
     value.x * value.x + value.y * value.y + value.z * value.z
 }
 
+fn validate_unit_vec3(value: Vec3) -> Result<Vec3> {
+    let value = value.validate()?;
+    if (vec3_length_squared(value) - 1.0).abs() <= 1.0e-4 {
+        Ok(value)
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
 impl From<[f32; 3]> for Vec3 {
     #[inline]
     fn from(value: [f32; 3]) -> Self {
@@ -267,6 +330,20 @@ impl Quat {
         } else {
             Err(crate::error::Error::InvalidArgument)
         }
+    }
+
+    pub fn from_matrix(matrix: Matrix3) -> Result<Self> {
+        let matrix = matrix.validate()?;
+        Self::from_raw(unsafe { ffi::b3MakeQuatFromMatrix(&matrix.into_raw()) }).validate()
+    }
+
+    pub fn between_unit_vectors(v1: impl Into<Vec3>, v2: impl Into<Vec3>) -> Result<Self> {
+        let v1 = validate_unit_vec3(v1.into())?;
+        let v2 = validate_unit_vec3(v2.into())?;
+        Self::from_raw(unsafe {
+            ffi::b3ComputeQuatBetweenUnitVectors(v1.into_raw(), v2.into_raw())
+        })
+        .validate()
     }
 }
 
@@ -486,6 +563,20 @@ impl Matrix3 {
             cz: self.cz.into_raw(),
         }
     }
+
+    #[inline]
+    pub fn is_valid(self) -> bool {
+        unsafe { ffi::b3IsValidMatrix3(self.into_raw()) }
+    }
+
+    #[inline]
+    pub fn validate(self) -> Result<Self> {
+        if self.is_valid() {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
 }
 
 #[repr(C)]
@@ -526,6 +617,24 @@ impl Aabb {
             Err(Error::InvalidArgument)
         }
     }
+
+    #[inline]
+    pub fn is_bounded(self) -> bool {
+        self.is_valid() && unsafe { ffi::b3IsBoundedAABB(self.into_raw()) }
+    }
+
+    #[inline]
+    pub fn is_sane(self) -> bool {
+        unsafe { ffi::b3IsSaneAABB(self.into_raw()) }
+    }
+}
+
+pub fn steiner_inertia(mass: f32, origin: impl Into<Vec3>) -> Result<Matrix3> {
+    let origin = origin.into().validate()?;
+    if !is_valid_float(mass) || mass < 0.0 {
+        return Err(Error::InvalidArgument);
+    }
+    Matrix3::from_raw(unsafe { ffi::b3Steiner(mass, origin.into_raw()) }).validate()
 }
 
 #[repr(C)]

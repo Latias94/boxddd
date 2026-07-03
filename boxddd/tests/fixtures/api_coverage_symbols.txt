@@ -544,21 +544,21 @@ b3GetLengthUnitsPerMeter|raw|globals|constants.h|explicit boxddd::raw process-gl
 b3SetStallThreshold|raw|globals|constants.h|explicit boxddd::raw process-global tuning boundary
 b3GetStallThreshold|raw|globals|constants.h|explicit boxddd::raw process-global tuning boundary
 b3IsValidFloat|safe|math|math_functions.h|covered by current safe wrapper implementation
-b3Atan2|deferred|math|math_functions.h|U6 will add a finite-input deterministic atan2 wrapper
-b3ComputeCosSin|deferred|math|math_functions.h|U6 will add a finite-input deterministic cosine-sine wrapper
-b3MakeQuatFromMatrix|deferred|math|math_functions.h|U6 will add a validated quaternion-from-matrix constructor
-b3ComputeQuatBetweenUnitVectors|deferred|math|math_functions.h|U6 will add a unit-vector quaternion helper
-b3Steiner|deferred|math|math_functions.h|U6 will add a validated Steiner inertia helper
+b3Atan2|safe|math|math_functions.h|deterministic_atan2 validates finite inputs
+b3ComputeCosSin|safe|math|math_functions.h|compute_cos_sin validates finite input and returns CosSin
+b3MakeQuatFromMatrix|safe|math|math_functions.h|Quat::from_matrix validates Matrix3 input
+b3ComputeQuatBetweenUnitVectors|safe|math|math_functions.h|Quat::between_unit_vectors validates finite unit vectors
+b3Steiner|safe|math|math_functions.h|steiner_inertia validates mass and origin
 b3PointToSegmentDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3LineDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3SegmentDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidVec3|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidQuat|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidTransform|safe|math|math_functions.h|covered by current safe wrapper implementation
-b3IsValidMatrix3|deferred|math|math_functions.h|U6 will expose Matrix3 validation helpers
+b3IsValidMatrix3|safe|math|math_functions.h|Matrix3::is_valid and validate expose matrix validation
 b3IsValidAABB|safe|collision|math_functions.h|covered by current safe wrapper implementation
-b3IsBoundedAABB|deferred|collision|math_functions.h|U6 will expose Aabb boundedness validation
-b3IsSaneAABB|deferred|collision|math_functions.h|U6 will expose Aabb sanity validation
+b3IsBoundedAABB|safe|collision|math_functions.h|Aabb::is_bounded exposes boundedness validation
+b3IsSaneAABB|safe|collision|math_functions.h|Aabb::is_sane exposes sane bounds validation
 b3IsValidPlane|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidPosition|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidWorldTransform|safe|math|math_functions.h|covered by current safe wrapper implementation

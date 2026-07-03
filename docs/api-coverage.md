@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 530 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring, query, byte ownership transfer, and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 538 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring, query, byte ownership transfer, and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, deterministic math helpers, core math/value validation |
 | `raw` | 36 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers, low-level debug graph color helper |
 | `omitted` | 4 | global world-count diagnostics and redundant shape/joint world-handle getters that do not fit the safe ownership model |
-| `deferred` | 8 | selected math helpers and validators |
+| `deferred` | 0 | no current upstream `B3_API` symbols remain in the deferred bucket |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -35,11 +35,11 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 - `CompoundBytes` is an owner for Box3D-created compound allocations only. Its byte slice is for inspection or caller-side copying, not a stable safe deserialization format, and there is no safe `from_slice` or `from_vec` path for arbitrary bytes.
 - `World`, native resources, dynamic trees, recording, and replay player types remain single-owner and are not made `Send` or `Sync`.
 
-## High-Priority Deferred Areas
+## Deferred Areas
 
-These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
+No vendored upstream `B3_API` symbols are currently classified as `deferred`.
+Future upstream additions may reintroduce this bucket temporarily, but any deferred entry must carry a specific implementation-time rationale in `boxddd/tests/fixtures/api_coverage_symbols.txt`.
 
-- Deterministic math tail: scalar/quaternion/matrix helpers plus matrix and AABB validators need safe wrappers with input validation.
 
 ## How To Update Coverage
 
