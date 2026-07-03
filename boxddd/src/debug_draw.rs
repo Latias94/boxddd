@@ -1,3 +1,5 @@
+#![cfg_attr(all(target_arch = "wasm32", boxddd_wasm_provider), allow(dead_code))]
+
 use crate::core::{box3d_lock, callback_state};
 use crate::error::{Error, Result};
 use crate::shapes::ShapeType;
@@ -192,6 +194,7 @@ struct DebugShapeResource {
     shape: DebugShape,
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 pub(crate) unsafe extern "C" fn create_debug_shape(
     debug_shape: *const ffi::b3DebugShape,
     user_context: *mut c_void,
@@ -212,6 +215,7 @@ pub(crate) unsafe extern "C" fn create_debug_shape(
     Box::into_raw(Box::new(DebugShapeResource { shape })) as *mut c_void
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 pub(crate) unsafe extern "C" fn destroy_debug_shape(
     user_shape: *mut c_void,
     user_context: *mut c_void,
@@ -522,34 +526,42 @@ pub(crate) fn with_debug_draw(
     invoke: impl FnOnce(&mut ffi::b3DebugDraw) -> Result<()>,
 ) -> Result<()> {
     callback_state::check_not_in_callback()?;
-    if !options.force_scale.is_finite()
-        || !options.joint_scale.is_finite()
-        || !options.drawing_bounds.is_valid()
+    #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
     {
-        return Err(Error::InvalidArgument);
+        let _ = (drawer, options, invoke);
+        Err(Error::UnsupportedOnWasm)
     }
+    #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+    {
+        if !options.force_scale.is_finite()
+            || !options.joint_scale.is_finite()
+            || !options.drawing_bounds.is_valid()
+        {
+            return Err(Error::InvalidArgument);
+        }
 
-    let mut context = DebugDrawContext {
-        drawer,
-        panicked: false,
-    };
-    let mut draw = unsafe { ffi::b3DefaultDebugDraw() };
-    draw.DrawShapeFcn = Some(draw_shape);
-    draw.DrawSegmentFcn = Some(draw_segment);
-    draw.DrawTransformFcn = Some(draw_transform);
-    draw.DrawPointFcn = Some(draw_point);
-    draw.DrawSphereFcn = Some(draw_sphere);
-    draw.DrawCapsuleFcn = Some(draw_capsule);
-    draw.DrawBoundsFcn = Some(draw_bounds);
-    draw.DrawBoxFcn = Some(draw_box);
-    draw.DrawStringFcn = Some(draw_string);
-    apply_options(&mut draw, options, &mut context as *mut _ as *mut c_void);
+        let mut context = DebugDrawContext {
+            drawer,
+            panicked: false,
+        };
+        let mut draw = unsafe { ffi::b3DefaultDebugDraw() };
+        draw.DrawShapeFcn = Some(draw_shape);
+        draw.DrawSegmentFcn = Some(draw_segment);
+        draw.DrawTransformFcn = Some(draw_transform);
+        draw.DrawPointFcn = Some(draw_point);
+        draw.DrawSphereFcn = Some(draw_sphere);
+        draw.DrawCapsuleFcn = Some(draw_capsule);
+        draw.DrawBoundsFcn = Some(draw_bounds);
+        draw.DrawBoxFcn = Some(draw_box);
+        draw.DrawStringFcn = Some(draw_string);
+        apply_options(&mut draw, options, &mut context as *mut _ as *mut c_void);
 
-    invoke(&mut draw)?;
-    if context.panicked {
-        Err(Error::CallbackPanicked)
-    } else {
-        Ok(())
+        invoke(&mut draw)?;
+        if context.panicked {
+            Err(Error::CallbackPanicked)
+        } else {
+            Ok(())
+        }
     }
 }
 

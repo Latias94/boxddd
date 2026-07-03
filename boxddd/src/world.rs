@@ -1,8 +1,10 @@
 use crate::TaskSystem;
 use crate::body::{BodyDef, BodyType};
 use crate::callbacks::WorldCallbacks;
-use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec, task_system};
-use crate::debug_draw::{DebugShapeRegistry, create_debug_shape, destroy_debug_shape};
+use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec, task_system, wasm};
+use crate::debug_draw::DebugShapeRegistry;
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+use crate::debug_draw::{create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeType, Sphere,
@@ -142,10 +144,15 @@ impl World {
             task_system.reset_panics();
             task_system::install_callbacks(&mut raw_def, task_system);
         }
-        raw_def.createDebugShape = Some(create_debug_shape);
-        raw_def.destroyDebugShape = Some(destroy_debug_shape);
-        raw_def.userDebugShapeContext =
-            (&*debug_shapes) as *const DebugShapeRegistry as *mut std::ffi::c_void;
+        if !wasm::is_provider_mode() {
+            #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+            {
+                raw_def.createDebugShape = Some(create_debug_shape);
+                raw_def.destroyDebugShape = Some(destroy_debug_shape);
+                raw_def.userDebugShapeContext =
+                    (&*debug_shapes) as *const DebugShapeRegistry as *mut std::ffi::c_void;
+            }
+        }
 
         let _guard = box3d_lock::lock();
         let raw = unsafe { create_world_raw(&raw_def) };

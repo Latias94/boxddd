@@ -78,12 +78,21 @@ under Node. The runner instantiates both modules with the same
 uses APIs that do not pass Rust function pointers into the C provider; query,
 contact, debug draw, and task callbacks need a separate shared-table or
 dynamic-linking design before they are claimed for browser provider mode.
+The safe wrapper returns `Error::UnsupportedOnWasm` for callback-heavy APIs in
+provider mode instead of allowing a runtime table trap.
 
 Expected output:
 
 ```text
 boxddd provider smoke passed
 ```
+
+Provider mode currently supports non-callback calls such as world/body/shape
+creation, stepping, body inspection, and closest-ray casts. Visitor-style queries
+(`overlap_aabb`, `overlap_shape`, `cast_ray`, `cast_shape`), debug draw
+collection, contact/material callbacks, and Rust-owned task callbacks are
+blocked with `Error::UnsupportedOnWasm` until cross-module function-table
+ownership is designed.
 
 ## C-Backed WASI Runtime Smoke
 
@@ -141,6 +150,7 @@ CI separates WASM support into visible jobs:
 The browser route follows the same shape as `dear-imgui-rs`: a Rust app WASM
 module imports C symbols from a provider module, and both modules share the same
 `WebAssembly.Memory`. The current provider smoke proves the memory/import part
-of this runtime contract without a UI. A future browser plan should add
-cross-module callback support, packaged browser artifacts, visual examples, and
-then Bevy Web or other renderer integrations.
+of this runtime contract without a UI and enforces typed errors for callback
+APIs. A future browser plan should add cross-module callback support, packaged
+browser artifacts, visual examples, and then Bevy Web or other renderer
+integrations.

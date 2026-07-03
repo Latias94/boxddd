@@ -51,7 +51,8 @@ boxddd provider smoke passed
 `provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
 imports it expects from `box3d-sys-v0`. `provider-smoke` additionally builds the
 Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
-does not cover APIs that pass Rust callbacks into the C provider yet.
+checks non-callback APIs and asserts that callback-heavy APIs return
+`Error::UnsupportedOnWasm` instead of trapping across wasm module tables.
 
 A visual Bevy Web or renderer-specific example is still deferred until this
 runtime layer is packaged for browser use.

@@ -1,3 +1,5 @@
+#![cfg_attr(all(target_arch = "wasm32", boxddd_wasm_provider), allow(dead_code))]
+
 use crate::core::{box3d_lock, callback_state, material_mix_registry};
 use crate::error::{Error, Result};
 use crate::types::{Pos, ShapeId, Vec3};
@@ -98,20 +100,28 @@ impl WorldCallbacks {
     }
 
     pub(crate) fn clear_raw_callbacks(&mut self, world: ffi::b3WorldId) {
-        unsafe {
-            ffi::b3World_SetCustomFilterCallback(world, None, std::ptr::null_mut());
-            ffi::b3World_SetPreSolveCallback(world, None, std::ptr::null_mut());
-            ffi::b3World_SetFrictionCallback(world, None);
-            ffi::b3World_SetRestitutionCallback(world, None);
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = world;
+            *self = Self::default();
         }
-        self.custom_filter = None;
-        self.pre_solve = None;
-        self.friction = None;
-        self.restitution = None;
-        if let Some(slot) = self.material_slot.take() {
-            material_mix_registry::set_friction_ptr(slot, std::ptr::null_mut());
-            material_mix_registry::set_restitution_ptr(slot, std::ptr::null_mut());
-            material_mix_registry::release_slot(slot);
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            unsafe {
+                ffi::b3World_SetCustomFilterCallback(world, None, std::ptr::null_mut());
+                ffi::b3World_SetPreSolveCallback(world, None, std::ptr::null_mut());
+                ffi::b3World_SetFrictionCallback(world, None);
+                ffi::b3World_SetRestitutionCallback(world, None);
+            }
+            self.custom_filter = None;
+            self.pre_solve = None;
+            self.friction = None;
+            self.restitution = None;
+            if let Some(slot) = self.material_slot.take() {
+                material_mix_registry::set_friction_ptr(slot, std::ptr::null_mut());
+                material_mix_registry::set_restitution_ptr(slot, std::ptr::null_mut());
+                material_mix_registry::release_slot(slot);
+            }
         }
     }
 
@@ -206,23 +216,31 @@ impl World {
         F: Fn(ShapeId, ShapeId) -> bool + Send + Sync + 'static,
     {
         callback_state::check_not_in_callback()?;
-        let context = Box::new(CustomFilterContext {
-            callback: Box::new(callback),
-            panicked: AtomicBool::new(false),
-        });
-        let context_ptr = (&*context) as *const CustomFilterContext as *mut c_void;
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = callback;
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let context = Box::new(CustomFilterContext {
+                callback: Box::new(callback),
+                panicked: AtomicBool::new(false),
+            });
+            let context_ptr = (&*context) as *const CustomFilterContext as *mut c_void;
 
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        self.callbacks.custom_filter = Some(context);
-        unsafe {
-            ffi::b3World_SetCustomFilterCallback(
-                self.raw(),
-                Some(custom_filter_trampoline),
-                context_ptr,
-            )
-        };
-        Ok(())
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            self.callbacks.custom_filter = Some(context);
+            unsafe {
+                ffi::b3World_SetCustomFilterCallback(
+                    self.raw(),
+                    Some(custom_filter_trampoline),
+                    context_ptr,
+                )
+            };
+            Ok(())
+        }
     }
 
     pub fn clear_custom_filter(&mut self) {
@@ -254,19 +272,31 @@ impl World {
         F: Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 'static,
     {
         callback_state::check_not_in_callback()?;
-        let context = Box::new(PreSolveContext {
-            callback: Box::new(callback),
-            panicked: AtomicBool::new(false),
-        });
-        let context_ptr = (&*context) as *const PreSolveContext as *mut c_void;
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = callback;
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let context = Box::new(PreSolveContext {
+                callback: Box::new(callback),
+                panicked: AtomicBool::new(false),
+            });
+            let context_ptr = (&*context) as *const PreSolveContext as *mut c_void;
 
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        self.callbacks.pre_solve = Some(context);
-        unsafe {
-            ffi::b3World_SetPreSolveCallback(self.raw(), Some(pre_solve_trampoline), context_ptr)
-        };
-        Ok(())
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            self.callbacks.pre_solve = Some(context);
+            unsafe {
+                ffi::b3World_SetPreSolveCallback(
+                    self.raw(),
+                    Some(pre_solve_trampoline),
+                    context_ptr,
+                )
+            };
+            Ok(())
+        }
     }
 
     pub fn clear_pre_solve(&mut self) {
@@ -298,23 +328,31 @@ impl World {
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
     {
         callback_state::check_not_in_callback()?;
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let slot = self.callbacks.ensure_material_slot()?;
-        let context = Box::new(MaterialMixContext {
-            callback: Box::new(callback),
-            panicked: AtomicBool::new(false),
-        });
-        let ptr = (&*context) as *const MaterialMixContext as *mut MaterialMixContext;
-        material_mix_registry::set_friction_ptr(slot, ptr);
-        self.callbacks.friction = Some(context);
-        unsafe {
-            ffi::b3World_SetFrictionCallback(
-                self.raw(),
-                material_mix_registry::friction_callback(slot),
-            )
-        };
-        Ok(())
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = callback;
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let slot = self.callbacks.ensure_material_slot()?;
+            let context = Box::new(MaterialMixContext {
+                callback: Box::new(callback),
+                panicked: AtomicBool::new(false),
+            });
+            let ptr = (&*context) as *const MaterialMixContext as *mut MaterialMixContext;
+            material_mix_registry::set_friction_ptr(slot, ptr);
+            self.callbacks.friction = Some(context);
+            unsafe {
+                ffi::b3World_SetFrictionCallback(
+                    self.raw(),
+                    material_mix_registry::friction_callback(slot),
+                )
+            };
+            Ok(())
+        }
     }
 
     pub fn clear_friction_callback(&mut self) {
@@ -348,23 +386,31 @@ impl World {
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
     {
         callback_state::check_not_in_callback()?;
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let slot = self.callbacks.ensure_material_slot()?;
-        let context = Box::new(MaterialMixContext {
-            callback: Box::new(callback),
-            panicked: AtomicBool::new(false),
-        });
-        let ptr = (&*context) as *const MaterialMixContext as *mut MaterialMixContext;
-        material_mix_registry::set_restitution_ptr(slot, ptr);
-        self.callbacks.restitution = Some(context);
-        unsafe {
-            ffi::b3World_SetRestitutionCallback(
-                self.raw(),
-                material_mix_registry::restitution_callback(slot),
-            )
-        };
-        Ok(())
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = callback;
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let slot = self.callbacks.ensure_material_slot()?;
+            let context = Box::new(MaterialMixContext {
+                callback: Box::new(callback),
+                panicked: AtomicBool::new(false),
+            });
+            let ptr = (&*context) as *const MaterialMixContext as *mut MaterialMixContext;
+            material_mix_registry::set_restitution_ptr(slot, ptr);
+            self.callbacks.restitution = Some(context);
+            unsafe {
+                ffi::b3World_SetRestitutionCallback(
+                    self.raw(),
+                    material_mix_registry::restitution_callback(slot),
+                )
+            };
+            Ok(())
+        }
     }
 
     pub fn clear_restitution_callback(&mut self) {

@@ -15,6 +15,7 @@ mod core {
     pub(crate) mod ffi_vec;
     pub(crate) mod material_mix_registry;
     pub(crate) mod task_system;
+    pub(crate) mod wasm;
 }
 pub mod debug_draw;
 pub mod error;

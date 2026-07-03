@@ -66,7 +66,7 @@ cargo run -p xtask -- provider-smoke
 The provider smoke verifies shared memory and imported Box3D symbols without
 cross-module callback function pointers. Callback-heavy APIs need a dedicated
 shared-table or dynamic-linking path before browser provider mode can claim
-them.
+them; the safe wrapper currently reports them as `Error::UnsupportedOnWasm`.
 
 C-backed WASI source build:
 

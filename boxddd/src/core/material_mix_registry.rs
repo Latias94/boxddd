@@ -1,3 +1,5 @@
+#![cfg_attr(all(target_arch = "wasm32", boxddd_wasm_provider), allow(dead_code))]
+
 use crate::callbacks::{MaterialMixContext, MaterialMixInput};
 use boxddd_sys::ffi;
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};

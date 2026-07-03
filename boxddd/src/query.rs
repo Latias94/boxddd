@@ -1,3 +1,5 @@
+#![cfg_attr(all(target_arch = "wasm32", boxddd_wasm_provider), allow(dead_code))]
+
 use crate::collision::{ShapeCastInput, ShapeProxy};
 use crate::core::{box3d_lock, callback_state};
 use crate::error::{Error, Result};
@@ -135,26 +137,34 @@ impl World {
         F: FnMut(ShapeId) -> bool,
     {
         callback_state::check_not_in_callback()?;
-        aabb.validate()?;
-        let mut ctx = OverlapContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let stats = unsafe {
-            ffi::b3World_OverlapAABB(
-                self.raw(),
-                aabb.into_raw(),
-                filter.raw(),
-                Some(overlap_trampoline::<F>),
-                (&mut ctx as *mut OverlapContext<_>).cast(),
-            )
-        };
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(TreeStats::from_raw(stats))
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (aabb, filter, visitor);
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            aabb.validate()?;
+            let mut ctx = OverlapContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let stats = unsafe {
+                ffi::b3World_OverlapAABB(
+                    self.raw(),
+                    aabb.into_raw(),
+                    filter.raw(),
+                    Some(overlap_trampoline::<F>),
+                    (&mut ctx as *mut OverlapContext<_>).cast(),
+                )
+            };
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(TreeStats::from_raw(stats))
+            }
         }
     }
 
@@ -194,28 +204,36 @@ impl World {
         F: FnMut(ShapeId) -> bool,
     {
         callback_state::check_not_in_callback()?;
-        let origin = origin.into().validate()?;
-        let raw_proxy = proxy.raw();
-        let mut ctx = OverlapContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let stats = unsafe {
-            ffi::b3World_OverlapShape(
-                self.raw(),
-                origin.into_raw(),
-                &raw_proxy,
-                filter.raw(),
-                Some(overlap_trampoline::<F>),
-                (&mut ctx as *mut OverlapContext<_>).cast(),
-            )
-        };
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(TreeStats::from_raw(stats))
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (origin, proxy, filter, visitor);
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let origin = origin.into().validate()?;
+            let raw_proxy = proxy.raw();
+            let mut ctx = OverlapContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let stats = unsafe {
+                ffi::b3World_OverlapShape(
+                    self.raw(),
+                    origin.into_raw(),
+                    &raw_proxy,
+                    filter.raw(),
+                    Some(overlap_trampoline::<F>),
+                    (&mut ctx as *mut OverlapContext<_>).cast(),
+                )
+            };
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(TreeStats::from_raw(stats))
+            }
         }
     }
 
@@ -255,28 +273,36 @@ impl World {
         F: FnMut(RayHit) -> f32,
     {
         callback_state::check_not_in_callback()?;
-        let origin = origin.into().validate()?;
-        let translation = translation.into().validate()?;
-        let mut ctx = CastContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let stats = unsafe {
-            ffi::b3World_CastRay(
-                self.raw(),
-                origin.into_raw(),
-                translation.into_raw(),
-                filter.raw(),
-                Some(cast_trampoline::<F>),
-                (&mut ctx as *mut CastContext<_>).cast(),
-            )
-        };
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(TreeStats::from_raw(stats))
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (origin, translation, filter, visitor);
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let origin = origin.into().validate()?;
+            let translation = translation.into().validate()?;
+            let mut ctx = CastContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let stats = unsafe {
+                ffi::b3World_CastRay(
+                    self.raw(),
+                    origin.into_raw(),
+                    translation.into_raw(),
+                    filter.raw(),
+                    Some(cast_trampoline::<F>),
+                    (&mut ctx as *mut CastContext<_>).cast(),
+                )
+            };
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(TreeStats::from_raw(stats))
+            }
         }
     }
 
@@ -352,29 +378,37 @@ impl World {
         F: FnMut(RayHit) -> f32,
     {
         callback_state::check_not_in_callback()?;
-        let origin = origin.into().validate()?;
-        let raw_input = input.raw();
-        let mut ctx = CastContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        self.check_world_valid_locked()?;
-        let stats = unsafe {
-            ffi::b3World_CastShape(
-                self.raw(),
-                origin.into_raw(),
-                &raw_input.proxy,
-                raw_input.translation,
-                filter.raw(),
-                Some(cast_trampoline::<F>),
-                (&mut ctx as *mut CastContext<_>).cast(),
-            )
-        };
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(TreeStats::from_raw(stats))
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (origin, input, filter, visitor);
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let origin = origin.into().validate()?;
+            let raw_input = input.raw();
+            let mut ctx = CastContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            let stats = unsafe {
+                ffi::b3World_CastShape(
+                    self.raw(),
+                    origin.into_raw(),
+                    &raw_input.proxy,
+                    raw_input.translation,
+                    filter.raw(),
+                    Some(cast_trampoline::<F>),
+                    (&mut ctx as *mut CastContext<_>).cast(),
+                )
+            };
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(TreeStats::from_raw(stats))
+            }
         }
     }
 
