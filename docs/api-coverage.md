@@ -8,7 +8,7 @@ The machine-checkable source is `boxddd/tests/fixtures/api_coverage_symbols.txt`
 | Status | Meaning |
 |---|---|
 | `safe` | Exposed through the safe `boxddd` API with Rust ownership, validation, or callback containment. |
-| `raw` | Intentionally left to `boxddd_sys::ffi` or a future explicitly unsafe/raw module because the API involves process-global state, raw pointers, file IO, debug dumping, or platform hooks. |
+| `raw` | Intentionally left to `boxddd_sys::ffi` or exposed only through explicitly unsafe/raw-named `boxddd` APIs because the API involves process-global state, raw pointers, file IO, debug dumping, or platform hooks. |
 | `omitted` | Not part of the safe wrapper contract for this release because it is diagnostic or incompatible with the crate ownership model. |
 | `deferred` | Known upstream public API that still needs a focused safe design or implementation unit. |
 
@@ -31,7 +31,7 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 - Safe APIs must not expose borrowed Box3D-owned memory beyond the owning `World` or native resource lifetime.
 - Callback APIs must follow the existing callback guard pattern: do not unwind through C, return `Error::CallbackPanicked` where panic containment is possible, and return `Error::UnsupportedOnWasm` for provider-mode WASM callback paths that are not sound yet.
 - Process-global hooks are not ordinary safe convenience APIs. Allocator, assert, log, timer, file IO, global units, and stall threshold functions stay raw or require an explicit raw/unsafe policy.
-- Raw `void*` user data is not a typed Rust ownership mechanism. Any exposure must make the raw boundary visible in the name and documentation.
+- Raw `void*` user data is not a typed Rust ownership mechanism. Any exposure must make the raw boundary visible in the name and documentation, for example `raw_user_data` fields or `unsafe fn try_set_*_raw_user_data`.
 - `World`, native resources, dynamic trees, recording, and replay player types remain single-owner and are not made `Send` or `Sync`.
 
 ## High-Priority Deferred Areas

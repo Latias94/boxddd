@@ -212,7 +212,13 @@ impl World {
         Ok(unsafe { ffi::b3Joint_GetCollideConnected(joint_id.into_raw()) })
     }
 
-    pub fn try_set_joint_user_data(
+    /// Sets the raw Box3D `userData` pointer attached to a joint.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure `user_data` remains valid for every native Box3D use and must not
+    /// rely on `boxddd` to manage, alias-check, or drop the pointed-to value.
+    pub unsafe fn try_set_joint_raw_user_data(
         &mut self,
         joint_id: JointId,
         user_data: *mut c_void,
@@ -222,7 +228,13 @@ impl World {
         Ok(())
     }
 
-    pub fn try_joint_user_data(&self, joint_id: JointId) -> Result<*mut c_void> {
+    /// Returns the raw Box3D `userData` pointer attached to a joint.
+    ///
+    /// # Safety
+    ///
+    /// The returned pointer is not validated by `boxddd`. The caller is responsible for treating
+    /// it only according to the ownership and lifetime contract used when it was stored.
+    pub unsafe fn try_joint_raw_user_data(&self, joint_id: JointId) -> Result<*mut c_void> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetUserData(joint_id.into_raw()) })
     }

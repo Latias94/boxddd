@@ -6,6 +6,7 @@ Status legend:
 
 - **Wrapped**: available on the safe `boxddd` API.
 - **Raw-only**: intentionally exposed through `boxddd_sys::ffi` only for this release.
+- **Unsafe raw**: available through explicit `unsafe`/raw-named `boxddd` APIs, not part of the safe API contract.
 - **Deferred**: known upstream API that needs a focused safe design before it should be wrapped.
 - **Not applicable**: internal/package concern, not a safe wrapper target.
 
@@ -43,7 +44,7 @@ Status legend:
 | Dynamic tree | `b3DynamicTree_*` except file save/load | Wrapped/Raw-only | `DynamicTree` owns create/destroy, proxy lifecycle, metrics, rebuild/validation, AABB/closest/ray/box cast visitors, and panic containment. File save/load stays raw file IO. |
 | Standalone collision | sphere/capsule/hull/mesh/height field/compound mass/AABB/overlap/ray/shape cast; GJK distance, TOI, sweep transforms, plane solving, clipping, and sphere/capsule/hull/triangle manifolds | Wrapped/Deferred | The value-returning collision helpers are wrapped with validation and owned outputs. Mesh and height-field query callbacks remain deferred until their visitor/lifetime contract is designed. |
 | Joints common runtime | destroy, valid, type, bodies, world, local frames, collide connected, wake, forces/torques, separations, tuning, thresholds | Wrapped | Wrong-family typed calls return `Error::WrongJointType`. |
-| Joint user data | `b3Joint_SetUserData`, `b3Joint_GetUserData` | Raw-only | Raw pointer ownership is explicit. |
+| Joint user data | `b3Joint_SetUserData`, `b3Joint_GetUserData` | Unsafe raw | Exposed as `raw_user_data` definition/runtime APIs; pointer ownership remains entirely caller-defined. |
 | Parallel joint | create, spring, damping, max torque | Wrapped | Typed definition and runtime APIs. |
 | Distance joint | create, length, spring/range, limit/range, motor/speed/force/current length | Wrapped | Typed definition and runtime APIs. |
 | Motor joint | create, linear/angular velocity, max velocity force/torque, spring tuning | Wrapped | Typed definition and runtime APIs. |

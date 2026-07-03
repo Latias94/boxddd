@@ -26,7 +26,7 @@ fn assert_close(a: f32, b: f32) {
 }
 
 #[test]
-fn common_joint_runtime_setters_getters_and_user_data_work() {
+fn common_joint_runtime_setters_getters_and_raw_user_data_work() {
     let (mut world, a, b) = body_pair();
     let joint = world.create_distance_joint(
         DistanceJointDef::new(a, b)
@@ -63,8 +63,11 @@ fn common_joint_runtime_setters_getters_and_user_data_work() {
 
     let mut marker = 7_i32;
     let ptr = (&mut marker as *mut i32).cast::<c_void>();
-    world.try_set_joint_user_data(joint, ptr).unwrap();
-    assert_eq!(world.try_joint_user_data(joint).unwrap(), ptr);
+    unsafe { world.try_set_joint_raw_user_data(joint, ptr).unwrap() };
+    assert_eq!(
+        unsafe { world.try_joint_raw_user_data(joint).unwrap() },
+        ptr
+    );
 
     world.try_wake_joint_bodies(joint).unwrap();
     assert!(world.try_joint_constraint_force(joint).unwrap().is_valid());

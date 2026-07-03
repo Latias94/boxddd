@@ -109,8 +109,14 @@ macro_rules! impl_joint_def_common {
                 self
             }
 
+            /// Sets the raw Box3D `userData` pointer on this joint definition.
+            ///
+            /// # Safety
+            ///
+            /// The caller must ensure the pointer remains valid for every native Box3D use and
+            /// must not rely on `boxddd` to manage, alias-check, or drop the pointed-to value.
             #[inline]
-            pub fn user_data(mut self, user_data: *mut c_void) -> Self {
+            pub unsafe fn raw_user_data(mut self, user_data: *mut c_void) -> Self {
                 self.raw.base.userData = user_data;
                 self
             }

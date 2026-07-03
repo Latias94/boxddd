@@ -21,7 +21,7 @@ impl BodyMove<'_> {
         self.0.fellAsleep
     }
 
-    pub fn user_data(&self) -> *mut c_void {
+    pub fn raw_user_data(&self) -> *mut c_void {
         self.0.userData
     }
 }
@@ -45,7 +45,7 @@ pub struct BodyMoveEvent {
     pub body_id: BodyId,
     pub transform: WorldTransform,
     pub fell_asleep: bool,
-    pub user_data: *mut c_void,
+    pub raw_user_data: *mut c_void,
 }
 
 #[derive(Copy, Clone)]
@@ -274,7 +274,7 @@ impl JointEventView<'_> {
         JointId::from_raw(self.0.jointId)
     }
 
-    pub fn user_data(&self) -> *mut c_void {
+    pub fn raw_user_data(&self) -> *mut c_void {
         self.0.userData
     }
 }
@@ -296,7 +296,7 @@ impl<'a> Iterator for JointEventIter<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct JointEvent {
     pub joint_id: JointId,
-    pub user_data: *mut c_void,
+    pub raw_user_data: *mut c_void,
 }
 
 fn map_snapshot_into<T, U>(out: &mut Vec<U>, input: &[T], mut map: impl FnMut(&T) -> U) {
@@ -366,7 +366,7 @@ impl World {
             body_id: BodyId::from_raw(event.bodyId),
             transform: WorldTransform::from_raw(event.transform),
             fell_asleep: event.fellAsleep,
-            user_data: event.userData,
+            raw_user_data: event.userData,
         });
         Ok(())
     }
@@ -612,7 +612,7 @@ impl World {
         let raw = unsafe { ffi::b3World_GetJointEvents(self.raw()) };
         map_snapshot_into(out, joint_event_slice(raw), |event| JointEvent {
             joint_id: JointId::from_raw(event.jointId),
-            user_data: event.userData,
+            raw_user_data: event.userData,
         });
         Ok(())
     }
