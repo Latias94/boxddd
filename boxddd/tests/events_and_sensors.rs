@@ -1,4 +1,7 @@
-use boxddd::{BodyDef, BodyType, BoxHull, ContactEvents, ShapeDef, Sphere, Vec3, World, WorldDef};
+use boxddd::{
+    BodyDef, BodyType, BoxHull, ContactEvents, ContactId, Error, ShapeDef, Sphere, Vec3, World,
+    WorldDef,
+};
 
 #[test]
 fn sensor_events_support_owned_into_and_view_reads() {
@@ -161,6 +164,7 @@ fn contact_and_hit_events_capture_ids_materials_and_reuse_buffers() {
     let begin_capacity = events.begin.capacity();
     let mut begin_seen = false;
     let mut hit_seen = false;
+    let mut contact_id = None;
 
     for _ in 0..160 {
         world.step(1.0 / 60.0, 4);
@@ -168,9 +172,13 @@ fn contact_and_hit_events_capture_ids_materials_and_reuse_buffers() {
         assert!(events.begin.capacity() >= begin_capacity);
 
         begin_seen |= events.begin.iter().any(|event| {
-            event.contact_id.is_valid()
+            let matches = event.contact_id.is_valid()
                 && [event.shape_a, event.shape_b].contains(&ground_shape)
-                && [event.shape_a, event.shape_b].contains(&sphere_shape)
+                && [event.shape_a, event.shape_b].contains(&sphere_shape);
+            if matches {
+                contact_id = Some(event.contact_id);
+            }
+            matches
         });
         hit_seen |= events.hit.iter().any(|event| {
             [event.shape_a, event.shape_b].contains(&ground_shape)
@@ -196,6 +204,28 @@ fn contact_and_hit_events_capture_ids_materials_and_reuse_buffers() {
 
     assert!(begin_seen);
     assert!(hit_seen);
+
+    let contact = world
+        .try_contact_data(contact_id.expect("contact id"))
+        .unwrap();
+    assert_eq!(contact.contact_id, contact_id.unwrap());
+    assert!(
+        [contact.shape_id_a, contact.shape_id_b].contains(&ground_shape)
+            && [contact.shape_id_a, contact.shape_id_b].contains(&sphere_shape)
+    );
+    assert!(!contact.manifolds.is_empty());
+
+    assert_eq!(
+        world.try_contact_data(ContactId::default()).unwrap_err(),
+        Error::InvalidContactId
+    );
+    let other_world = World::new(WorldDef::default()).unwrap();
+    assert_eq!(
+        other_world
+            .try_contact_data(contact.contact_id)
+            .unwrap_err(),
+        Error::InvalidContactId
+    );
 
     let shape_contacts = world.try_shape_contacts(sphere_shape).unwrap();
     assert!(
@@ -265,6 +295,10 @@ fn event_apis_respect_callback_guard() {
     );
     assert_eq!(
         world.try_contact_events().unwrap_err(),
+        boxddd::Error::InCallback
+    );
+    assert_eq!(
+        world.try_contact_data(ContactId::default()).unwrap_err(),
         boxddd::Error::InCallback
     );
     assert_eq!(

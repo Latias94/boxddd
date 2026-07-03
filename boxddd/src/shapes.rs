@@ -309,6 +309,12 @@ pub struct BoxHull {
     raw: ffi::b3BoxHull,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ScaledBox {
+    pub half_widths: Vec3,
+    pub transform: Transform,
+}
+
 impl BoxHull {
     #[inline]
     pub fn cube(half_width: f32) -> Self {
@@ -353,6 +359,34 @@ impl BoxHull {
                 )
             },
         }
+    }
+
+    pub fn scale_box(
+        half_widths: impl Into<Vec3>,
+        transform: Transform,
+        post_scale: impl Into<Vec3>,
+        min_half_width: f32,
+    ) -> Result<ScaledBox> {
+        let mut half_widths = validate_box_half_widths(half_widths.into())?.into_raw();
+        let mut transform = transform.validate()?.into_raw();
+        let post_scale = post_scale.into().validate()?;
+        if !min_half_width.is_finite() || min_half_width <= 0.0 {
+            return Err(Error::InvalidArgument);
+        }
+
+        unsafe {
+            ffi::b3ScaleBox(
+                &mut half_widths,
+                &mut transform,
+                post_scale.into_raw(),
+                min_half_width,
+            );
+        }
+
+        Ok(ScaledBox {
+            half_widths: Vec3::from_raw(half_widths).validate()?,
+            transform: Transform::from_raw(transform).validate()?,
+        })
     }
 
     #[inline]
@@ -477,6 +511,20 @@ pub(crate) fn validate_mesh_scale(scale: Vec3) -> Result<Vec3> {
     }
 }
 
+fn validate_box_half_widths(half_widths: Vec3) -> Result<Vec3> {
+    if half_widths.x.is_finite()
+        && half_widths.x > 0.0
+        && half_widths.y.is_finite()
+        && half_widths.y > 0.0
+        && half_widths.z.is_finite()
+        && half_widths.z > 0.0
+    {
+        Ok(half_widths)
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
 #[derive(Debug)]
 pub struct Hull {
     raw: NonNull<ffi::b3HullData>,
@@ -532,6 +580,22 @@ impl Hull {
             return Err(Error::InvalidArgument);
         }
         Self::from_ptr(unsafe { ffi::b3CreateRock(radius) })
+    }
+
+    pub fn try_clone(&self) -> Result<Self> {
+        Self::from_ptr(unsafe { ffi::b3CloneHull(self.as_ptr()) })
+    }
+
+    pub fn try_clone_transformed(
+        &self,
+        transform: Transform,
+        scale: impl Into<Vec3>,
+    ) -> Result<Self> {
+        let transform = transform.validate()?;
+        let scale = validate_mesh_scale(scale.into())?;
+        Self::from_ptr(unsafe {
+            ffi::b3CloneAndTransformHull(self.as_ptr(), transform.into_raw(), scale.into_raw())
+        })
     }
 
     #[inline]

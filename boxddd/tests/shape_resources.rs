@@ -1,6 +1,6 @@
 use boxddd::{
     BodyDef, BodyType, BoxHull, Capsule, Compound, CompoundChild, Error, HeightField, Hull,
-    MeshData, ShapeDef, ShapeType, Sphere, SurfaceMaterial, Transform, Vec3, World, WorldDef,
+    MeshData, Quat, ShapeDef, ShapeType, Sphere, SurfaceMaterial, Transform, Vec3, World, WorldDef,
 };
 
 #[test]
@@ -47,6 +47,59 @@ fn shape_creation_covers_value_and_native_resources() {
     );
 
     let transformed_hull = Hull::cylinder(1.0, 0.25, 0.0, 8).unwrap();
+    let cloned_hull = transformed_hull.try_clone().unwrap();
+    assert_ne!(
+        cloned_hull.as_hull_data() as *const _,
+        transformed_hull.as_hull_data() as *const _
+    );
+    assert_eq!(
+        cloned_hull.as_hull_data().byteCount,
+        transformed_hull.as_hull_data().byteCount
+    );
+    let moved_hull = transformed_hull
+        .try_clone_transformed(Transform::new(Vec3::X, Quat::IDENTITY), [1.0, 1.0, 1.0])
+        .unwrap();
+    assert_ne!(
+        moved_hull.as_hull_data().center.x,
+        transformed_hull.as_hull_data().center.x
+    );
+    assert_eq!(
+        transformed_hull
+            .try_clone_transformed(
+                Transform::new(Vec3::ZERO, Quat::new(Vec3::ZERO, f32::NAN)),
+                [1.0, 1.0, 1.0],
+            )
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        transformed_hull
+            .try_clone_transformed(Transform::IDENTITY, [0.0, 1.0, 1.0])
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    let scaled_box =
+        BoxHull::scale_box([1.0, 2.0, 3.0], Transform::IDENTITY, [-2.0, 0.5, 1.5], 0.1).unwrap();
+    assert!(scaled_box.half_widths.x >= 0.1);
+    assert!(scaled_box.half_widths.y >= 0.1);
+    assert!(scaled_box.half_widths.z >= 0.1);
+    assert!(scaled_box.transform.is_valid());
+    assert_eq!(
+        BoxHull::scale_box(
+            [1.0, 2.0, 3.0],
+            Transform::IDENTITY,
+            [f32::NAN, 1.0, 1.0],
+            0.1
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        BoxHull::scale_box([1.0, 2.0, 3.0], Transform::IDENTITY, [1.0, 1.0, 1.0], 0.0).unwrap_err(),
+        Error::InvalidArgument
+    );
+
     let transformed_hull_shape = world
         .try_create_transformed_hull_shape(
             static_body,

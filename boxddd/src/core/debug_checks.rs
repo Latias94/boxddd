@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use crate::types::{BodyId, JointId, ShapeId};
+use crate::types::{BodyId, ContactId, JointId, ShapeId};
 use boxddd_sys::ffi;
 
 #[inline]
@@ -26,5 +26,14 @@ pub(crate) fn check_joint_valid_raw(id: JointId) -> Result<()> {
         Ok(())
     } else {
         Err(Error::InvalidJointId)
+    }
+}
+
+#[inline]
+pub(crate) fn check_contact_valid_raw(id: ContactId) -> Result<()> {
+    if unsafe { ffi::b3Contact_IsValid(id.into_raw()) } {
+        Ok(())
+    } else {
+        Err(Error::InvalidContactId)
     }
 }

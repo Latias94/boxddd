@@ -11,8 +11,8 @@ use crate::shapes::{
     ShapeMesh, ShapeType, Sphere, SurfaceMaterial, validate_mesh_scale,
 };
 use crate::types::{
-    Aabb, BodyId, Capacity, ContactData, Counters, Filter, JointId, MassData, Matrix3, MotionLocks,
-    Pos, Profile, Quat, ShapeId, Vec3, Version, WorldTransform,
+    Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, MassData, Matrix3,
+    MotionLocks, Pos, Profile, Quat, ShapeId, Vec3, Version, WorldTransform,
 };
 use boxddd_sys::ffi;
 use std::collections::HashMap;
@@ -334,6 +334,17 @@ impl World {
             Ok(())
         } else {
             Err(Error::InvalidJointId)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn check_contact_belongs_locked(&self, contact_id: ContactId) -> Result<()> {
+        self.check_world_valid_locked()?;
+        debug_checks::check_contact_valid_raw(contact_id)?;
+        if contact_id.world0 == self.world0_locked()? {
+            Ok(())
+        } else {
+            Err(Error::InvalidContactId)
         }
     }
 

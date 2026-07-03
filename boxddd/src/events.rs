@@ -1,6 +1,6 @@
 use crate::core::{box3d_lock, callback_state};
 use crate::error::Result;
-use crate::types::{BodyId, ContactId, JointId, Pos, ShapeId, Vec3, WorldTransform};
+use crate::types::{BodyId, ContactData, ContactId, JointId, Pos, ShapeId, Vec3, WorldTransform};
 use crate::world::World;
 use boxddd_sys::ffi;
 use std::ffi::c_void;
@@ -507,6 +507,19 @@ impl World {
     pub fn contact_events_into(&self, out: &mut ContactEvents) {
         self.try_contact_events_into(out)
             .expect("invalid Box3D world");
+    }
+
+    pub fn contact_data(&self, contact_id: ContactId) -> ContactData {
+        self.try_contact_data(contact_id)
+            .expect("invalid ContactId or Box3D world")
+    }
+
+    pub fn try_contact_data(&self, contact_id: ContactId) -> Result<ContactData> {
+        callback_state::check_not_in_callback()?;
+        let _guard = box3d_lock::lock();
+        self.check_contact_belongs_locked(contact_id)?;
+        let raw = unsafe { ffi::b3Contact_GetData(contact_id.into_raw()) };
+        Ok(unsafe { ContactData::from_raw(raw) })
     }
 
     pub fn try_contact_events_into(&self, out: &mut ContactEvents) -> Result<()> {
