@@ -88,8 +88,8 @@ pub use shapes::{
     BoxHull, Capsule, Compound, CompoundBuilder, CompoundCapsule, CompoundChild,
     CompoundChildShape, CompoundHull, CompoundMesh, CompoundQueryHit, CompoundSphere,
     HEIGHT_FIELD_HOLE, HeightField, HeightFieldBuilder, Hull, MAX_COMPOUND_MESH_MATERIALS,
-    MeshData, MeshDataBuilder, MeshDataOptions, ScaledBox, ShapeDef, ShapeDefBuilder,
-    ShapeHeightField, ShapeHull, ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
+    MeshData, MeshDataBuilder, MeshDataOptions, MeshTriangleHit, ScaledBox, ShapeDef,
+    ShapeDefBuilder, ShapeHeightField, ShapeHull, ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
 };
 pub use types::{
     Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, Manifold,

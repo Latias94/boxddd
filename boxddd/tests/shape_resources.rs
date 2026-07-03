@@ -1,5 +1,5 @@
 use boxddd::{
-    BodyDef, BodyType, BoxHull, Capsule, Compound, CompoundChild, Error, HeightField, Hull,
+    Aabb, BodyDef, BodyType, BoxHull, Capsule, Compound, CompoundChild, Error, HeightField, Hull,
     MeshData, Quat, ShapeDef, ShapeType, Sphere, SurfaceMaterial, Transform, Vec3, World, WorldDef,
 };
 
@@ -380,6 +380,113 @@ fn borrowed_resource_shapes_are_rejected_on_dynamic_bodies() {
                 MeshData::box_mesh([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], true).unwrap(),
                 [1.0, 1.0, 1.0],
             )
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+}
+
+#[test]
+fn mesh_and_height_field_query_visitors_return_owned_triangles() {
+    let mesh = MeshData::box_mesh([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], true).unwrap();
+    let broad_bounds = Aabb {
+        lower_bound: [-1.25, -1.25, -1.25].into(),
+        upper_bound: [1.25, 1.25, 1.25].into(),
+    };
+
+    let mesh_hits = mesh.query_triangles(broad_bounds, [1.0, 1.0, 1.0]).unwrap();
+    assert!(!mesh_hits.is_empty());
+    assert!(mesh_hits.iter().all(|hit| {
+        hit.triangle_index >= 0 && hit.a.is_valid() && hit.b.is_valid() && hit.c.is_valid()
+    }));
+
+    let mut reusable_hits = Vec::with_capacity(16);
+    mesh.query_triangles_into(broad_bounds, [1.0, 1.0, 1.0], &mut reusable_hits)
+        .unwrap();
+    assert_eq!(reusable_hits.len(), mesh_hits.len());
+
+    let mut visited = 0;
+    mesh.visit_triangles(broad_bounds, [1.0, 1.0, 1.0], |hit| {
+        visited += 1;
+        assert!(hit.triangle_index >= 0);
+        false
+    })
+    .unwrap();
+    assert_eq!(visited, 1);
+
+    let narrow_hits = mesh
+        .query_triangles(
+            Aabb {
+                lower_bound: [-0.1, -0.1, -0.1].into(),
+                upper_bound: [0.1, 0.1, 0.1].into(),
+            },
+            [1.0, 1.0, 1.0],
+        )
+        .unwrap();
+    assert!(narrow_hits.len() <= mesh_hits.len());
+
+    assert_eq!(
+        mesh.query_triangles(broad_bounds, [0.0, 1.0, 1.0])
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        mesh.query_triangles(
+            Aabb {
+                lower_bound: [1.0, 0.0, 0.0].into(),
+                upper_bound: [0.0, 0.0, 0.0].into(),
+            },
+            [1.0, 1.0, 1.0],
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+
+    mesh.visit_triangles(broad_bounds, [1.0, 1.0, 1.0], |_| {
+        assert_eq!(
+            mesh.query_triangles(broad_bounds, [1.0, 1.0, 1.0])
+                .unwrap_err(),
+            Error::InCallback
+        );
+        false
+    })
+    .unwrap();
+
+    let height_field = HeightField::grid(3, 3, [1.0, 1.0, 1.0], false).unwrap();
+    let height_bounds = Aabb {
+        lower_bound: [-0.25, -1.0, -0.25].into(),
+        upper_bound: [2.25, 1.0, 2.25].into(),
+    };
+    let height_hits = height_field.query_triangles(height_bounds).unwrap();
+    assert!(!height_hits.is_empty());
+    assert!(height_hits.iter().all(|hit| {
+        hit.triangle_index >= 0 && hit.a.is_valid() && hit.b.is_valid() && hit.c.is_valid()
+    }));
+
+    let mut height_reusable_hits = Vec::new();
+    height_field
+        .query_triangles_into(height_bounds, &mut height_reusable_hits)
+        .unwrap();
+    assert_eq!(height_reusable_hits.len(), height_hits.len());
+
+    let mut height_visited = 0;
+    height_field
+        .visit_triangles(height_bounds, |hit| {
+            height_visited += 1;
+            assert!(hit.triangle_index >= 0);
+            assert_eq!(
+                height_field.query_triangles(height_bounds).unwrap_err(),
+                Error::InCallback
+            );
+        })
+        .unwrap();
+    assert_eq!(height_visited, height_hits.len());
+
+    assert_eq!(
+        height_field
+            .query_triangles(Aabb {
+                lower_bound: [1.0, 0.0, 0.0].into(),
+                upper_bound: [0.0, 0.0, 0.0].into(),
+            })
             .unwrap_err(),
         Error::InvalidArgument
     );

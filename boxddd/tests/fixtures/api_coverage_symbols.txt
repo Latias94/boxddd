@@ -522,8 +522,8 @@ b3ShapeCastCompound|safe|collision|collision.h|covered by current safe wrapper i
 b3ShapeCastHull|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCastMesh|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCastHeightField|safe|collision|collision.h|covered by current safe wrapper implementation
-b3QueryMesh|deferred|geometry_resources|collision.h|U4 will add owned triangle-hit visitor and collection APIs with early stop
-b3QueryHeightField|deferred|geometry_resources|collision.h|U4 will add owned triangle-hit traversal without native early-stop semantics
+b3QueryMesh|safe|geometry_resources|collision.h|MeshData::query_triangles and visit_triangles return owned triangle hits with early stop
+b3QueryHeightField|safe|geometry_resources|collision.h|HeightField::query_triangles returns owned triangle hits without promising native early stop
 b3ShapeDistance|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCast|safe|collision|collision.h|covered by current safe wrapper implementation
 b3GetSweepTransform|safe|core|collision.h|covered by current safe wrapper implementation

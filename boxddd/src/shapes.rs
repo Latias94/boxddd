@@ -429,6 +429,34 @@ fn raw_aabb_eq(a: &ffi::b3AABB, b: &ffi::b3AABB) -> bool {
     raw_vec3_eq(a.lowerBound, b.lowerBound) && raw_vec3_eq(a.upperBound, b.upperBound)
 }
 
+fn clamp_height_field_query_bounds(a: Aabb, b: ffi::b3AABB) -> Result<Option<Aabb>> {
+    let b = Aabb::from_raw(b).validate()?;
+    if a.upper_bound.x < b.lower_bound.x
+        || a.lower_bound.x > b.upper_bound.x
+        || a.upper_bound.y < b.lower_bound.y
+        || a.lower_bound.y > b.upper_bound.y
+        || a.upper_bound.z < b.lower_bound.z
+        || a.lower_bound.z > b.upper_bound.z
+    {
+        Ok(None)
+    } else {
+        Aabb {
+            lower_bound: Vec3::new(
+                a.lower_bound.x.max(b.lower_bound.x),
+                a.lower_bound.y,
+                a.lower_bound.z.max(b.lower_bound.z),
+            ),
+            upper_bound: Vec3::new(
+                a.upper_bound.x.min(b.upper_bound.x),
+                a.upper_bound.y,
+                a.upper_bound.z.min(b.upper_bound.z),
+            ),
+        }
+        .validate()
+        .map(Some)
+    }
+}
+
 fn raw_hull_data_eq(a: &ffi::b3HullData, b: &ffi::b3HullData) -> bool {
     a.version == b.version
         && a.byteCount == b.byteCount
@@ -751,6 +779,14 @@ pub struct MeshData {
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MeshTriangleHit {
+    pub a: Vec3,
+    pub b: Vec3,
+    pub c: Vec3,
+    pub triangle_index: i32,
+}
+
 impl MeshData {
     #[inline]
     pub fn builder(
@@ -975,6 +1011,60 @@ impl MeshData {
         unsafe { self.raw.as_ref().materialCount }
     }
 
+    pub fn query_triangles(
+        &self,
+        bounds: Aabb,
+        scale: impl Into<Vec3>,
+    ) -> Result<Vec<MeshTriangleHit>> {
+        let mut out = Vec::new();
+        self.query_triangles_into(bounds, scale, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn query_triangles_into(
+        &self,
+        bounds: Aabb,
+        scale: impl Into<Vec3>,
+        out: &mut Vec<MeshTriangleHit>,
+    ) -> Result<()> {
+        out.clear();
+        self.visit_triangles(bounds, scale, |hit| {
+            out.push(hit);
+            true
+        })
+    }
+
+    pub fn visit_triangles<F>(&self, bounds: Aabb, scale: impl Into<Vec3>, visitor: F) -> Result<()>
+    where
+        F: FnMut(MeshTriangleHit) -> bool,
+    {
+        callback_state::check_not_in_callback()?;
+        let bounds = bounds.validate()?;
+        let scale = validate_mesh_scale(scale.into())?;
+        let raw_mesh = ffi::b3Mesh {
+            data: self.as_ptr(),
+            scale: scale.into_raw(),
+        };
+        let mut ctx = MeshTriangleQueryContext {
+            visitor,
+            panicked: false,
+        };
+        let _guard = box3d_lock::lock();
+        unsafe {
+            ffi::b3QueryMesh(
+                &raw_mesh,
+                bounds.into_raw(),
+                Some(mesh_triangle_query_trampoline::<F>),
+                (&mut ctx as *mut MeshTriangleQueryContext<_>).cast(),
+            );
+        }
+        if ctx.panicked {
+            Err(Error::CallbackPanicked)
+        } else {
+            Ok(())
+        }
+    }
+
     #[inline]
     pub(crate) fn as_ptr(&self) -> *const ffi::b3MeshData {
         self.raw.as_ptr()
@@ -1176,6 +1266,47 @@ impl HeightField {
         unsafe { self.raw.as_ref().columnCount }
     }
 
+    pub fn query_triangles(&self, bounds: Aabb) -> Result<Vec<MeshTriangleHit>> {
+        let mut out = Vec::new();
+        self.query_triangles_into(bounds, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn query_triangles_into(&self, bounds: Aabb, out: &mut Vec<MeshTriangleHit>) -> Result<()> {
+        out.clear();
+        self.visit_triangles(bounds, |hit| out.push(hit))
+    }
+
+    pub fn visit_triangles<F>(&self, bounds: Aabb, visitor: F) -> Result<()>
+    where
+        F: FnMut(MeshTriangleHit),
+    {
+        callback_state::check_not_in_callback()?;
+        let Some(bounds) =
+            clamp_height_field_query_bounds(bounds.validate()?, unsafe { self.raw.as_ref().aabb })?
+        else {
+            return Ok(());
+        };
+        let mut ctx = HeightFieldTriangleQueryContext {
+            visitor,
+            panicked: false,
+        };
+        let _guard = box3d_lock::lock();
+        unsafe {
+            ffi::b3QueryHeightField(
+                self.as_ptr(),
+                bounds.into_raw(),
+                Some(height_field_triangle_query_trampoline::<F>),
+                (&mut ctx as *mut HeightFieldTriangleQueryContext<_>).cast(),
+            );
+        }
+        if ctx.panicked {
+            Err(Error::CallbackPanicked)
+        } else {
+            Ok(())
+        }
+    }
+
     #[inline]
     pub(crate) fn as_ptr(&self) -> *const ffi::b3HeightFieldData {
         self.raw.as_ptr()
@@ -1194,6 +1325,76 @@ impl HeightField {
 impl Drop for HeightField {
     fn drop(&mut self) {
         unsafe { ffi::b3DestroyHeightField(self.raw.as_ptr()) };
+    }
+}
+
+struct MeshTriangleQueryContext<F> {
+    visitor: F,
+    panicked: bool,
+}
+
+unsafe extern "C" fn mesh_triangle_query_trampoline<F>(
+    a: ffi::b3Vec3,
+    b: ffi::b3Vec3,
+    c: ffi::b3Vec3,
+    triangle_index: i32,
+    context: *mut c_void,
+) -> bool
+where
+    F: FnMut(MeshTriangleHit) -> bool,
+{
+    let _guard = callback_state::CallbackGuard::enter();
+    let ctx = unsafe { &mut *context.cast::<MeshTriangleQueryContext<F>>() };
+    if ctx.panicked {
+        return false;
+    }
+    let hit = MeshTriangleHit {
+        a: Vec3::from_raw(a),
+        b: Vec3::from_raw(b),
+        c: Vec3::from_raw(c),
+        triangle_index,
+    };
+    match catch_unwind(AssertUnwindSafe(|| (ctx.visitor)(hit))) {
+        Ok(keep_going) => keep_going,
+        Err(_) => {
+            ctx.panicked = true;
+            false
+        }
+    }
+}
+
+struct HeightFieldTriangleQueryContext<F> {
+    visitor: F,
+    panicked: bool,
+}
+
+unsafe extern "C" fn height_field_triangle_query_trampoline<F>(
+    a: ffi::b3Vec3,
+    b: ffi::b3Vec3,
+    c: ffi::b3Vec3,
+    triangle_index: i32,
+    context: *mut c_void,
+) -> bool
+where
+    F: FnMut(MeshTriangleHit),
+{
+    let _guard = callback_state::CallbackGuard::enter();
+    let ctx = unsafe { &mut *context.cast::<HeightFieldTriangleQueryContext<F>>() };
+    if ctx.panicked {
+        return false;
+    }
+    let hit = MeshTriangleHit {
+        a: Vec3::from_raw(a),
+        b: Vec3::from_raw(b),
+        c: Vec3::from_raw(c),
+        triangle_index,
+    };
+    match catch_unwind(AssertUnwindSafe(|| (ctx.visitor)(hit))) {
+        Ok(()) => true,
+        Err(_) => {
+            ctx.panicked = true;
+            false
+        }
     }
 }
 
