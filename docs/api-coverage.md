@@ -21,7 +21,7 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 | `safe` | 521 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 36 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers, low-level debug graph color helper |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
-| `deferred` | 19 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
+| `deferred` | 19 | contact data, redundant shape/joint world-handle getters, hull clone/transform and box scaling helpers, compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers and validators |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -38,8 +38,11 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 
 These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
 
+- Contact and redundant ownership helpers: `b3Contact_GetData` needs a world-scoped owned accessor, while shape/joint world getter symbols need an omitted-status rationale.
+- Hull and box helper tail: hull clone, transformed hull clone, and box scaling need RAII ownership and validation wrappers.
 - Complex geometry edge cases: compound overlap callback queries and compound byte conversion still need dedicated callback/ownership design.
 - Geometry query callbacks: mesh and height-field callback queries still need dedicated visitor/lifetime design.
+- Deterministic math tail: scalar/quaternion/matrix helpers plus matrix and AABB validators need safe wrappers with input validation.
 
 ## How To Update Coverage
 

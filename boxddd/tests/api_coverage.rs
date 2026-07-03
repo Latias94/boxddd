@@ -24,6 +24,8 @@ enum CoverageStatus {
 }
 
 impl CoverageStatus {
+    const ALL: [Self; 4] = [Self::Safe, Self::Raw, Self::Omitted, Self::Deferred];
+
     fn parse(value: &str) -> Option<Self> {
         match value {
             "safe" => Some(Self::Safe),
@@ -31,6 +33,15 @@ impl CoverageStatus {
             "omitted" => Some(Self::Omitted),
             "deferred" => Some(Self::Deferred),
             _ => None,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Safe => "safe",
+            Self::Raw => "raw",
+            Self::Omitted => "omitted",
+            Self::Deferred => "deferred",
         }
     }
 }
@@ -100,24 +111,36 @@ fn coverage_fixture_has_policy_buckets_and_high_priority_symbols() {
     assert!(statuses.contains(&CoverageStatus::Safe));
     assert!(statuses.contains(&CoverageStatus::Raw));
     assert!(statuses.contains(&CoverageStatus::Omitted));
-    assert!(statuses.contains(&CoverageStatus::Deferred));
 
     assert_eq!(by_symbol["b3World_Step"].status, CoverageStatus::Safe);
     assert_eq!(by_symbol["b3SetAllocator"].status, CoverageStatus::Raw);
     assert_eq!(by_symbol["b3GetWorldCount"].status, CoverageStatus::Omitted);
 
-    for symbol in [
-        "b3QueryCompound",
-        "b3ConvertCompoundToBytes",
-        "b3Atan2",
-        "b3QueryMesh",
-    ] {
-        assert_eq!(
-            by_symbol[symbol].status,
-            CoverageStatus::Deferred,
-            "{symbol} should remain visible until its implementation unit lands"
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.status == CoverageStatus::Deferred)
+    {
+        assert!(
+            !is_placeholder_deferred_note(&entry.note),
+            "{} has a placeholder deferred note",
+            entry.symbol
         );
     }
+}
+
+#[test]
+fn docs_api_snapshot_matches_fixture_counts() {
+    let entries = parse_fixture(FIXTURE).expect("coverage fixture is well formed");
+    let expected = status_counts(&entries);
+    let docs =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/api-coverage.md"))
+            .expect("API coverage docs can be read");
+    let actual = parse_docs_counts(&docs).expect("API coverage docs contain status counts");
+
+    assert_eq!(
+        actual, expected,
+        "docs/api-coverage.md Current Snapshot counts must match the fixture"
+    );
 }
 
 #[test]
@@ -175,6 +198,62 @@ fn parse_fixture(input: &str) -> Result<Vec<CoverageEntry>, String> {
     }
 
     Ok(entries)
+}
+
+fn is_placeholder_deferred_note(note: &str) -> bool {
+    let lower = note.to_ascii_lowercase();
+    lower.contains("known upstream api awaiting safe design or implementation")
+        || lower.contains("planned safe wrapper in api completion work")
+        || lower.contains("todo")
+}
+
+fn status_counts(entries: &[CoverageEntry]) -> BTreeMap<CoverageStatus, usize> {
+    let mut counts = BTreeMap::new();
+    for status in CoverageStatus::ALL {
+        counts.insert(status, 0);
+    }
+    for entry in entries {
+        *counts.entry(entry.status).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn parse_docs_counts(input: &str) -> Result<BTreeMap<CoverageStatus, usize>, String> {
+    let mut counts = BTreeMap::new();
+
+    for line in input.lines() {
+        let fields: Vec<_> = line.split('|').map(str::trim).collect();
+        if fields.len() < 4 {
+            continue;
+        }
+
+        let status = fields[1].trim_matches('`');
+        let Some(status) = CoverageStatus::parse(status) else {
+            continue;
+        };
+        let count_field = fields[2].replace(',', "");
+        if !count_field
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_digit())
+        {
+            continue;
+        }
+
+        let count = count_field
+            .parse::<usize>()
+            .map_err(|err| format!("invalid docs count for {}: {err}", status.label()))?;
+
+        counts.insert(status, count);
+    }
+
+    for status in CoverageStatus::ALL {
+        counts
+            .get(&status)
+            .ok_or_else(|| format!("docs missing {} status count", status.label()))?;
+    }
+
+    Ok(counts)
 }
 
 fn extract_header_symbols() -> BTreeMap<String, String> {

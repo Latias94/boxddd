@@ -191,7 +191,7 @@ b3DestroyShape|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_IsValid|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetType|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetBody|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_GetWorld|deferred|shape|box3d.h|known upstream API awaiting safe design or implementation
+b3Shape_GetWorld|deferred|shape|box3d.h|U2 will classify as omitted because World ownership is validated through safe owner APIs
 b3Shape_IsSensor|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetUserData|raw|shape|box3d.h|explicit unsafe boxddd::raw user-data boundary
 b3Shape_GetUserData|raw|shape|box3d.h|explicit unsafe boxddd::raw user-data boundary
@@ -239,7 +239,7 @@ b3Joint_IsValid|safe|joints|box3d.h|covered by current safe wrapper implementati
 b3Joint_GetType|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_GetBodyA|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_GetBodyB|safe|joints|box3d.h|covered by current safe wrapper implementation
-b3Joint_GetWorld|deferred|joints|box3d.h|known upstream API awaiting safe design or implementation
+b3Joint_GetWorld|deferred|joints|box3d.h|U2 will classify as omitted because World ownership is validated through safe owner APIs
 b3Joint_SetLocalFrameA|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_GetLocalFrameA|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_SetLocalFrameB|safe|joints|box3d.h|covered by current safe wrapper implementation
@@ -431,7 +431,7 @@ b3WheelJoint_GetTargetSteeringAngle|safe|joints|box3d.h|covered by current safe 
 b3WheelJoint_GetSteeringAngle|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3WheelJoint_GetSteeringTorque|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Contact_IsValid|safe|core|box3d.h|covered by current safe wrapper implementation
-b3Contact_GetData|deferred|core|box3d.h|known upstream API awaiting safe design or implementation
+b3Contact_GetData|deferred|core|box3d.h|U2 will add a world-scoped owned ContactData accessor
 b3DynamicTree_Create|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
 b3DynamicTree_Destroy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
 b3DynamicTree_CreateProxy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
@@ -458,15 +458,15 @@ b3CreateCylinder|safe|geometry_resources|collision.h|covered by current safe wra
 b3CreateCone|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateRock|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3CloneHull|deferred|geometry_resources|collision.h|known upstream API awaiting safe design or implementation
-b3CloneAndTransformHull|deferred|geometry_resources|collision.h|known upstream API awaiting safe design or implementation
+b3CloneHull|deferred|geometry_resources|collision.h|U2 will add a fallible RAII Hull clone helper
+b3CloneAndTransformHull|deferred|geometry_resources|collision.h|U2 will add a fallible transformed Hull clone helper
 b3DestroyHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3MakeCubeHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3MakeBoxHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3MakeOffsetBoxHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3MakeTransformedBoxHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3MakeScaledBoxHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3ScaleBox|deferred|core|collision.h|known upstream API awaiting safe design or implementation
+b3ScaleBox|deferred|core|collision.h|U2 will add a safe box scaling helper with transform and scale validation
 b3CreateGridMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateWaveMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateTorusMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
@@ -483,7 +483,7 @@ b3DestroyHeightField|safe|geometry_resources|collision.h|covered by current safe
 b3DumpHeightData|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3LoadHeightField|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3GetCompoundChild|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3QueryCompound|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3QueryCompound|deferred|geometry_resources|collision.h|U3 will add callback-contained Compound query visitor and collection APIs
 b3GetCompoundCapsule|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3GetCompoundHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3GetCompoundMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
@@ -491,8 +491,8 @@ b3GetCompoundSphere|safe|geometry_resources|collision.h|covered by current safe 
 b3GetCompoundMaterials|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3ConvertCompoundToBytes|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3ConvertBytesToCompound|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3ConvertCompoundToBytes|deferred|geometry_resources|collision.h|U5 will consume Box3D-owned Compound into a CompoundBytes owner
+b3ConvertBytesToCompound|deferred|geometry_resources|collision.h|U5 will restore Compound only from a CompoundBytes owner created by boxddd
 b3ComputeSphereMass|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ComputeCapsuleMass|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ComputeHullMass|safe|collision|collision.h|covered by current safe wrapper implementation
@@ -522,8 +522,8 @@ b3ShapeCastCompound|safe|collision|collision.h|covered by current safe wrapper i
 b3ShapeCastHull|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCastMesh|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCastHeightField|safe|collision|collision.h|covered by current safe wrapper implementation
-b3QueryMesh|deferred|geometry_resources|collision.h|known upstream API awaiting safe design or implementation
-b3QueryHeightField|deferred|geometry_resources|collision.h|known upstream API awaiting safe design or implementation
+b3QueryMesh|deferred|geometry_resources|collision.h|U4 will add owned triangle-hit visitor and collection APIs with early stop
+b3QueryHeightField|deferred|geometry_resources|collision.h|U4 will add owned triangle-hit traversal without native early-stop semantics
 b3ShapeDistance|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ShapeCast|safe|collision|collision.h|covered by current safe wrapper implementation
 b3GetSweepTransform|safe|core|collision.h|covered by current safe wrapper implementation
@@ -544,21 +544,21 @@ b3GetLengthUnitsPerMeter|raw|globals|constants.h|explicit boxddd::raw process-gl
 b3SetStallThreshold|raw|globals|constants.h|explicit boxddd::raw process-global tuning boundary
 b3GetStallThreshold|raw|globals|constants.h|explicit boxddd::raw process-global tuning boundary
 b3IsValidFloat|safe|math|math_functions.h|covered by current safe wrapper implementation
-b3Atan2|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
-b3ComputeCosSin|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
-b3MakeQuatFromMatrix|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
-b3ComputeQuatBetweenUnitVectors|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
-b3Steiner|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
+b3Atan2|deferred|math|math_functions.h|U6 will add a finite-input deterministic atan2 wrapper
+b3ComputeCosSin|deferred|math|math_functions.h|U6 will add a finite-input deterministic cosine-sine wrapper
+b3MakeQuatFromMatrix|deferred|math|math_functions.h|U6 will add a validated quaternion-from-matrix constructor
+b3ComputeQuatBetweenUnitVectors|deferred|math|math_functions.h|U6 will add a unit-vector quaternion helper
+b3Steiner|deferred|math|math_functions.h|U6 will add a validated Steiner inertia helper
 b3PointToSegmentDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3LineDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3SegmentDistance|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidVec3|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidQuat|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidTransform|safe|math|math_functions.h|covered by current safe wrapper implementation
-b3IsValidMatrix3|deferred|math|math_functions.h|known upstream API awaiting safe design or implementation
+b3IsValidMatrix3|deferred|math|math_functions.h|U6 will expose Matrix3 validation helpers
 b3IsValidAABB|safe|collision|math_functions.h|covered by current safe wrapper implementation
-b3IsBoundedAABB|deferred|collision|math_functions.h|known upstream API awaiting safe design or implementation
-b3IsSaneAABB|deferred|collision|math_functions.h|known upstream API awaiting safe design or implementation
+b3IsBoundedAABB|deferred|collision|math_functions.h|U6 will expose Aabb boundedness validation
+b3IsSaneAABB|deferred|collision|math_functions.h|U6 will expose Aabb sanity validation
 b3IsValidPlane|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidPosition|safe|math|math_functions.h|covered by current safe wrapper implementation
 b3IsValidWorldTransform|safe|math|math_functions.h|covered by current safe wrapper implementation
