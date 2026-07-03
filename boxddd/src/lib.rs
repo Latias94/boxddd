@@ -21,6 +21,7 @@ mod core {
     pub(crate) mod wasm;
 }
 pub mod debug_draw;
+pub mod dynamic_tree;
 pub mod error;
 pub mod events;
 #[cfg(any(
@@ -41,22 +42,28 @@ pub mod world;
 pub use body::{BodyDef, BodyDefBuilder, BodyType};
 pub use callbacks::MaterialMixInput;
 pub use collision::{
-    CastOutput, CollisionPlane, DistanceInput, DistanceOutput, LocalManifold, PlaneSolverResult,
-    RayCastInput, ShapeCastInput, ShapeCastPairInput, ShapeProxy, Sweep, TimeOfImpactInput,
-    TimeOfImpactOutput, TimeOfImpactState, clip_vector, collide_capsule_and_sphere,
-    collide_capsule_and_triangle, collide_capsules, collide_hull_and_capsule,
-    collide_hull_and_sphere, collide_hull_and_triangle, collide_hulls, collide_sphere_and_triangle,
-    collide_spheres, compute_capsule_aabb, compute_capsule_mass, compute_compound_aabb,
-    compute_height_field_aabb, compute_hull_aabb, compute_hull_mass, compute_mesh_aabb,
-    compute_sphere_aabb, compute_sphere_mass, get_sweep_transform, overlap_capsule,
-    overlap_compound, overlap_height_field, overlap_hull, overlap_mesh, overlap_sphere,
-    ray_cast_capsule, ray_cast_compound, ray_cast_height_field, ray_cast_hollow_sphere,
-    ray_cast_hull, ray_cast_mesh, ray_cast_sphere, shape_cast_capsule, shape_cast_compound,
-    shape_cast_height_field, shape_cast_hull, shape_cast_mesh, shape_cast_pair, shape_cast_sphere,
-    shape_distance, solve_planes, sweep_transform, time_of_impact,
+    BoxCastInput, CastOutput, CollisionPlane, DistanceInput, DistanceOutput, LocalManifold,
+    PlaneSolverResult, RayCastInput, ShapeCastInput, ShapeCastPairInput, ShapeProxy, Sweep,
+    TimeOfImpactInput, TimeOfImpactOutput, TimeOfImpactState, clip_vector,
+    collide_capsule_and_sphere, collide_capsule_and_triangle, collide_capsules,
+    collide_hull_and_capsule, collide_hull_and_sphere, collide_hull_and_triangle, collide_hulls,
+    collide_sphere_and_triangle, collide_spheres, compute_capsule_aabb, compute_capsule_mass,
+    compute_compound_aabb, compute_height_field_aabb, compute_hull_aabb, compute_hull_mass,
+    compute_mesh_aabb, compute_sphere_aabb, compute_sphere_mass, get_sweep_transform,
+    overlap_capsule, overlap_compound, overlap_height_field, overlap_hull, overlap_mesh,
+    overlap_sphere, ray_cast_capsule, ray_cast_compound, ray_cast_height_field,
+    ray_cast_hollow_sphere, ray_cast_hull, ray_cast_mesh, ray_cast_sphere, shape_cast_capsule,
+    shape_cast_compound, shape_cast_height_field, shape_cast_hull, shape_cast_mesh,
+    shape_cast_pair, shape_cast_sphere, shape_distance, solve_planes, sweep_transform,
+    time_of_impact,
 };
 pub use core::task_system::{TaskSystem, TaskSystemStats};
 pub use debug_draw::{DebugDraw, DebugDrawCommand, DebugDrawOptions, DebugShape, HexColor};
+pub use dynamic_tree::{
+    DynamicTree, DynamicTreeBoxCastHit, DynamicTreeCastControl, DynamicTreeClosestHit,
+    DynamicTreeClosestResult, DynamicTreeFilter, DynamicTreeHit, DynamicTreeProxy,
+    DynamicTreeProxyId, DynamicTreeRayCastHit,
+};
 pub use error::{ApiError, ApiResult, Error, Result};
 pub use events::{
     BodyMoveEvent, BodyMoveIter, ContactBeginIter, ContactBeginTouch, ContactBeginTouchEvent,

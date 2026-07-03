@@ -109,7 +109,7 @@ fn coverage_fixture_has_policy_buckets_and_high_priority_symbols() {
     for symbol in [
         "b3QueryCompound",
         "b3ConvertCompoundToBytes",
-        "b3DynamicTree_Create",
+        "b3Atan2",
         "b3QueryMesh",
     ] {
         assert_eq!(

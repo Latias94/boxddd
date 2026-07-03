@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 499 | world lifecycle and stepping, body runtime, body/shape scoped queries, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 519 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, raw `void*` user data, file-backed dynamic tree or height-field helpers |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
-| `deferred` | 42 | dynamic tree, compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
+| `deferred` | 22 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -40,7 +40,6 @@ These areas are intentionally visible in the fixture as `deferred` until their i
 
 - Complex geometry edge cases: compound overlap callback queries and compound byte conversion still need dedicated callback/ownership design.
 - Geometry query callbacks: mesh and height-field callback queries still need dedicated visitor/lifetime design.
-- Dynamic tree: the independent `b3DynamicTree_*` broadphase API needs a dedicated RAII wrapper.
 
 ## How To Update Coverage
 

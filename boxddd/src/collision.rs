@@ -60,6 +60,7 @@ impl ShapeProxy {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RayCastInput {
     pub origin: Vec3,
@@ -94,9 +95,79 @@ impl RayCastInput {
     }
 
     #[inline]
-    fn raw(&self) -> ffi::b3RayCastInput {
+    pub(crate) fn validate(self) -> Result<Self> {
+        if self.origin.is_valid()
+            && self.translation.is_valid()
+            && self.max_fraction.is_finite()
+            && self.max_fraction >= 0.0
+        {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn raw(&self) -> ffi::b3RayCastInput {
         ffi::b3RayCastInput {
             origin: self.origin.into_raw(),
+            translation: self.translation.into_raw(),
+            maxFraction: self.max_fraction,
+        }
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct BoxCastInput {
+    pub aabb: Aabb,
+    pub translation: Vec3,
+    pub max_fraction: f32,
+}
+
+impl BoxCastInput {
+    pub fn new(aabb: Aabb, translation: impl Into<Vec3>) -> Result<Self> {
+        Self::with_max_fraction(aabb, translation, 1.0)
+    }
+
+    pub fn with_max_fraction(
+        aabb: Aabb,
+        translation: impl Into<Vec3>,
+        max_fraction: f32,
+    ) -> Result<Self> {
+        let input = Self {
+            aabb,
+            translation: translation.into(),
+            max_fraction,
+        };
+        if input.aabb.is_valid()
+            && input.translation.is_valid()
+            && input.max_fraction.is_finite()
+            && input.max_fraction >= 0.0
+        {
+            Ok(input)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn validate(self) -> Result<Self> {
+        if self.aabb.is_valid()
+            && self.translation.is_valid()
+            && self.max_fraction.is_finite()
+            && self.max_fraction >= 0.0
+        {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn raw(&self) -> ffi::b3BoxCastInput {
+        ffi::b3BoxCastInput {
+            box_: self.aabb.into_raw(),
             translation: self.translation.into_raw(),
             maxFraction: self.max_fraction,
         }

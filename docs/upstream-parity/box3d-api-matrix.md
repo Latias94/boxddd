@@ -40,7 +40,7 @@ Status legend:
 | Shape user data/wind | `b3Shape_SetUserData`, `b3Shape_GetUserData`, `b3Shape_ApplyWind` | Wrapped/Raw-only | Pointer user data stays raw; wind is wrapped with finite/non-negative input validation. |
 | Shape contacts/sensors/query helpers | `b3Shape_GetContactData`, `b3Shape_GetSensorData`, `b3Shape_RayCast`, closest point | Wrapped | Contact/sensor buffers, AABB, mass data, direct ray-cast, closest-point, and geometry view helpers are wrapped. |
 | Geometry resources | hull/mesh/height field/compound create/destroy helpers | Wrapped/Deferred | RAII constructors, arbitrary mesh creation, wave/torus/hollow/platform meshes, custom height fields, compound builders, and compound child/material introspection are wrapped. File-backed height fields, compound byte conversion, and compound overlap callbacks stay raw/deferred. |
-| Dynamic tree | `b3DynamicTree_*` | Deferred | Needs an owned safe tree type; not required for world-level query use. |
+| Dynamic tree | `b3DynamicTree_*` except file save/load | Wrapped/Raw-only | `DynamicTree` owns create/destroy, proxy lifecycle, metrics, rebuild/validation, AABB/closest/ray/box cast visitors, and panic containment. File save/load stays raw file IO. |
 | Standalone collision | sphere/capsule/hull/mesh/height field/compound mass/AABB/overlap/ray/shape cast; GJK distance, TOI, sweep transforms, plane solving, clipping, and sphere/capsule/hull/triangle manifolds | Wrapped/Deferred | The value-returning collision helpers are wrapped with validation and owned outputs. Mesh and height-field query callbacks remain deferred until their visitor/lifetime contract is designed. |
 | Joints common runtime | destroy, valid, type, bodies, world, local frames, collide connected, wake, forces/torques, separations, tuning, thresholds | Wrapped | Wrong-family typed calls return `Error::WrongJointType`. |
 | Joint user data | `b3Joint_SetUserData`, `b3Joint_GetUserData` | Raw-only | Raw pointer ownership is explicit. |
@@ -61,7 +61,6 @@ Status legend:
 
 Deferred entries are not hidden unknowns. They are intentionally outside the `0.1.x` safe claim because they need one of:
 
-- a new owned native resource type (`b3DynamicTree`)
 - raw pointer/user-data ownership policy
 - callback/threading design
 - allocation and lifetime tests for callback-returned buffers

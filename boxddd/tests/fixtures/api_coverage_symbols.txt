@@ -432,26 +432,26 @@ b3WheelJoint_GetSteeringAngle|safe|joints|box3d.h|covered by current safe wrappe
 b3WheelJoint_GetSteeringTorque|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Contact_IsValid|safe|core|box3d.h|covered by current safe wrapper implementation
 b3Contact_GetData|deferred|core|box3d.h|known upstream API awaiting safe design or implementation
-b3DynamicTree_Create|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_Destroy|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_CreateProxy|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_DestroyProxy|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_MoveProxy|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_EnlargeProxy|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_SetCategoryBits|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetCategoryBits|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_Query|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_QueryClosest|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_RayCast|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_BoxCast|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_Validate|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetHeight|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetAreaRatio|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetRootBounds|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetProxyCount|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_Rebuild|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_GetByteCount|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
-b3DynamicTree_ValidateNoEnlarged|deferred|dynamic_tree|collision.h|planned DynamicTree RAII module
+b3DynamicTree_Create|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_Destroy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_CreateProxy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_DestroyProxy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_MoveProxy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_EnlargeProxy|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_SetCategoryBits|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetCategoryBits|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_Query|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_QueryClosest|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_RayCast|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_BoxCast|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_Validate|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetHeight|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetAreaRatio|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetRootBounds|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetProxyCount|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_Rebuild|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_GetByteCount|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
+b3DynamicTree_ValidateNoEnlarged|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
 b3DynamicTree_Save|raw|dynamic_tree|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3DynamicTree_Load|raw|dynamic_tree|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3CreateCylinder|safe|geometry_resources|collision.h|covered by current safe wrapper implementation

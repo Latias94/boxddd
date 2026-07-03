@@ -17,6 +17,8 @@ pub enum Error {
     CreateShapeFailed,
     #[error("failed to create Box3D recording")]
     CreateRecordingFailed,
+    #[error("failed to create Box3D dynamic tree")]
+    CreateDynamicTreeFailed,
     #[error("failed to create Box3D replay player")]
     CreateRecPlayerFailed,
     #[error("failed to load or save a Box3D recording")]
