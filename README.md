@@ -16,12 +16,34 @@
 
 ## Target Support
 
-| Target | Tier | Notes |
+| Target | CI coverage | Notes |
 |---|---|---|
-| Native Windows/Linux/macOS | supported | Primary development target. Vendored Box3D C sources are compiled by `boxddd-sys`. |
+| `x86_64` Windows MSVC | tests | Primary Windows target. Vendored Box3D C sources are compiled by `boxddd-sys`. |
+| `x86_64` Linux GNU | tests | Primary Linux target. CI installs the native windowing/audio packages needed by Bevy examples. |
+| `aarch64` macOS | tests | Primary Apple desktop target on GitHub-hosted macOS runners. |
+| `x86_64-pc-windows-gnu` | link check | CI builds `boxddd-sys` tests with MSYS2/MinGW to catch GNU linker regressions. |
+| `armv7-unknown-linux-gnueabihf` | compile-only | FFI signedness sentinel for pregenerated bindings. Native C linking is skipped. |
+| `aarch64-apple-ios` | compile-only | Rust wrapper and pregenerated bindings are type-checked. Native C linking is skipped. |
+| `aarch64-apple-ios-sim` | compile-only | Simulator compile sentinel. Native C linking is skipped. |
+| `aarch64-linux-android` | compile-only | Android compile sentinel. Native C linking is skipped. |
 | `wasm32-unknown-unknown` | compile-only | The Rust crates type-check for a narrow subset, but `boxddd-sys` currently skips Box3D C compilation for wasm32. |
 
 See [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the exact WASM matrix.
+
+## CI Coverage
+
+The GitHub Actions workflow is intentionally shaped like a native binding crate gate rather than a single workspace smoke test:
+
+- format check on stable Rust
+- native `cargo nextest run --workspace` on Windows, Linux, and macOS
+- double-precision `boxddd-sys` ABI checks and layout tests
+- Bevy example compile checks, including debug draw, picking, and the 3D testbed
+- docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
+- no-default-feature and optional interop feature checks
+- package checks for all publishable crates
+- forced bindgen refresh checks for single and double precision
+- default `boxddd-sys` dependency checks proving `bindgen` and `clang-sys` are not required for normal users
+- Windows GNU, armv7, mobile, and WASM compile/link sentinels
 
 ## Status
 
@@ -147,6 +169,7 @@ cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example tes
 Default builds use vendored Box3D C sources and pregenerated bindings, so normal builds do not require LLVM or libclang.
 
 ```bash
+cargo fmt --all --check
 cargo build --workspace
 cargo nextest run --workspace
 cargo check -p bevy_boxddd --examples
@@ -154,11 +177,32 @@ cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example t
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
-To refresh bindings for review:
+Useful CI-equivalent binding checks:
 
 ```bash
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys
+cargo check -p boxddd-sys --features double-precision
+cargo nextest run -p boxddd-sys --features double-precision --test layout
 BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
 BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
+```
+
+Cross-target compile-only checks:
+
+```bash
+rustup target add armv7-unknown-linux-gnueabihf wasm32-unknown-unknown aarch64-linux-android
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target armv7-unknown-linux-gnueabihf
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target aarch64-linux-android
+cargo check -p boxddd --target wasm32-unknown-unknown
+cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
+```
+
+On macOS, CI also runs:
+
+```bash
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target aarch64-apple-ios
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target aarch64-apple-ios-sim
 ```
 
 ## Threading And Async

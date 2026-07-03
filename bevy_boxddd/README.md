@@ -108,17 +108,32 @@ The plugin registers Bevy messages for errors, body moves, contact begin/end/hit
 
 ## Platform And Concurrency Boundaries
 
-Native desktop targets are the supported runtime target for the Bevy plugin. `wasm32-unknown-unknown` is compile-only for the minimal library surface; windowed examples are native-only in this release.
+Native desktop targets are the supported runtime target for the Bevy plugin. CI checks Windows, Linux, and macOS native builds through the workspace test suite, and checks the Bevy examples on Linux with the required windowing/audio packages installed.
+
+`wasm32-unknown-unknown` is compile-only for the minimal library surface; windowed examples are native-only in this release. Mobile targets are also compile-only at the core `boxddd` layer and are not yet runtime targets for `bevy_boxddd`.
 
 `boxddd::World` is intentionally non-send and lives in `BoxdddPhysicsContext`. Do not move it into Bevy worker systems. The core crate has `TaskSystem::blocking_threads()` for Box3D's native task callbacks, but Bevy task-pool integration is deferred until that contract has more usage.
 
 ## Development Checks
 
 ```bash
+cargo fmt --all --check
 cargo check -p bevy_boxddd --no-default-features
 cargo nextest run -p bevy_boxddd
 cargo check -p bevy_boxddd --examples
 cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
 cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
+cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
+```
+
+Windowed teaching examples:
+
+```bash
+cargo run -p bevy_boxddd --example falling_stack_3d
+cargo run -p bevy_boxddd --example advanced_colliders_3d
+cargo run -p bevy_boxddd --example joint_gallery_3d
+cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d
+cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
