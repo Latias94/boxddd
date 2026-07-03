@@ -1,3 +1,5 @@
+#![cfg_attr(all(target_arch = "wasm32", boxddd_wasm_provider), allow(dead_code))]
+
 use crate::core::box3d_lock;
 use crate::error::{Error, Result};
 use crate::shapes::{Capsule, Compound, HeightField, Hull, MeshData, Sphere, validate_mesh_scale};
@@ -204,6 +206,16 @@ impl ShapeCastInput {
             && input.max_fraction >= 0.0
         {
             Ok(input)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    pub(crate) fn validate(self) -> Result<Self> {
+        if self.translation.is_valid() && self.max_fraction.is_finite() && self.max_fraction >= 0.0
+        {
+            Ok(self)
         } else {
             Err(Error::InvalidArgument)
         }
@@ -1184,6 +1196,7 @@ fn shape_cast(
     input: ShapeCastInput,
     f: impl FnOnce(*const ffi::b3ShapeCastInput) -> ffi::b3CastOutput,
 ) -> Result<CastOutput> {
+    let input = input.validate()?;
     let raw = input.raw();
     let _guard = box3d_lock::lock();
     Ok(CastOutput::from_raw(f(&raw)))

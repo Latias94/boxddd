@@ -254,4 +254,16 @@ fn borrowed_resource_shapes_are_rejected_on_dynamic_bodies() {
             .unwrap_err(),
         Error::InvalidArgument
     );
+
+    let sphere = world.create_sphere_shape(dynamic_body, &def, &Sphere::new([0.0, 0.0, 0.0], 0.25));
+    assert_eq!(
+        world
+            .try_set_shape_mesh(
+                sphere,
+                MeshData::box_mesh([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], true).unwrap(),
+                [1.0, 1.0, 1.0],
+            )
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
 }

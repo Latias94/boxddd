@@ -74,6 +74,16 @@ fn overlap_shape_and_ray_casts_find_expected_shapes() {
         )
         .unwrap();
     assert!(!shape_hits.is_empty());
+
+    let mut invalid_input =
+        ShapeCastInput::new(ShapeProxy::sphere(0.25).unwrap(), [5.0, 0.0, 0.0]).unwrap();
+    invalid_input.translation = Vec3::new(f32::NAN, 0.0, 0.0);
+    assert_eq!(
+        world
+            .cast_shape([-3.0, 0.0, 0.0], invalid_input, QueryFilter::default())
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
 }
 
 #[test]
@@ -134,6 +144,21 @@ fn body_scoped_ray_cast_and_shape_cast_find_only_that_body() {
         .unwrap()
         .unwrap();
     assert_eq!(shape_hit.shape_id, left_shape);
+
+    let mut invalid_input =
+        ShapeCastInput::new(ShapeProxy::sphere(0.25).unwrap(), [5.0, 0.0, 0.0]).unwrap();
+    invalid_input.max_fraction = -1.0;
+    assert_eq!(
+        world
+            .try_body_cast_shape(
+                left_body,
+                [-3.0, 0.0, 0.0],
+                invalid_input,
+                QueryFilter::default(),
+            )
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
 }
 
 #[test]

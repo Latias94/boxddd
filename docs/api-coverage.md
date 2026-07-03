@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 519 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
-| `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers |
+| `safe` | 521 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `raw` | 36 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers, low-level debug graph color helper |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
-| `deferred` | 22 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
+| `deferred` | 19 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -46,6 +46,6 @@ These areas are intentionally visible in the fixture as `deferred` until their i
 1. Add or change the safe/raw implementation.
 2. Update `boxddd/tests/fixtures/api_coverage_symbols.txt` so the symbol status matches the public contract.
 3. Update this document when the status counts or policy language change.
-4. Run `cargo nextest run -p boxddd api_coverage`.
+4. Run `cargo nextest run -p boxddd --test api_coverage`.
 
 The coverage test is deliberately structural. It proves every upstream public symbol is classified, not that every `safe` entry has ideal API ergonomics. API quality is still enforced by the implementation tests, docs, and examples for each wrapper module.

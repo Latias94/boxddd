@@ -466,6 +466,7 @@ impl World {
         #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
         {
             let origin = origin.into().validate()?;
+            let input = input.validate()?;
             let raw_input = input.raw();
             let mut ctx = CastContext {
                 visitor,

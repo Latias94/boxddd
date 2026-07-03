@@ -397,6 +397,8 @@ impl World {
         sphere.validate()?;
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_SetSphere(shape_id.into_raw(), sphere.raw()) };
+        drop(_guard);
+        self.resources.remove(&shape_id);
         Ok(())
     }
 
@@ -404,12 +406,16 @@ impl World {
         capsule.validate()?;
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_SetCapsule(shape_id.into_raw(), capsule.raw()) };
+        drop(_guard);
+        self.resources.remove(&shape_id);
         Ok(())
     }
 
     pub fn try_set_shape_hull(&mut self, shape_id: ShapeId, hull: &Hull) -> Result<()> {
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_SetHull(shape_id.into_raw(), hull.as_ptr()) };
+        drop(_guard);
+        self.resources.remove(&shape_id);
         Ok(())
     }
 
@@ -422,6 +428,10 @@ impl World {
         let scale = validate_mesh_scale(scale.into())?;
         let mesh_ptr = mesh.as_ptr();
         let _guard = self.lock_shape_checked(shape_id)?;
+        let body = unsafe { ffi::b3Shape_GetBody(shape_id.into_raw()) };
+        if BodyType::from_raw(unsafe { ffi::b3Body_GetType(body) }) != Some(BodyType::Static) {
+            return Err(Error::InvalidArgument);
+        }
         unsafe { ffi::b3Shape_SetMesh(shape_id.into_raw(), mesh_ptr, scale.into_raw()) };
         drop(_guard);
         self.resources

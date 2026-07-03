@@ -71,6 +71,17 @@ impl World {
 
     pub fn try_set_body_type(&mut self, body_id: BodyId, body_type: BodyType) -> Result<()> {
         let _guard = self.lock_body_checked(body_id)?;
+        if body_type != BodyType::Static {
+            for shape_id in body_shape_ids_locked(body_id) {
+                match ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) }) {
+                    Some(ShapeType::Compound | ShapeType::HeightField | ShapeType::Mesh) => {
+                        return Err(Error::InvalidArgument);
+                    }
+                    Some(_) => {}
+                    None => return Err(Error::InvalidArgument),
+                }
+            }
+        }
         unsafe { ffi::b3Body_SetType(body_id.into_raw(), body_type.into_raw()) };
         Ok(())
     }
@@ -623,6 +634,7 @@ impl World {
         body_transform: WorldTransform,
     ) -> Result<Option<BodyCastHit>> {
         let origin = origin.into().validate()?;
+        let input = input.validate()?;
         validate_world_transform(body_transform)?;
         let raw_input = input.raw();
         let _guard = self.lock_body_checked(body_id)?;

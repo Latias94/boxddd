@@ -10,7 +10,7 @@ pub const MAX_COMPOUND_MESH_MATERIALS: usize = ffi::B3_MAX_COMPOUND_MESH_MATERIA
 
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SurfaceMaterial {
     pub friction: f32,
     pub restitution: f32,
@@ -18,6 +18,12 @@ pub struct SurfaceMaterial {
     pub tangent_velocity: Vec3,
     pub user_material_id: u64,
     pub custom_color: u32,
+}
+
+impl Default for SurfaceMaterial {
+    fn default() -> Self {
+        Self::from_raw(unsafe { ffi::b3DefaultSurfaceMaterial() })
+    }
 }
 
 impl SurfaceMaterial {

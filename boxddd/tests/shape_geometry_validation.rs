@@ -4,6 +4,15 @@ use boxddd::{
 };
 
 #[test]
+fn surface_material_default_matches_box3d_default() {
+    let material = SurfaceMaterial::default();
+    assert_eq!(material.friction, 0.6);
+    assert_eq!(material.restitution, 0.0);
+    assert_eq!(material.rolling_resistance, 0.0);
+    assert_eq!(material.tangent_velocity, Vec3::ZERO);
+}
+
+#[test]
 fn value_and_resource_geometry_reject_invalid_inputs() {
     assert_eq!(
         Capsule::new(Vec3::ZERO, Vec3::X, f32::NAN).validate(),

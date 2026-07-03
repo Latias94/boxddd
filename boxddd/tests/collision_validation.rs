@@ -1,9 +1,10 @@
 use boxddd::{
     Capsule, CollisionPlane, DistanceInput, Error, HeightField, Hull, MeshData, Plane, Quat,
-    ShapeCastPairInput, ShapeProxy, Sphere, Sweep, TimeOfImpactInput, Transform, Vec3,
-    collide_sphere_and_triangle, compute_capsule_mass, compute_height_field_aabb,
+    ShapeCastInput, ShapeCastPairInput, ShapeProxy, Sphere, Sweep, TimeOfImpactInput, Transform,
+    Vec3, collide_sphere_and_triangle, compute_capsule_mass, compute_height_field_aabb,
     compute_hull_aabb, compute_mesh_aabb, compute_sphere_aabb, compute_sphere_mass,
-    shape_cast_pair, shape_distance, solve_planes, sweep_transform, time_of_impact,
+    shape_cast_pair, shape_cast_sphere, shape_distance, solve_planes, sweep_transform,
+    time_of_impact,
 };
 
 #[test]
@@ -87,6 +88,12 @@ fn advanced_collision_helpers_validate_inputs() {
                 .unwrap(),
         )
         .is_ok()
+    );
+    let mut mutated_shape_cast = ShapeCastInput::new(sphere.clone(), [1.0, 0.0, 0.0]).unwrap();
+    mutated_shape_cast.max_fraction = f32::NAN;
+    assert_eq!(
+        shape_cast_sphere(&Sphere::new(Vec3::ZERO, 0.5), mutated_shape_cast).unwrap_err(),
+        Error::InvalidArgument
     );
 
     assert_eq!(

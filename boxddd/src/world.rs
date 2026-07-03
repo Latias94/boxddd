@@ -467,8 +467,42 @@ mod tests {
             .unwrap();
         assert_eq!(world.resources.len(), 1);
 
+        world
+            .try_set_shape_sphere(shape, &Sphere::new(Vec3::ZERO, 0.25))
+            .unwrap();
+        assert!(world.resources.is_empty());
+
         world.try_destroy_shape(shape, true).unwrap();
         assert!(world.resources.is_empty());
+    }
+
+    #[test]
+    fn resource_backed_shapes_keep_body_static() {
+        let mut world = World::new(WorldDef::default()).unwrap();
+        let body = static_body(&mut world);
+        world
+            .try_create_height_field_shape(
+                body,
+                &ShapeDef::default(),
+                HeightField::grid(2, 2, [1.0, 1.0, 1.0], false).unwrap(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            world
+                .try_set_body_type(body, BodyType::Dynamic)
+                .unwrap_err(),
+            Error::InvalidArgument
+        );
+        assert_eq!(world.try_body_type(body).unwrap(), BodyType::Static);
+
+        world
+            .try_create_sphere_shape(
+                body,
+                &ShapeDef::default(),
+                &Sphere::new(Vec3::new(2.0, 0.0, 0.0), 0.25),
+            )
+            .unwrap();
     }
 
     #[test]

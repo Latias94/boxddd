@@ -565,7 +565,7 @@ b3IsValidWorldTransform|safe|math|math_functions.h|covered by current safe wrapp
 b3DefaultWorldDef|safe|defaults|types.h|covered by current safe wrapper implementation
 b3DefaultBodyDef|safe|defaults|types.h|covered by current safe wrapper implementation
 b3DefaultFilter|safe|defaults|types.h|covered by current safe wrapper implementation
-b3DefaultSurfaceMaterial|deferred|defaults|types.h|known upstream API awaiting safe design or implementation
+b3DefaultSurfaceMaterial|safe|defaults|types.h|SurfaceMaterial::default uses the upstream Box3D material default
 b3DefaultShapeDef|safe|defaults|types.h|covered by current safe wrapper implementation
 b3DefaultDistanceJointDef|safe|joints|types.h|covered by current safe wrapper implementation
 b3DefaultMotorJointDef|safe|joints|types.h|covered by current safe wrapper implementation
@@ -577,6 +577,6 @@ b3DefaultSphericalJointDef|safe|joints|types.h|covered by current safe wrapper i
 b3DefaultWeldJointDef|safe|joints|types.h|covered by current safe wrapper implementation
 b3DefaultWheelJointDef|safe|joints|types.h|covered by current safe wrapper implementation
 b3DefaultExplosionDef|safe|defaults|types.h|covered by current safe wrapper implementation
-b3DefaultQueryFilter|deferred|defaults|types.h|known upstream API awaiting safe design or implementation
-b3GetGraphColor|deferred|defaults|types.h|known upstream API awaiting safe design or implementation
+b3DefaultQueryFilter|safe|defaults|types.h|QueryFilter::default mirrors the upstream default filter values without exposing raw name pointers
+b3GetGraphColor|raw|defaults|types.h|debug graph color helper remains a low-level diagnostic helper
 b3DefaultDebugDraw|safe|defaults|types.h|covered by current safe wrapper implementation

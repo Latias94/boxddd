@@ -20,7 +20,7 @@ Status legend:
 | Timing/files/platform helpers | `b3GetTicks`, `b3Sleep`, `b3Hash`, `b3ReadBinaryFile`, `b3WriteBinaryFile` | Raw-only | Not required for the safe physics model; use Rust std/time/io unless a Box3D-specific reason appears. |
 | Scalar/vector validation | `b3IsValidFloat`, `b3IsValidVec3`, `b3IsValidQuat`, `b3IsValidTransform`, `b3IsValidPosition`, `b3IsValidWorldTransform` | Wrapped | Value types expose `is_valid`/`validate` where applicable. |
 | Extra math helpers | `b3PointToSegmentDistance`, `b3LineDistance`, `b3SegmentDistance`, `b3Atan2`, `b3ComputeCosSin`, `b3MakeQuatFromMatrix`, `b3ComputeQuatBetweenUnitVectors`, `b3Steiner` | Wrapped/Deferred | Segment and line distance helpers are wrapped; remaining scalar/quaternion helper APIs can wait until a dedicated math module is justified. |
-| World lifecycle | `b3CreateWorld`, `b3DestroyWorld`, `b3World_IsValid`, `b3GetWorldCount`, `b3GetMaxWorldCount` | Wrapped/Raw-only | `World` owns create/destroy/valid; global world-count diagnostics remain raw-only. |
+| World lifecycle | `b3CreateWorld`, `b3DestroyWorld`, `b3World_IsValid`, `b3GetWorldCount`, `b3GetMaxWorldCount` | Wrapped/Not applicable | `World` owns create/destroy/valid; global world-count diagnostics are omitted because they do not fit the safe ownership model. |
 | World stepping/drawing | `b3World_Step`, `b3World_Draw` | Wrapped | `try_step`, `step`, debug draw callback and collection APIs. |
 | World runtime metrics/tuning | bounds, gravity, sleeping, continuous, warm starting, speculative, thresholds, contact tuning, worker count, profile, counters, capacity, rebuild static tree | Wrapped | Dump/debug-print functions remain raw-only. |
 | World user data | `b3World_SetUserData`, `b3World_GetUserData` | Unsafe raw | Exposed through `boxddd::raw`; raw pointer ownership remains entirely caller-defined. |
@@ -55,8 +55,8 @@ Status legend:
 | Weld joint | create, linear/angular spring tuning | Wrapped | Typed definition and runtime APIs. |
 | Wheel joint | create, suspension, spin motor, steering and limits | Wrapped | Typed definition and runtime APIs. |
 | Contact id/data | `b3Contact_IsValid`, `b3Contact_GetData` | Wrapped | Safe `ContactId`, `ContactData`, and `Manifold` value types. |
-| Default definition values | `b3DefaultWorldDef`, `b3DefaultBodyDef`, `b3DefaultShapeDef`, joint defaults, query filter, debug draw | Wrapped | Safe builders keep raw pointer fields out of ordinary user code. |
-| Debug draw default/color | `b3DefaultDebugDraw`, `b3GetGraphColor` | Wrapped/Raw-only | Default debug draw is used internally; graph color helper remains raw-only. |
+| Default definition values | `b3DefaultWorldDef`, `b3DefaultBodyDef`, `b3DefaultShapeDef`, `b3DefaultSurfaceMaterial`, joint defaults, query filter, debug draw | Wrapped | Safe builders keep raw pointer fields out of ordinary user code; `SurfaceMaterial::default` and `QueryFilter::default` mirror upstream defaults without exposing raw pointer fields. |
+| Debug draw default/color | `b3DefaultDebugDraw`, `b3GetGraphColor` | Wrapped/Raw-only | Default debug draw is used internally; graph color helper remains a raw low-level diagnostic helper. |
 
 ## Release Policy For Deferred APIs
 
