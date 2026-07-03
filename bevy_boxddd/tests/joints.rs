@@ -191,3 +191,41 @@ fn changing_joint_target_recreates_native_joint() {
     assert_ne!(old_joint, new_joint);
     assert_eq!(world.try_joint_body_b(new_joint).unwrap(), body_c_id);
 }
+
+#[test]
+fn changing_joint_descriptor_recreates_native_joint() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let body_a = dynamic_body(&mut app, Vec3::new(-0.5, 0.0, 0.0));
+    let body_b = dynamic_body(&mut app, Vec3::new(0.5, 0.0, 0.0));
+    let joint_entity = app
+        .world_mut()
+        .spawn((JointTarget::new(body_a, body_b), Joint::distance(1.0)))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+    let old_joint = app
+        .world()
+        .entity(joint_entity)
+        .get::<BoxdddJoint>()
+        .unwrap()
+        .id();
+
+    app.world_mut()
+        .entity_mut(joint_entity)
+        .insert(Joint::distance(2.0));
+    run_fixed_frames(&mut app, 3);
+
+    let new_joint = app
+        .world()
+        .entity(joint_entity)
+        .get::<BoxdddJoint>()
+        .unwrap()
+        .id();
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let world = context.world().unwrap();
+
+    assert!(!old_joint.is_valid());
+    assert!(new_joint.is_valid());
+    assert_ne!(old_joint, new_joint);
+    assert_eq!(world.try_distance_joint_length(new_joint).unwrap(), 2.0);
+}

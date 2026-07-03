@@ -1,3 +1,4 @@
+use crate::components::Joint;
 use bevy_ecs::prelude::{Entity, Resource};
 use bevy_math::Vec3;
 use boxddd::{BodyId, JointId, ShapeId, World, WorldDef};
@@ -41,6 +42,7 @@ pub struct BoxdddPhysicsContext {
     pub(crate) entity_to_joint: HashMap<Entity, JointId>,
     pub(crate) joint_to_entity: HashMap<JointId, Entity>,
     pub(crate) joint_to_body_entities: HashMap<Entity, (Entity, Entity)>,
+    pub(crate) joint_descriptors: HashMap<Entity, Joint>,
     pub(crate) last_step_failed: bool,
 }
 
@@ -62,6 +64,7 @@ impl BoxdddPhysicsContext {
             entity_to_joint: HashMap::new(),
             joint_to_entity: HashMap::new(),
             joint_to_body_entities: HashMap::new(),
+            joint_descriptors: HashMap::new(),
             last_step_failed: true,
         }
     }
@@ -77,6 +80,7 @@ impl BoxdddPhysicsContext {
             entity_to_joint: HashMap::new(),
             joint_to_entity: HashMap::new(),
             joint_to_body_entities: HashMap::new(),
+            joint_descriptors: HashMap::new(),
             last_step_failed: false,
         }
     }
@@ -157,20 +161,27 @@ impl BoxdddPhysicsContext {
         entity: Entity,
         body_a: Entity,
         body_b: Entity,
+        joint: Joint,
         joint_id: JointId,
     ) {
         self.entity_to_joint.insert(entity, joint_id);
         self.joint_to_entity.insert(joint_id, entity);
         self.joint_to_body_entities.insert(entity, (body_a, body_b));
+        self.joint_descriptors.insert(entity, joint);
     }
 
     pub(crate) fn remove_joint(&mut self, entity: Entity, joint_id: JointId) {
         self.entity_to_joint.remove(&entity);
         self.joint_to_entity.remove(&joint_id);
         self.joint_to_body_entities.remove(&entity);
+        self.joint_descriptors.remove(&entity);
     }
 
     pub(crate) fn joint_body_entities(&self, joint_entity: Entity) -> Option<(Entity, Entity)> {
         self.joint_to_body_entities.get(&joint_entity).copied()
+    }
+
+    pub(crate) fn joint_descriptor(&self, joint_entity: Entity) -> Option<Joint> {
+        self.joint_descriptors.get(&joint_entity).copied()
     }
 }

@@ -161,7 +161,7 @@ pub fn create_missing_joints(
 
         match result {
             Ok(joint_id) => {
-                context.insert_joint(entity, target.body_a, target.body_b, joint_id);
+                context.insert_joint(entity, target.body_a, target.body_b, *joint, joint_id);
                 commands.entity(entity).insert(BoxdddJoint(joint_id));
             }
             Err(error) => report_error(
@@ -309,6 +309,7 @@ pub fn cleanup_removed_joints(
     for (entity, joint_id, target, joint) in &joints {
         let current_target = target.map(|target| (target.body_a, target.body_b));
         let tracked_target = context.joint_body_entities(entity);
+        let tracked_joint = context.joint_descriptor(entity);
         let endpoints_exist = target
             .map(|target| bodies.get(target.body_a).is_ok() && bodies.get(target.body_b).is_ok())
             .unwrap_or(false);
@@ -316,6 +317,7 @@ pub fn cleanup_removed_joints(
         if joint.is_some()
             && current_target.is_some()
             && current_target == tracked_target
+            && joint.copied() == tracked_joint
             && endpoints_exist
         {
             continue;
