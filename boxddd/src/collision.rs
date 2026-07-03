@@ -1,6 +1,6 @@
 use crate::core::box3d_lock;
 use crate::error::{Error, Result};
-use crate::shapes::{Capsule, Compound, HeightField, Hull, MeshData, Sphere};
+use crate::shapes::{Capsule, Compound, HeightField, Hull, MeshData, Sphere, validate_mesh_scale};
 use crate::types::{Aabb, MassData, Transform, Vec3};
 use boxddd_sys::ffi;
 use std::mem::MaybeUninit;
@@ -266,7 +266,7 @@ pub fn compute_mesh_aabb(
     scale: impl Into<Vec3>,
 ) -> Result<Aabb> {
     transform.validate()?;
-    let scale = scale.into().validate()?;
+    let scale = validate_mesh_scale(scale.into())?;
     let _guard = box3d_lock::lock();
     Ok(Aabb::from_raw(unsafe {
         ffi::b3ComputeMeshAABB(mesh.as_ptr(), transform.into_raw(), scale.into_raw())
@@ -321,7 +321,7 @@ pub fn overlap_mesh(
 ) -> Result<bool> {
     let raw_mesh = ffi::b3Mesh {
         data: mesh.as_ptr(),
-        scale: scale.into().validate()?.into_raw(),
+        scale: validate_mesh_scale(scale.into())?.into_raw(),
     };
     overlap(proxy, transform, |proxy, transform| unsafe {
         ffi::b3OverlapMesh(&raw_mesh, transform, proxy)
@@ -382,7 +382,7 @@ pub fn ray_cast_mesh(
 ) -> Result<CastOutput> {
     let raw_mesh = ffi::b3Mesh {
         data: mesh.as_ptr(),
-        scale: scale.into().validate()?.into_raw(),
+        scale: validate_mesh_scale(scale.into())?.into_raw(),
     };
     ray_cast(input, |input| unsafe {
         ffi::b3RayCastMesh(&raw_mesh, input)

@@ -380,6 +380,19 @@ impl World {
             .ok_or(Error::InvalidArgument)
     }
 
+    pub fn try_shape_compound(&self, shape_id: ShapeId) -> Result<&Compound> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        if ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) })
+            != Some(ShapeType::Compound)
+        {
+            return Err(Error::InvalidArgument);
+        }
+        match self.resources.get(&shape_id) {
+            Some(ShapeResource::Compound { _data }) => Ok(_data),
+            _ => Err(Error::InvalidArgument),
+        }
+    }
+
     pub fn try_set_shape_sphere(&mut self, shape_id: ShapeId, sphere: &Sphere) -> Result<()> {
         sphere.validate()?;
         let _guard = self.lock_shape_checked(shape_id)?;
@@ -406,7 +419,7 @@ impl World {
         mesh: MeshData,
         scale: impl Into<Vec3>,
     ) -> Result<()> {
-        let scale = scale.into().validate()?;
+        let scale = validate_mesh_scale(scale.into())?;
         let mesh_ptr = mesh.as_ptr();
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_SetMesh(shape_id.into_raw(), mesh_ptr, scale.into_raw()) };

@@ -71,8 +71,11 @@ pub use recording::{
     validate_replay_bytes,
 };
 pub use shapes::{
-    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder,
-    ShapeHeightField, ShapeHull, ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
+    BoxHull, Capsule, Compound, CompoundBuilder, CompoundCapsule, CompoundChild,
+    CompoundChildShape, CompoundHull, CompoundMesh, CompoundSphere, HEIGHT_FIELD_HOLE, HeightField,
+    HeightFieldBuilder, Hull, MAX_COMPOUND_MESH_MATERIALS, MeshData, MeshDataBuilder,
+    MeshDataOptions, ShapeDef, ShapeDefBuilder, ShapeHeightField, ShapeHull, ShapeMesh, ShapeType,
+    Sphere, SurfaceMaterial,
 };
 pub use types::{
     Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, Manifold,

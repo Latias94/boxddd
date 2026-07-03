@@ -8,7 +8,7 @@ use crate::debug_draw::{create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeHeightField, ShapeHull,
-    ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
+    ShapeMesh, ShapeType, Sphere, SurfaceMaterial, validate_mesh_scale,
 };
 use crate::types::{
     Aabb, BodyId, Capacity, ContactData, Counters, Filter, JointId, MassData, Matrix3, MotionLocks,

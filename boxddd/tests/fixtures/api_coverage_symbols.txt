@@ -468,28 +468,28 @@ b3MakeTransformedBoxHull|safe|geometry_resources|collision.h|covered by current 
 b3MakeScaledBoxHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3ScaleBox|deferred|core|collision.h|known upstream API awaiting safe design or implementation
 b3CreateGridMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3CreateWaveMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateTorusMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3CreateWaveMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateTorusMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateBoxMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3CreateHollowBoxMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreatePlatformMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3CreateHollowBoxMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreatePlatformMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3GetHeight|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateHeightField|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateGrid|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateWave|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3GetHeight|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateHeightField|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateGrid|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateWave|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyHeightField|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DumpHeightData|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3LoadHeightField|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
-b3GetCompoundChild|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3GetCompoundChild|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3QueryCompound|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3GetCompoundCapsule|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3GetCompoundHull|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3GetCompoundMesh|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3GetCompoundSphere|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3GetCompoundMaterials|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
-b3CreateCompound|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
+b3GetCompoundCapsule|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3GetCompoundHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3GetCompoundMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3GetCompoundSphere|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3GetCompoundMaterials|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
+b3CreateCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3ConvertCompoundToBytes|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work
 b3ConvertBytesToCompound|deferred|geometry_resources|collision.h|planned safe wrapper in API completion work

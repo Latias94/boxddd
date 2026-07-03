@@ -150,7 +150,7 @@ impl World {
         }
         callback_state::check_not_in_callback()?;
         def.validate()?;
-        let scale = scale.into().validate()?;
+        let scale = validate_mesh_scale(scale.into())?;
         let mesh_ptr = mesh.as_ptr();
         let _guard = self.lock_body_checked(body_id)?;
         let raw = unsafe {
