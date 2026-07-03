@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 use bevy_math::Vec3;
-use boxddd::{BodyId, BodyType, Filter, ShapeDef, ShapeId};
+use boxddd::{BodyId, BodyType, Filter, ShapeDef, ShapeId, SurfaceMaterial};
 
 #[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum RigidBody {
@@ -34,6 +34,40 @@ pub enum Collider {
         point2: Vec3,
         radius: f32,
     },
+    MeshBox {
+        center: Vec3,
+        extent: Vec3,
+        scale: Vec3,
+        identify_edges: bool,
+    },
+    MeshGrid {
+        x_count: i32,
+        z_count: i32,
+        cell_width: f32,
+        material_count: i32,
+        scale: Vec3,
+        identify_edges: bool,
+    },
+    HeightFieldGrid {
+        row_count: i32,
+        column_count: i32,
+        scale: Vec3,
+        make_holes: bool,
+    },
+    CompoundSphere {
+        center: Vec3,
+        radius: f32,
+        material: SurfaceMaterial,
+    },
+    CreatedRockHull {
+        radius: f32,
+    },
+    TransformedRockHull {
+        radius: f32,
+        translation: Vec3,
+        rotation: bevy_math::Quat,
+        scale: Vec3,
+    },
 }
 
 impl Collider {
@@ -64,6 +98,85 @@ impl Collider {
         }
     }
 
+    pub fn mesh_box(center: Vec3, extent: Vec3, scale: Vec3, identify_edges: bool) -> Self {
+        Self::MeshBox {
+            center,
+            extent,
+            scale,
+            identify_edges,
+        }
+    }
+
+    pub fn mesh_grid(
+        x_count: i32,
+        z_count: i32,
+        cell_width: f32,
+        material_count: i32,
+        scale: Vec3,
+        identify_edges: bool,
+    ) -> Self {
+        Self::MeshGrid {
+            x_count,
+            z_count,
+            cell_width,
+            material_count,
+            scale,
+            identify_edges,
+        }
+    }
+
+    pub fn height_field_grid(
+        row_count: i32,
+        column_count: i32,
+        scale: Vec3,
+        make_holes: bool,
+    ) -> Self {
+        Self::HeightFieldGrid {
+            row_count,
+            column_count,
+            scale,
+            make_holes,
+        }
+    }
+
+    pub fn compound_sphere(center: Vec3, radius: f32, material: SurfaceMaterial) -> Self {
+        Self::CompoundSphere {
+            center,
+            radius,
+            material,
+        }
+    }
+
+    pub fn created_rock_hull(radius: f32) -> Self {
+        Self::CreatedRockHull { radius }
+    }
+
+    pub fn transformed_rock_hull(
+        radius: f32,
+        translation: Vec3,
+        rotation: bevy_math::Quat,
+        scale: Vec3,
+    ) -> Self {
+        Self::TransformedRockHull {
+            radius,
+            translation,
+            rotation,
+            scale,
+        }
+    }
+
+    pub const fn requires_static_body(self) -> bool {
+        matches!(
+            self,
+            Self::MeshBox { .. }
+                | Self::MeshGrid { .. }
+                | Self::HeightFieldGrid { .. }
+                | Self::CompoundSphere { .. }
+                | Self::CreatedRockHull { .. }
+                | Self::TransformedRockHull { .. }
+        )
+    }
+
     pub fn validate(self) -> boxddd::Result<()> {
         match self {
             Self::Cuboid { half_extents } => validate_positive_vec3(half_extents),
@@ -79,6 +192,65 @@ impl Collider {
                 validate_vec3(point1)?;
                 validate_vec3(point2)?;
                 validate_positive_scalar(radius)
+            }
+            Self::MeshBox {
+                center,
+                extent,
+                scale,
+                ..
+            } => {
+                validate_vec3(center)?;
+                validate_positive_vec3(extent)?;
+                validate_positive_vec3(scale)
+            }
+            Self::MeshGrid {
+                x_count,
+                z_count,
+                cell_width,
+                material_count,
+                scale,
+                ..
+            } => {
+                if x_count < 2 || z_count < 2 || material_count <= 0 {
+                    return Err(boxddd::Error::InvalidArgument);
+                }
+                validate_positive_scalar(cell_width)?;
+                validate_positive_vec3(scale)
+            }
+            Self::HeightFieldGrid {
+                row_count,
+                column_count,
+                scale,
+                ..
+            } => {
+                if row_count < 2 || column_count < 2 {
+                    return Err(boxddd::Error::InvalidArgument);
+                }
+                validate_positive_vec3(scale)
+            }
+            Self::CompoundSphere {
+                center,
+                radius,
+                material,
+            } => {
+                validate_vec3(center)?;
+                validate_positive_scalar(radius)?;
+                material.validate()
+            }
+            Self::CreatedRockHull { radius } => validate_positive_scalar(radius),
+            Self::TransformedRockHull {
+                radius,
+                translation,
+                rotation,
+                scale,
+            } => {
+                validate_positive_scalar(radius)?;
+                validate_vec3(translation)?;
+                if rotation.is_finite() {
+                    validate_positive_vec3(scale)
+                } else {
+                    Err(boxddd::Error::InvalidArgument)
+                }
             }
         }
     }

@@ -724,6 +724,7 @@ dependencies = [
  "bevy_transform",
  "boxddd",
  "log",
+ "static_assertions",
  "thiserror 2.0.18",
 ]
 

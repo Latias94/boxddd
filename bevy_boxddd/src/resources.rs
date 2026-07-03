@@ -37,6 +37,7 @@ pub struct BoxdddPhysicsContext {
     pub(crate) body_to_entity: HashMap<BodyId, Entity>,
     pub(crate) entity_to_shape: HashMap<Entity, ShapeId>,
     pub(crate) shape_to_entity: HashMap<ShapeId, Entity>,
+    pub(crate) shape_to_body_entity: HashMap<Entity, Entity>,
     pub(crate) last_step_failed: bool,
 }
 
@@ -54,6 +55,7 @@ impl BoxdddPhysicsContext {
             body_to_entity: HashMap::new(),
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
+            shape_to_body_entity: HashMap::new(),
             last_step_failed: true,
         }
     }
@@ -65,6 +67,7 @@ impl BoxdddPhysicsContext {
             body_to_entity: HashMap::new(),
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
+            shape_to_body_entity: HashMap::new(),
             last_step_failed: false,
         }
     }
@@ -94,22 +97,32 @@ impl BoxdddPhysicsContext {
         self.entity_to_body.remove(&entity);
         self.body_to_entity.remove(&body_id);
         let shapes = self
-            .entity_to_shape
+            .shape_to_body_entity
             .iter()
-            .filter_map(|(shape_entity, shape_id)| (*shape_entity == entity).then_some(*shape_id))
+            .filter_map(|(shape_entity, body_entity)| {
+                (*body_entity == entity).then_some(*shape_entity)
+            })
             .collect::<Vec<_>>();
-        for shape_id in shapes {
-            self.remove_shape(entity, shape_id);
+        for shape_entity in shapes {
+            if let Some(shape_id) = self.entity_to_shape.get(&shape_entity).copied() {
+                self.remove_shape(shape_entity, shape_id);
+            }
         }
     }
 
-    pub(crate) fn insert_shape(&mut self, entity: Entity, shape_id: ShapeId) {
+    pub(crate) fn insert_shape(&mut self, entity: Entity, body_entity: Entity, shape_id: ShapeId) {
         self.entity_to_shape.insert(entity, shape_id);
         self.shape_to_entity.insert(shape_id, entity);
+        self.shape_to_body_entity.insert(entity, body_entity);
     }
 
     pub(crate) fn remove_shape(&mut self, entity: Entity, shape_id: ShapeId) {
         self.entity_to_shape.remove(&entity);
         self.shape_to_entity.remove(&shape_id);
+        self.shape_to_body_entity.remove(&entity);
+    }
+
+    pub(crate) fn shape_body_entity(&self, shape_entity: Entity) -> Option<Entity> {
+        self.shape_to_body_entity.get(&shape_entity).copied()
     }
 }

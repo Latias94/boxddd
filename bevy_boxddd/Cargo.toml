@@ -25,6 +25,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 bevy = "0.19.0"
+static_assertions = "1"
 
 [package.metadata.docs.rs]
 all-features = false
@@ -43,3 +44,7 @@ path = "examples/contact_messages_3d.rs"
 [[example]]
 name = "debug_gizmos_3d"
 path = "examples/debug_gizmos_3d.rs"
+
+[[example]]
+name = "advanced_colliders_3d"
+path = "examples/advanced_colliders_3d.rs"
