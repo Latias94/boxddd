@@ -1,15 +1,14 @@
+#[path = "support/mod.rs"]
+mod support;
+
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Falling Stack".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins(
+            "boxddd Bevy Falling Stack",
+        ))
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
         .add_systems(Startup, setup)
         .run();

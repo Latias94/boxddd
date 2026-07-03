@@ -137,3 +137,5 @@ cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
 cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d
 cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
+
+On Windows, the teaching examples default to the DX12 backend because some NVIDIA/Vulkan driver and validation-layer combinations emit noisy swapchain validation errors even when the app continues to run. Set `WGPU_BACKEND=vulkan` before running an example if you want to test Vulkan explicitly.

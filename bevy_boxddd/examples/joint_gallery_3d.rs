@@ -1,16 +1,15 @@
+#[path = "support/mod.rs"]
+mod support;
+
 use bevy::color::palettes::css::{GOLD, LIME, TOMATO};
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Joint Gallery".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins(
+            "boxddd Bevy Joint Gallery",
+        ))
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings {
             gravity: Vec3::new(0.0, -6.0, 0.0),
             ..default()

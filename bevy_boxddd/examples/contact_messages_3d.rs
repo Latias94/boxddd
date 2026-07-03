@@ -1,3 +1,6 @@
+#[path = "support/mod.rs"]
+mod support;
+
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 
@@ -12,13 +15,9 @@ struct ContactMaterials {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Contact Messages".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins(
+            "boxddd Bevy Contact Messages",
+        ))
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
         .add_systems(Startup, setup)
         .add_systems(Update, highlight_contacts)

@@ -1,3 +1,6 @@
+#[path = "support/mod.rs"]
+mod support;
+
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 
@@ -11,13 +14,9 @@ fn main() {
             enabled: true,
             options,
         })
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Debug Draw Overlay".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins(
+            "boxddd Bevy Debug Draw Overlay",
+        ))
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
         .add_systems(Startup, setup)
         .add_systems(Update, draw_debug_gizmos)

@@ -1,15 +1,14 @@
+#[path = "support/mod.rs"]
+mod support;
+
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Advanced Colliders".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins(
+            "boxddd Bevy Advanced Colliders",
+        ))
         .add_plugins(BoxdddPhysicsPlugin::default())
         .add_systems(Startup, setup)
         .run();

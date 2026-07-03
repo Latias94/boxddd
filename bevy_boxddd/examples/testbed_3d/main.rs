@@ -1,4 +1,6 @@
 mod scenes;
+#[path = "../support/mod.rs"]
+mod support;
 
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
@@ -36,13 +38,7 @@ fn main() {
             enabled: false,
             options: boxddd::DebugDrawOptions::default(),
         })
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "boxddd Bevy Testbed".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(support::teaching_default_plugins("boxddd Bevy Testbed"))
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
         .add_systems(Startup, (setup_view, spawn_initial_scene).chain())
         .add_systems(
