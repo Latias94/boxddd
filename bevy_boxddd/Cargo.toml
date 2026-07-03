@@ -69,3 +69,8 @@ required-features = ["debug-gizmos"]
 name = "physics_picking_3d"
 path = "examples/physics_picking_3d.rs"
 required-features = ["physics-picking"]
+
+[[example]]
+name = "testbed_3d"
+path = "examples/testbed_3d/main.rs"
+required-features = ["debug-gizmos", "physics-picking"]
