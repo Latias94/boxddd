@@ -19,6 +19,8 @@ include = [
     "README.md",
     "build.rs",
     "src/**",
+    "tests/**",
+    "third-party/box3d/README.md",
     "third-party/box3d/include/**/*.h",
     "third-party/box3d/src/**/*.c",
     "third-party/box3d/src/**/*.h",
