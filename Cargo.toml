@@ -3,6 +3,8 @@ members = [
     "bevy_boxddd",
     "boxddd",
     "boxddd-sys",
+    "examples-wasm/provider-smoke",
+    "xtask",
 ]
 resolver = "3"
 

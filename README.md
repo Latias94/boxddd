@@ -26,7 +26,7 @@
 | `aarch64-apple-ios` | compile-only | Rust wrapper and pregenerated bindings are type-checked. Native C linking is skipped. |
 | `aarch64-apple-ios-sim` | compile-only | Simulator compile sentinel. Native C linking is skipped. |
 | `aarch64-linux-android` | compile-only | Android compile sentinel. Native C linking is skipped. |
-| `wasm32-unknown-unknown` | compile-only + provider check | Browser-oriented target. Default checks skip Box3D C; `BOXDDD_SYS_WASM_MODE=provider` checks import bindings for module `box3d-sys-v0`. |
+| `wasm32-unknown-unknown` | compile-only + provider smoke | Browser-oriented target. Default checks skip Box3D C; provider mode imports Box3D from module `box3d-sys-v0` and CI runs a headless shared-memory smoke. |
 | `wasm32-wasip1` | runtime smoke | CI builds vendored Box3D C with WASI SDK and runs `boxddd/examples/wasm_smoke.rs` under wasmtime. |
 
 See [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the exact WASM matrix.
@@ -46,6 +46,7 @@ The GitHub Actions workflow is intentionally shaped like a native binding crate 
 - default `boxddd-sys` dependency checks proving `bindgen` and `clang-sys` are not required for normal users
 - Windows GNU, armv7, mobile, and WASM compile/link sentinels
 - C-backed `wasm32-wasip1` runtime smoke with WASI SDK and wasmtime
+- browser-style provider smoke with Emscripten, shared `WebAssembly.Memory`, and Node
 
 ## Status
 
@@ -210,6 +211,16 @@ export WASI_SYSROOT="$WASI_SDK_PATH/share/wasi-sysroot"
 export CC_wasm32_wasip1="$WASI_SDK_PATH/bin/clang"
 cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
 wasmtime target/wasm32-wasip1/debug/examples/wasm_smoke.wasm
+```
+
+Browser-style provider smoke:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo run -p xtask -- provider-smoke-app
+
+# Full provider smoke also requires Emscripten SDK on PATH or EMSDK set.
+cargo run -p xtask -- provider-smoke
 ```
 
 On macOS, CI also runs:

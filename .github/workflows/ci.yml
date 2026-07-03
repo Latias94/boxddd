@@ -523,6 +523,42 @@ jobs:
       - name: Check minimal bevy_boxddd wasm compile-only path
         run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
 
+  wasm-provider:
+    name: WASM provider smoke
+    runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: "4.0.22"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install Emscripten SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "${EMSDK_VERSION}" https://github.com/emscripten-core/emsdk.git "${RUNNER_TEMP}/emsdk"
+          "${RUNNER_TEMP}/emsdk/emsdk" install "${EMSDK_VERSION}"
+          "${RUNNER_TEMP}/emsdk/emsdk" activate "${EMSDK_VERSION}"
+          echo "EMSDK=${RUNNER_TEMP}/emsdk" >> "$GITHUB_ENV"
+          echo "${RUNNER_TEMP}/emsdk" >> "$GITHUB_PATH"
+          echo "${RUNNER_TEMP}/emsdk/upstream/emscripten" >> "$GITHUB_PATH"
+
+      - name: Check Node runtime
+        run: node --version
+
+      - name: Run browser-style provider smoke
+        run: cargo run -p xtask -- provider-smoke
+
   wasm-runtime:
     name: WASM runtime smoke (WASI)
     runs-on: ubuntu-latest

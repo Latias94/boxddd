@@ -22,22 +22,34 @@ Expected output:
 boxddd wasm smoke passed: y 4.000 -> -0.003, hits 2
 ```
 
-## Browser Provider Scaffold
+## Browser Provider Smoke
 
-Browser-style `wasm32-unknown-unknown` builds use provider mode:
+Browser-style `wasm32-unknown-unknown` builds use provider mode and a separate
+Box3D C provider module:
 
 ```bash
 BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unknown
 ```
 
-Provider mode generates bindings whose C imports come from module
-`box3d-sys-v0`. A future browser example should add:
+The headless provider smoke verifies the same shape used by browser apps:
 
-- a Box3D C provider WASM module exporting the imported `b3*` symbols
-- shared `WebAssembly.Memory` wiring between the Rust app module and provider
-- a headless JS smoke that calls the same world/body/shape/step assertion
-- a visual Bevy Web or renderer-specific example after the runtime smoke is
-  stable
+```bash
+rustup target add wasm32-unknown-unknown
+cargo run -p xtask -- provider-smoke-app
 
-This mirrors the `dear-imgui-rs` provider approach without claiming browser
-runtime support before the provider module exists.
+# Requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
+cargo run -p xtask -- provider-smoke
+```
+
+Expected output:
+
+```text
+boxddd provider smoke passed
+```
+
+`provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
+imports it expects from `box3d-sys-v0`. `provider-smoke` additionally builds the
+Emscripten provider and runs Node with a shared `WebAssembly.Memory`.
+
+A visual Bevy Web or renderer-specific example is still deferred until this
+runtime layer is packaged for browser use.

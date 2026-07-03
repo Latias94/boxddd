@@ -16,7 +16,7 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 - Docs.rs/offline docs: uses pregenerated bindings and skips native C compilation.
 - WASM compile-only: `wasm32-unknown-unknown` skips C compilation by default.
 - WASM runtime smoke: `wasm32-wasip1` builds vendored C sources when `WASI_SYSROOT` or `WASI_SDK_PATH` points at WASI SDK.
-- WASM provider scaffold: `BOXDDD_SYS_WASM_MODE=provider` generates import bindings for module `box3d-sys-v0`.
+- WASM provider: `BOXDDD_SYS_WASM_MODE=provider` generates import bindings for module `box3d-sys-v0`; `xtask provider-smoke` builds an Emscripten provider and runs the shared-memory smoke.
 
 ## Features
 
@@ -51,6 +51,16 @@ Provider import-mode check:
 
 ```bash
 BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd-sys --target wasm32-unknown-unknown
+```
+
+Browser-style provider smoke:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo run -p xtask -- provider-smoke-app
+
+# Full smoke requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
+cargo run -p xtask -- provider-smoke
 ```
 
 C-backed WASI source build:
