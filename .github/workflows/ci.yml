@@ -12,37 +12,96 @@ env:
 
 jobs:
   fmt:
-    name: fmt
+    name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all --check
 
-  test:
-    name: test (${{ matrix.os }})
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  native:
+    name: Native build and tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: taiki-e/install-action@nextest
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo nextest run --workspace
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install Linux native deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxxf86vm-dev \
+            mesa-common-dev \
+            pkg-config
+
+      - name: Run workspace tests
+        run: cargo nextest run --workspace
+
+      - name: Check double precision sys ABI
+        run: cargo check -p boxddd-sys --features double-precision
+
+      - name: Run double precision layout tests
+        run: cargo nextest run -p boxddd-sys --features double-precision --test layout
 
   examples:
-    name: examples
+    name: Examples (Ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
       - name: Install Bevy Linux dependencies
         run: |
           sudo apt-get update
@@ -66,58 +125,395 @@ jobs:
             libxxf86vm-dev \
             mesa-common-dev \
             pkg-config
-      - run: cargo check -p boxddd --examples
-      - run: cargo check -p bevy_boxddd --no-default-features
-      - run: cargo check -p bevy_boxddd --examples
-      - run: cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
-      - run: cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
-      - run: cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
+
+      - name: Check core examples
+        run: cargo check -p boxddd --examples
+
+      - name: Check Bevy plugin library
+        run: cargo check -p bevy_boxddd --no-default-features
+
+      - name: Check Bevy examples
+        run: cargo check -p bevy_boxddd --examples
+
+      - name: Check debug draw overlay example
+        run: cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+
+      - name: Check physics picking example
+        run: cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
+
+      - name: Check Bevy testbed example
+        run: cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 
   docs-and-features:
-    name: docs and feature matrix
+    name: Docs and feature matrix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@nextest
-      - uses: Swatinem/rust-cache@v2
-      - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
-      - run: DOCS_RS=1 RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo doc -p boxddd --no-deps
-      - run: DOCS_RS=1 RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo doc -p bevy_boxddd --no-deps
-      - run: cargo check -p boxddd --no-default-features
-      - run: cargo check -p boxddd-sys --no-default-features
-      - run: BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys
-      - run: cargo check -p boxddd --features validate
-      - run: cargo check -p boxddd --features disable-simd
-      - run: cargo check -p boxddd --features double-precision
-      - run: cargo nextest run -p boxddd-sys --features double-precision --test layout
-      - run: cargo check -p boxddd --features serde
-      - run: cargo check -p boxddd --features mint
-      - run: cargo check -p boxddd --features glam
-      - run: cargo check -p boxddd --features nalgebra
-      - run: cargo check -p boxddd --features cgmath
-      - run: cargo check -p boxddd --all-features --tests --examples
-      - run: cargo check -p boxddd-sys --target wasm32-unknown-unknown
-      - run: cargo check -p boxddd --target wasm32-unknown-unknown
-      - run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
-      - run: cargo test -p boxddd --features serde --test serde_values
-      - run: cargo test -p boxddd --features mint --test interop
-      - run: cargo test -p boxddd --features glam --test interop
-      - run: cargo test -p boxddd --features nalgebra --test interop
-      - run: cargo test -p boxddd --features cgmath --test interop
-      - run: cargo run -p boxddd --example mint_interop --features mint
 
-  package-and-bindings:
-    name: package and bindings
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install Linux native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxxf86vm-dev \
+            mesa-common-dev \
+            pkg-config
+
+      - name: Check workspace docs
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Check boxddd-sys docs.rs path
+        run: cargo doc -p boxddd-sys --no-deps --no-default-features
+        env:
+          DOCS_RS: "1"
+          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+
+      - name: Check boxddd docs.rs path
+        run: cargo doc -p boxddd --no-deps
+        env:
+          DOCS_RS: "1"
+          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+
+      - name: Check bevy_boxddd docs.rs path
+        run: cargo doc -p bevy_boxddd --no-deps
+        env:
+          DOCS_RS: "1"
+          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+
+      - name: Check no-default feature paths
+        run: |
+          cargo check -p boxddd --no-default-features
+          cargo check -p boxddd-sys --no-default-features
+
+      - name: Check sys crate without native C build
+        run: cargo check -p boxddd-sys
+        env:
+          BOXDDD_SYS_SKIP_CC: "1"
+
+      - name: Check core feature flags
+        run: |
+          cargo check -p boxddd --features validate
+          cargo check -p boxddd --features disable-simd
+          cargo check -p boxddd --features double-precision
+          cargo check -p boxddd --features serde
+          cargo check -p boxddd --features mint
+          cargo check -p boxddd --features glam
+          cargo check -p boxddd --features nalgebra
+          cargo check -p boxddd --features cgmath
+
+      - name: Run feature interop tests
+        run: |
+          cargo test -p boxddd --features serde --test serde_values
+          cargo test -p boxddd --features mint --test interop
+          cargo test -p boxddd --features glam --test interop
+          cargo test -p boxddd --features nalgebra --test interop
+          cargo test -p boxddd --features cgmath --test interop
+          cargo run -p boxddd --example mint_interop --features mint
+
+  all-features:
+    name: All features (Ubuntu)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo package -p boxddd-sys
-      - run: cargo package -p boxddd --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
-      - run: cargo package -p bevy_boxddd --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
-      - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
-      - run: BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install Linux native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxxf86vm-dev \
+            mesa-common-dev \
+            pkg-config
+
+      - name: Check all-feature build surfaces
+        run: |
+          cargo check -p boxddd --all-features --tests --examples
+          cargo check -p bevy_boxddd --all-features --tests --examples
+
+      - name: Run all-feature tests
+        run: cargo nextest run --workspace --all-features
+
+  package-and-bindings:
+    name: Package and bindgen refresh
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install LLVM for bindgen
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          cached: true
+          version: "14.0"
+
+      - name: Package crates
+        run: |
+          cargo package -p boxddd-sys
+          cargo package -p boxddd --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+          cargo package -p bevy_boxddd --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+
+      - name: Check forced bindgen path
+        run: cargo check -p boxddd-sys --features bindgen
+        env:
+          BOXDDD_SYS_FORCE_BINDGEN: "1"
+
+      - name: Check forced bindgen double precision path
+        run: cargo check -p boxddd-sys --features "bindgen double-precision"
+        env:
+          BOXDDD_SYS_FORCE_BINDGEN: "1"
+
+  sys-bindgen-defaults:
+    name: Sys crate default binding path
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Assert default sys crate does not pull bindgen
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dep in bindgen clang-sys; do
+            out="$(mktemp)"
+            if cargo tree -p boxddd-sys --target all -i "$dep" >"$out" 2>&1; then
+              cat "$out"
+              echo "::error::boxddd-sys unexpectedly depends on $dep by default"
+              exit 1
+            fi
+            if ! grep -q "did not match any packages" "$out"; then
+              cat "$out"
+              echo "::error::cargo tree failed unexpectedly while checking boxddd-sys for $dep"
+              exit 1
+            fi
+          done
+
+      - name: Check sys crate without libclang or native C
+        run: cargo check -p boxddd-sys
+        env:
+          LIBCLANG_PATH: ${{ github.workspace }}/ci-missing-libclang
+          BOXDDD_SYS_SKIP_CC: "1"
+
+      - name: Assert forced regeneration requires bindgen feature
+        shell: bash
+        env:
+          LIBCLANG_PATH: ${{ github.workspace }}/ci-missing-libclang
+          BOXDDD_SYS_FORCE_BINDGEN: "1"
+        run: |
+          set -euo pipefail
+          set +e
+          cargo check -p boxddd-sys >regen-without-bindgen.log 2>&1
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            cat regen-without-bindgen.log
+            echo "::error::binding regeneration unexpectedly succeeded without the bindgen feature"
+            exit 1
+          fi
+          grep -F 'BOXDDD_SYS_FORCE_BINDGEN=1 requires the `bindgen` feature' regen-without-bindgen.log
+
+  windows-gnu:
+    name: Windows GNU link check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Setup MSYS2 (mingw64)
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+
+      - name: Add MinGW64 to PATH
+        shell: powershell
+        run: |
+          $root = '${{ steps.msys2.outputs.msys2-location }}'
+          $mingw = Join-Path $root 'mingw64\bin'
+          echo $mingw >> $env:GITHUB_PATH
+          echo "MINGW_BIN=$mingw" >> $env:GITHUB_ENV
+
+      - name: Add windows-gnu target
+        run: rustup target add x86_64-pc-windows-gnu
+
+      - name: Link boxddd-sys tests for windows-gnu
+        run: cargo test -p boxddd-sys --target x86_64-pc-windows-gnu --no-run
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: '${{ env.MINGW_BIN }}\gcc.exe'
+          CC_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\gcc.exe'
+          CXX_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\g++.exe'
+          AR_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\ar.exe'
+
+      - name: Type-check core wrapper for windows-gnu
+        run: cargo check -p boxddd --target x86_64-pc-windows-gnu
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: '${{ env.MINGW_BIN }}\gcc.exe'
+          CC_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\gcc.exe'
+          CXX_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\g++.exe'
+          AR_x86_64_pc_windows_gnu: '${{ env.MINGW_BIN }}\ar.exe'
+
+  cross-typecheck:
+    name: Cross target type-check (armv7)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Type-check pregenerated bindings on armv7
+        run: cargo check -p boxddd-sys -p boxddd --target armv7-unknown-linux-gnueabihf
+        env:
+          BOXDDD_SYS_SKIP_CC: "1"
+
+  mobile-typecheck:
+    name: Mobile target type-check (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-ios
+          - os: macos-latest
+            target: aarch64-apple-ios-sim
+          - os: ubuntu-latest
+            target: aarch64-linux-android
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Add mobile target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Type-check safe wrapper on mobile target
+        run: cargo check -p boxddd-sys -p boxddd --target ${{ matrix.target }}
+        env:
+          BOXDDD_SYS_SKIP_CC: "1"
+
+  wasm:
+    name: WASM compile-only matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Check boxddd-sys wasm compile-only path
+        run: cargo check -p boxddd-sys --target wasm32-unknown-unknown
+
+      - name: Check boxddd wasm compile-only path
+        run: cargo check -p boxddd --target wasm32-unknown-unknown
+
+      - name: Check minimal bevy_boxddd wasm compile-only path
+        run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
