@@ -76,7 +76,7 @@ with Emscripten, and runs `target/boxddd-provider-smoke/run-provider-smoke.mjs`
 under Node. The runner instantiates both modules with the same
 `WebAssembly.Memory` and calls `boxddd_provider_smoke`. The smoke intentionally
 uses APIs that do not pass Rust function pointers into the C provider; query,
-contact, debug draw, and task callbacks need a separate shared-table or
+dynamic tree, contact, debug draw, and task callbacks need a separate shared-table or
 dynamic-linking design before they are claimed for browser provider mode.
 The safe wrapper returns `Error::UnsupportedOnWasm` for callback-heavy APIs in
 provider mode instead of allowing a runtime table trap.
@@ -89,8 +89,8 @@ boxddd provider smoke passed
 
 Provider mode currently supports non-callback calls such as world/body/shape
 creation, stepping, body inspection, and closest-ray casts. Visitor-style queries
-(`overlap_aabb`, `overlap_shape`, `cast_ray`, `cast_shape`), debug draw
-collection, contact/material callbacks, and Rust-owned task callbacks are
+(`overlap_aabb`, `overlap_shape`, `cast_ray`, `cast_shape`), `DynamicTree`
+visitor queries/casts, debug draw collection, contact/material callbacks, and Rust-owned task callbacks are
 blocked with `Error::UnsupportedOnWasm` until cross-module function-table
 ownership is designed.
 

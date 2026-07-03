@@ -29,15 +29,15 @@ env:
   RUSTFLAGS: "-Cdebuginfo=0"
 
 jobs:
-  publish:
-    name: publish
+  preflight:
+    name: preflight
     runs-on: ubuntu-24.04
-    environment: crates.io
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
+          fetch-depth: 0
 
       - name: Read version from tag
         id: version
@@ -51,6 +51,134 @@ jobs:
           fi
           if [[ "$release_tag" != v* ]]; then
             echo "::error::Release tag '$release_tag' must start with v."
+            exit 1
+          fi
+          git fetch --force origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
+          tag_commit="$(git rev-parse "${release_tag}^{commit}")"
+          head_commit="$(git rev-parse HEAD)"
+          if [ "$tag_commit" != "$head_commit" ]; then
+            echo "::error::Checked out commit $head_commit does not match ${release_tag} at $tag_commit"
+            exit 1
+          fi
+          version="${release_tag#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Tag version: $version"
+
+      - name: Verify Cargo workspace version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_version="$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' | tr -d ' ')"
+          if [ "$cargo_version" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::Cargo workspace version '$cargo_version' does not match tag ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install Linux native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxxf86vm-dev \
+            mesa-common-dev \
+            pkg-config
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run workspace tests
+        run: cargo nextest run --workspace
+
+      - name: Build package archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo package -p boxddd-sys --locked
+          cargo package -p boxddd --locked --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+          cargo package -p bevy_boxddd --locked --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+
+      - name: Audit package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(cargo pkgid -p boxddd | sed -E 's/.*[@#]//')"
+          sys_crate="target/package/boxddd-sys-${version}.crate"
+          core_crate="target/package/boxddd-${version}.crate"
+          bevy_crate="target/package/bevy_boxddd-${version}.crate"
+
+          for crate in "$sys_crate" "$core_crate" "$bevy_crate"; do
+            list="${crate}.list"
+            tar -tf "$crate" | tee "$list" >/dev/null
+            if grep -E '(^|/)(repo-ref|target|\.github)(/|$)|(^|/)docs/plans/' "$list"; then
+              echo "::error::$crate contains non-publishable workspace content"
+              exit 1
+            fi
+          done
+
+          tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
+          tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
+          tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+          tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
+
+  publish:
+    name: publish
+    runs-on: ubuntu-24.04
+    environment: crates.io
+    needs: preflight
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Read version from tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            release_tag="${{ inputs.release_tag }}"
+          else
+            release_tag="${GITHUB_REF_NAME}"
+          fi
+          if [[ "$release_tag" != v* ]]; then
+            echo "::error::Release tag '$release_tag' must start with v."
+            exit 1
+          fi
+          git fetch --force origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
+          tag_commit="$(git rev-parse "${release_tag}^{commit}")"
+          head_commit="$(git rev-parse HEAD)"
+          if [ "$tag_commit" != "$head_commit" ]; then
+            echo "::error::Checked out commit $head_commit does not match ${release_tag} at $tag_commit"
             exit 1
           fi
           version="${release_tag#v}"

@@ -70,19 +70,33 @@ BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
 BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
 ```
 
-When checking release packaging, publish or stage the dependency chain in order.
-`cargo package` prepares publishable manifests and resolves workspace
-dependencies through the registry, so `boxddd` expects `boxddd-sys` to already
-exist there, and `bevy_boxddd` expects `boxddd` to exist there.
+When checking release packaging locally, use the same temporary registry patch
+configuration as CI so the unpublished dependency chain can be verified before
+anything is on crates.io.
 
 ```bash
-cargo package -p boxddd-sys --allow-dirty
+cargo package -p boxddd-sys --locked
+cargo package -p boxddd --locked --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+cargo package -p bevy_boxddd --locked --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+```
 
-# After boxddd-sys is published or available in a local registry:
-cargo package -p boxddd --allow-dirty
+Audit the generated archives before publishing:
 
-# After boxddd is published or available in a local registry:
-cargo package -p bevy_boxddd --allow-dirty
+```bash
+version="$(cargo pkgid -p boxddd | sed -E 's/.*[@#]//')"
+sys_crate="target/package/boxddd-sys-${version}.crate"
+core_crate="target/package/boxddd-${version}.crate"
+bevy_crate="target/package/bevy_boxddd-${version}.crate"
+
+for crate in "$sys_crate" "$core_crate" "$bevy_crate"; do
+  tar -tf "$crate" >"${crate}.list"
+  ! grep -E '(^|/)(repo-ref|target|\.github)(/|$)|(^|/)docs/plans/' "${crate}.list"
+done
+
+tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
+tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
+tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
 ```
 
 ## Release Workflows

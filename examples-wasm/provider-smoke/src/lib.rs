@@ -1,7 +1,10 @@
 use boxddd::{BodyDef, BodyType, BoxHull, QueryFilter, ShapeDef, Vec3, World, WorldDef};
 
 #[cfg(target_arch = "wasm32")]
-use boxddd::{Aabb, DebugDrawOptions, Error, TaskSystem, validate_replay_bytes};
+use boxddd::{
+    Aabb, BoxCastInput, DebugDrawOptions, DynamicTree, DynamicTreeCastControl, DynamicTreeFilter,
+    Error, RayCastInput, TaskSystem, validate_replay_bytes,
+};
 
 const OK: i32 = 0;
 const ERR_WORLD: i32 = -1;
@@ -123,6 +126,33 @@ fn assert_provider_callback_guardrails(world: &mut World) -> Result<(), i32> {
     if !is_unsupported_on_wasm(
         world.try_set_restitution_callback(|a, b| a.coefficient.max(b.coefficient)),
     ) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+
+    let tree = DynamicTree::new().map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(tree.query(aabb, DynamicTreeFilter::default())) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+    if !is_unsupported_on_wasm(tree.query_closest(
+        Vec3::ZERO,
+        DynamicTreeFilter::default(),
+        1.0,
+        |_| 0.0,
+    )) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+    let ray = RayCastInput::new(Vec3::new(-1.0, 0.0, 0.0), Vec3::new(2.0, 0.0, 0.0))
+        .map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(tree.ray_cast(ray, DynamicTreeFilter::default(), |_| {
+        DynamicTreeCastControl::Continue
+    })) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+    let box_cast =
+        BoxCastInput::new(aabb, Vec3::new(1.0, 0.0, 0.0)).map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(tree.box_cast(box_cast, DynamicTreeFilter::default(), |_| {
+        DynamicTreeCastControl::Continue
+    })) {
         return Err(ERR_CALLBACK_GUARDRAIL);
     }
     Ok(())
