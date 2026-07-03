@@ -107,6 +107,67 @@ pub struct RayClosestHit {
     pub leaf_visits: i32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct BodyClosestPoint {
+    pub point: Vec3,
+    pub distance: f32,
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct BodyCastHit {
+    pub shape_id: ShapeId,
+    pub point: Pos,
+    pub normal: Vec3,
+    pub fraction: f32,
+    pub user_material_id: u64,
+    pub triangle_index: i32,
+    pub iterations: i32,
+}
+
+impl BodyCastHit {
+    #[inline]
+    pub(crate) fn from_raw(raw: ffi::b3BodyCastResult) -> Option<Self> {
+        raw.hit.then(|| Self {
+            shape_id: ShapeId::from_raw(raw.shapeId),
+            point: Pos::from_raw(raw.point),
+            normal: Vec3::from_raw(raw.normal),
+            fraction: raw.fraction,
+            user_material_id: raw.userMaterialId,
+            triangle_index: raw.triangleIndex,
+            iterations: raw.iterations,
+        })
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ShapeRayHit {
+    pub point: Pos,
+    pub normal: Vec3,
+    pub fraction: f32,
+    pub triangle_index: i32,
+    pub child_index: i32,
+    pub material_index: i32,
+    pub iterations: i32,
+}
+
+impl ShapeRayHit {
+    #[inline]
+    pub(crate) fn from_raw(raw: ffi::b3WorldCastOutput) -> Option<Self> {
+        raw.hit.then(|| Self {
+            point: Pos::from_raw(raw.point),
+            normal: Vec3::from_raw(raw.normal),
+            fraction: raw.fraction,
+            triangle_index: raw.triangleIndex,
+            child_index: raw.childIndex,
+            material_index: raw.materialIndex,
+            iterations: raw.iterations,
+        })
+    }
+}
+
 impl World {
     pub fn overlap_aabb(&self, aabb: Aabb, filter: QueryFilter) -> Result<Vec<QueryHit>> {
         let mut out = Vec::new();

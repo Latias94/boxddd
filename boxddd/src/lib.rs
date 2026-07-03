@@ -62,7 +62,9 @@ pub use joints::{
     DistanceJointDef, FilterJointDef, JointTuning, JointType, MotorJointDef, ParallelJointDef,
     PrismaticJointDef, RevoluteJointDef, SphericalJointDef, WeldJointDef, WheelJointDef,
 };
-pub use query::{QueryFilter, QueryHit, RayHit, TreeStats};
+pub use query::{
+    BodyCastHit, BodyClosestPoint, QueryFilter, QueryHit, RayHit, ShapeRayHit, TreeStats,
+};
 pub use recording::{
     RecPlayer, RecPlayerInfo, RecQueryHit, RecQueryInfo, RecQueryType, Recording, ReplayWorldId,
     validate_replay_bytes,

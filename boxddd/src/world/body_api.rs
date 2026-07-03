@@ -1,4 +1,6 @@
 use super::*;
+use crate::collision::{ShapeCastInput, ShapeProxy};
+use crate::query::{BodyCastHit, BodyClosestPoint, QueryFilter};
 
 impl World {
     pub fn body_position(&self, body_id: BodyId) -> Pos {
@@ -168,6 +170,30 @@ impl World {
         let _guard = self.lock_body_checked(body_id)?;
         Ok(Vec3::from_raw(unsafe {
             ffi::b3Body_GetWorldVector(body_id.into_raw(), local_vector.into_raw())
+        }))
+    }
+
+    pub fn try_body_local_point_velocity(
+        &self,
+        body_id: BodyId,
+        local_point: impl Into<Vec3>,
+    ) -> Result<Vec3> {
+        let local_point = local_point.into().validate()?;
+        let _guard = self.lock_body_checked(body_id)?;
+        Ok(Vec3::from_raw(unsafe {
+            ffi::b3Body_GetLocalPointVelocity(body_id.into_raw(), local_point.into_raw())
+        }))
+    }
+
+    pub fn try_body_world_point_velocity(
+        &self,
+        body_id: BodyId,
+        world_point: impl Into<Pos>,
+    ) -> Result<Vec3> {
+        let world_point = world_point.into().validate()?;
+        let _guard = self.lock_body_checked(body_id)?;
+        Ok(Vec3::from_raw(unsafe {
+            ffi::b3Body_GetWorldPointVelocity(body_id.into_raw(), world_point.into_raw())
         }))
     }
 
@@ -501,6 +527,151 @@ impl World {
         }))
     }
 
+    pub fn try_body_closest_point(
+        &self,
+        body_id: BodyId,
+        target: impl Into<Vec3>,
+    ) -> Result<BodyClosestPoint> {
+        let target = target.into().validate()?;
+        let mut point = Vec3::ZERO.into_raw();
+        let _guard = self.lock_body_checked(body_id)?;
+        let distance = unsafe {
+            ffi::b3Body_GetClosestPoint(body_id.into_raw(), &mut point, target.into_raw())
+        };
+        Ok(BodyClosestPoint {
+            point: Vec3::from_raw(point),
+            distance,
+        })
+    }
+
+    pub fn try_body_cast_ray(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        translation: impl Into<Vec3>,
+        filter: QueryFilter,
+    ) -> Result<Option<BodyCastHit>> {
+        let body_transform = self.try_body_transform(body_id)?;
+        self.try_body_cast_ray_with_transform(body_id, origin, translation, filter, body_transform)
+    }
+
+    pub fn try_body_cast_ray_with_transform(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        translation: impl Into<Vec3>,
+        filter: QueryFilter,
+        body_transform: WorldTransform,
+    ) -> Result<Option<BodyCastHit>> {
+        self.try_body_cast_ray_with_options(
+            body_id,
+            origin,
+            translation,
+            filter,
+            1.0,
+            body_transform,
+        )
+    }
+
+    pub fn try_body_cast_ray_with_options(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        translation: impl Into<Vec3>,
+        filter: QueryFilter,
+        max_fraction: f32,
+        body_transform: WorldTransform,
+    ) -> Result<Option<BodyCastHit>> {
+        let origin = origin.into().validate()?;
+        let translation = translation.into().validate()?;
+        validate_nonnegative_scalar(max_fraction)?;
+        validate_world_transform(body_transform)?;
+        let _guard = self.lock_body_checked(body_id)?;
+        let raw = unsafe {
+            ffi::b3Body_CastRay(
+                body_id.into_raw(),
+                origin.into_raw(),
+                translation.into_raw(),
+                filter.raw(),
+                max_fraction,
+                body_transform.into_raw(),
+            )
+        };
+        Ok(BodyCastHit::from_raw(raw))
+    }
+
+    pub fn try_body_cast_shape(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        input: ShapeCastInput,
+        filter: QueryFilter,
+    ) -> Result<Option<BodyCastHit>> {
+        let body_transform = self.try_body_transform(body_id)?;
+        self.try_body_cast_shape_with_transform(body_id, origin, input, filter, body_transform)
+    }
+
+    pub fn try_body_cast_shape_with_transform(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        input: ShapeCastInput,
+        filter: QueryFilter,
+        body_transform: WorldTransform,
+    ) -> Result<Option<BodyCastHit>> {
+        let origin = origin.into().validate()?;
+        validate_world_transform(body_transform)?;
+        let raw_input = input.raw();
+        let _guard = self.lock_body_checked(body_id)?;
+        let raw = unsafe {
+            ffi::b3Body_CastShape(
+                body_id.into_raw(),
+                origin.into_raw(),
+                &raw_input.proxy,
+                raw_input.translation,
+                filter.raw(),
+                raw_input.maxFraction,
+                raw_input.canEncroach,
+                body_transform.into_raw(),
+            )
+        };
+        Ok(BodyCastHit::from_raw(raw))
+    }
+
+    pub fn try_body_overlap_shape(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        proxy: &ShapeProxy,
+        filter: QueryFilter,
+    ) -> Result<bool> {
+        let body_transform = self.try_body_transform(body_id)?;
+        self.try_body_overlap_shape_with_transform(body_id, origin, proxy, filter, body_transform)
+    }
+
+    pub fn try_body_overlap_shape_with_transform(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        proxy: &ShapeProxy,
+        filter: QueryFilter,
+        body_transform: WorldTransform,
+    ) -> Result<bool> {
+        let origin = origin.into().validate()?;
+        validate_world_transform(body_transform)?;
+        let raw_proxy = proxy.raw();
+        let _guard = self.lock_body_checked(body_id)?;
+        Ok(unsafe {
+            ffi::b3Body_OverlapShape(
+                body_id.into_raw(),
+                origin.into_raw(),
+                &raw_proxy,
+                filter.raw(),
+                body_transform.into_raw(),
+            )
+        })
+    }
+
     pub fn body_shapes(&self, body_id: BodyId) -> Vec<ShapeId> {
         self.try_body_shapes(body_id).expect("invalid BodyId")
     }
@@ -570,5 +741,14 @@ impl World {
                 .map(|contact| unsafe { ContactData::from_raw(contact) }),
         );
         Ok(())
+    }
+}
+
+#[inline]
+fn validate_world_transform(transform: WorldTransform) -> Result<()> {
+    if transform.is_valid() {
+        Ok(())
+    } else {
+        Err(Error::InvalidArgument)
     }
 }

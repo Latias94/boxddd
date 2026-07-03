@@ -107,9 +107,9 @@ fn coverage_fixture_has_policy_buckets_and_high_priority_symbols() {
     assert_eq!(by_symbol["b3GetWorldCount"].status, CoverageStatus::Omitted);
 
     for symbol in [
-        "b3Body_CastRay",
-        "b3Shape_RayCast",
+        "b3Body_CollideMover",
         "b3World_Explode",
+        "b3Shape_GetContactData",
         "b3DynamicTree_Create",
         "b3ShapeDistance",
     ] {

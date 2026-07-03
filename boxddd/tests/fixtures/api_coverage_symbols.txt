@@ -128,8 +128,8 @@ b3Body_GetAngularVelocity|safe|body|box3d.h|covered by current safe wrapper impl
 b3Body_SetLinearVelocity|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_SetAngularVelocity|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_SetTargetTransform|safe|body|box3d.h|covered by current safe wrapper implementation
-b3Body_GetLocalPointVelocity|deferred|body|box3d.h|known upstream API awaiting safe design or implementation
-b3Body_GetWorldPointVelocity|deferred|body|box3d.h|known upstream API awaiting safe design or implementation
+b3Body_GetLocalPointVelocity|safe|body|box3d.h|covered by current safe wrapper implementation
+b3Body_GetWorldPointVelocity|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_ApplyForce|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_ApplyForceToCenter|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_ApplyTorque|safe|body|box3d.h|covered by current safe wrapper implementation
@@ -175,10 +175,10 @@ b3Body_GetJoints|safe|body|box3d.h|covered by current safe wrapper implementatio
 b3Body_GetContactCapacity|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_GetContactData|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_ComputeAABB|safe|body|box3d.h|covered by current safe wrapper implementation
-b3Body_GetClosestPoint|deferred|body|box3d.h|planned safe wrapper in API completion work
-b3Body_CastRay|deferred|body|box3d.h|planned safe wrapper in API completion work
-b3Body_CastShape|deferred|body|box3d.h|planned safe wrapper in API completion work
-b3Body_OverlapShape|deferred|body|box3d.h|planned safe wrapper in API completion work
+b3Body_GetClosestPoint|safe|body|box3d.h|covered by current safe wrapper implementation
+b3Body_CastRay|safe|body|box3d.h|covered by current safe wrapper implementation
+b3Body_CastShape|safe|body|box3d.h|covered by current safe wrapper implementation
+b3Body_OverlapShape|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_CollideMover|deferred|body|box3d.h|planned safe wrapper in API completion work
 b3CreateSphereShape|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3CreateCapsuleShape|safe|shape|box3d.h|covered by current safe wrapper implementation
@@ -216,7 +216,7 @@ b3Shape_EnablePreSolveEvents|safe|shape|box3d.h|covered by current safe wrapper 
 b3Shape_ArePreSolveEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
 b3Shape_EnableHitEvents|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_AreHitEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_RayCast|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_RayCast|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetSphere|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetCapsule|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetHull|deferred|shape|box3d.h|planned safe wrapper in API completion work
@@ -231,8 +231,8 @@ b3Shape_GetContactData|deferred|shape|box3d.h|planned safe wrapper in API comple
 b3Shape_GetSensorCapacity|deferred|shape|box3d.h|planned safe wrapper in API completion work
 b3Shape_GetSensorData|deferred|shape|box3d.h|planned safe wrapper in API completion work
 b3Shape_GetAABB|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_ComputeMassData|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetClosestPoint|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_ComputeMassData|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetClosestPoint|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_ApplyWind|deferred|shape|box3d.h|planned safe wrapper in API completion work
 b3DestroyJoint|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_IsValid|safe|joints|box3d.h|covered by current safe wrapper implementation

@@ -1,4 +1,5 @@
 use super::*;
+use crate::query::ShapeRayHit;
 
 impl World {
     pub fn try_destroy_shape(&mut self, shape_id: ShapeId, update_body_mass: bool) -> Result<()> {
@@ -170,6 +171,44 @@ impl World {
         let _guard = self.lock_shape_checked(shape_id)?;
         Ok(Aabb::from_raw(unsafe {
             ffi::b3Shape_GetAABB(shape_id.into_raw())
+        }))
+    }
+
+    pub fn try_shape_cast_ray(
+        &self,
+        shape_id: ShapeId,
+        origin: impl Into<Pos>,
+        translation: impl Into<Vec3>,
+    ) -> Result<Option<ShapeRayHit>> {
+        let origin = origin.into().validate()?;
+        let translation = translation.into().validate()?;
+        let _guard = self.lock_shape_checked(shape_id)?;
+        let raw = unsafe {
+            ffi::b3Shape_RayCast(
+                shape_id.into_raw(),
+                origin.into_raw(),
+                translation.into_raw(),
+            )
+        };
+        Ok(ShapeRayHit::from_raw(raw))
+    }
+
+    pub fn try_shape_mass_data(&self, shape_id: ShapeId) -> Result<MassData> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(MassData::from_raw(unsafe {
+            ffi::b3Shape_ComputeMassData(shape_id.into_raw())
+        }))
+    }
+
+    pub fn try_shape_closest_point(
+        &self,
+        shape_id: ShapeId,
+        target: impl Into<Vec3>,
+    ) -> Result<Vec3> {
+        let target = target.into().validate()?;
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(Vec3::from_raw(unsafe {
+            ffi::b3Shape_GetClosestPoint(shape_id.into_raw(), target.into_raw())
         }))
     }
 

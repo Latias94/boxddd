@@ -1,4 +1,7 @@
-use boxddd::{BodyDef, BodyType, Error, MotionLocks, ShapeDef, Sphere, Vec3, World, WorldDef};
+use boxddd::{
+    BodyDef, BodyType, Error, MotionLocks, QueryFilter, ShapeDef, ShapeProxy, Sphere, Vec3, World,
+    WorldDef,
+};
 
 #[test]
 fn world_runtime_tuning_and_metrics_are_safe() {
@@ -74,6 +77,18 @@ fn body_runtime_setters_getters_and_buffers_work() {
         .try_set_body_linear_velocity(body, [1.0, 2.0, 3.0])
         .unwrap();
     assert_eq!(world.body_linear_velocity(body), Vec3::new(1.0, 2.0, 3.0));
+    assert_eq!(
+        world
+            .try_body_local_point_velocity(body, Vec3::ZERO)
+            .unwrap(),
+        world.body_linear_velocity(body)
+    );
+    assert_eq!(
+        world
+            .try_body_world_point_velocity(body, [1.0, 4.0, 2.0])
+            .unwrap(),
+        world.body_linear_velocity(body)
+    );
     world
         .try_set_body_angular_velocity(body, [0.1, 0.2, 0.3])
         .unwrap();
@@ -173,6 +188,23 @@ fn world_rejects_foreign_body_and_shape_handles() {
 
     assert_eq!(
         world.try_body_position(foreign_body).unwrap_err(),
+        Error::InvalidBodyId
+    );
+    assert_eq!(
+        world
+            .try_body_closest_point(foreign_body, Vec3::ZERO)
+            .unwrap_err(),
+        Error::InvalidBodyId
+    );
+    assert_eq!(
+        world
+            .try_body_overlap_shape(
+                foreign_body,
+                Vec3::ZERO,
+                &ShapeProxy::sphere(0.5).unwrap(),
+                QueryFilter::default()
+            )
+            .unwrap_err(),
         Error::InvalidBodyId
     );
     assert_eq!(

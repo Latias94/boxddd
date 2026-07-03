@@ -1,6 +1,6 @@
 use boxddd::{
-    Aabb, BodyDef, BodyType, BoxHull, Error, Filter, QueryFilter, ShapeDef, ShapeProxy, Sphere,
-    Vec3, World, WorldDef,
+    Aabb, BodyDef, BodyType, BoxHull, Error, Filter, QueryFilter, ShapeCastInput, ShapeDef,
+    ShapeProxy, Sphere, Vec3, World, WorldDef,
 };
 
 fn query_world() -> (World, Vec<boxddd::ShapeId>) {
@@ -74,6 +74,161 @@ fn overlap_shape_and_ray_casts_find_expected_shapes() {
         )
         .unwrap();
     assert!(!shape_hits.is_empty());
+}
+
+#[test]
+fn body_scoped_ray_cast_and_shape_cast_find_only_that_body() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+    let left_body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Static)
+            .position([-1.0, 0.0, 0.0])
+            .build(),
+    );
+    let left_shape = world.create_sphere_shape(
+        left_body,
+        &ShapeDef::builder().density(1.0).build(),
+        &Sphere::new(Vec3::ZERO, 0.4),
+    );
+    let right_body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Static)
+            .position([2.0, 0.0, 0.0])
+            .build(),
+    );
+    world.create_hull_shape(
+        right_body,
+        &ShapeDef::builder().density(1.0).build(),
+        &BoxHull::cube(0.35),
+    );
+
+    let ray_hit = world
+        .try_body_cast_ray(
+            left_body,
+            [-3.0, 0.0, 0.0],
+            [5.0, 0.0, 0.0],
+            QueryFilter::default(),
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(ray_hit.shape_id, left_shape);
+    assert!(ray_hit.fraction > 0.0 && ray_hit.fraction < 1.0);
+
+    let body_miss = world
+        .try_body_cast_ray(
+            right_body,
+            [-3.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            QueryFilter::default(),
+        )
+        .unwrap();
+    assert!(body_miss.is_none());
+
+    let shape_hit = world
+        .try_body_cast_shape(
+            left_body,
+            [-3.0, 0.0, 0.0],
+            ShapeCastInput::new(ShapeProxy::sphere(0.25).unwrap(), [5.0, 0.0, 0.0]).unwrap(),
+            QueryFilter::default(),
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(shape_hit.shape_id, left_shape);
+}
+
+#[test]
+fn body_scoped_overlap_respects_query_filter() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+    let body = world.create_body(BodyDef::builder().body_type(BodyType::Static).build());
+    world.create_sphere_shape(
+        body,
+        &ShapeDef::builder()
+            .density(1.0)
+            .filter(Filter {
+                category_bits: 0b10,
+                mask_bits: u64::MAX,
+                group_index: 0,
+            })
+            .build(),
+        &Sphere::new(Vec3::ZERO, 0.5),
+    );
+    let proxy = ShapeProxy::sphere(0.5).unwrap();
+
+    assert!(
+        world
+            .try_body_overlap_shape(
+                body,
+                Vec3::ZERO,
+                &proxy,
+                QueryFilter::default().mask_bits(0b10),
+            )
+            .unwrap()
+    );
+    assert!(
+        !world
+            .try_body_overlap_shape(
+                body,
+                Vec3::ZERO,
+                &proxy,
+                QueryFilter::default().mask_bits(0b100),
+            )
+            .unwrap()
+    );
+}
+
+#[test]
+fn shape_scoped_ray_cast_closest_point_and_mass_data_are_typed() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+    let body = world.create_body(BodyDef::builder().body_type(BodyType::Static).build());
+    let sphere = Sphere::new([1.0, 0.0, 0.0], 0.5);
+    let shape = world.create_sphere_shape(body, &ShapeDef::builder().density(2.0).build(), &sphere);
+
+    let hit = world
+        .try_shape_cast_ray(shape, [-1.0, 0.0, 0.0], [4.0, 0.0, 0.0])
+        .unwrap()
+        .unwrap();
+    assert!(hit.fraction > 0.0 && hit.fraction < 1.0);
+
+    let closest = world
+        .try_shape_closest_point(shape, [3.0, 0.0, 0.0])
+        .unwrap();
+    assert!((closest.x - 1.5).abs() < 0.02, "{closest:?}");
+
+    let expected_mass = boxddd::compute_sphere_mass(&sphere, 2.0).unwrap();
+    let shape_mass = world.try_shape_mass_data(shape).unwrap();
+    assert!((shape_mass.mass - expected_mass.mass).abs() < 0.001);
+}
+
+#[test]
+fn scoped_shape_queries_reject_destroyed_and_foreign_shapes() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+    let body = world.create_body(BodyDef::builder().body_type(BodyType::Static).build());
+    let shape =
+        world.create_sphere_shape(body, &ShapeDef::default(), &Sphere::new(Vec3::ZERO, 0.5));
+
+    let mut other_world = World::new(WorldDef::default()).unwrap();
+    let other_body =
+        other_world.create_body(BodyDef::builder().body_type(BodyType::Static).build());
+    let foreign_shape = other_world.create_sphere_shape(
+        other_body,
+        &ShapeDef::default(),
+        &Sphere::new(Vec3::ZERO, 0.5),
+    );
+
+    assert_eq!(
+        world
+            .try_shape_closest_point(foreign_shape, Vec3::ZERO)
+            .unwrap_err(),
+        Error::InvalidShapeId
+    );
+
+    world.try_destroy_shape(shape, true).unwrap();
+    assert_eq!(
+        world
+            .try_shape_cast_ray(shape, [-1.0, 0.0, 0.0], [2.0, 0.0, 0.0])
+            .unwrap_err(),
+        Error::InvalidShapeId
+    );
 }
 
 #[test]

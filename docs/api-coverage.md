@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 437 | world lifecycle and stepping, body runtime, shape creation and core properties, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 446 | world lifecycle and stepping, body runtime, body/shape scoped queries, shape creation and core properties, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, raw `void*` user data, file-backed dynamic tree or height-field helpers |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
-| `deferred` | 104 | body/shape scoped queries, mover collision, explosions, dynamic tree, advanced collision, compound/mesh/height-field completion, selected math helpers |
+| `deferred` | 95 | mover collision, explosions, dynamic tree, advanced collision, compound/mesh/height-field completion, selected shape inspection/event APIs, selected math helpers |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -38,7 +38,6 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 
 These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
 
-- Body and shape scoped queries: `b3Body_CastRay`, `b3Body_CastShape`, `b3Body_OverlapShape`, `b3Body_GetClosestPoint`, `b3Shape_RayCast`, `b3Shape_GetClosestPoint`, and `b3Shape_ComputeMassData`.
 - Runtime helpers: `b3World_CollideMover`, `b3Body_CollideMover`, `b3World_Explode`, and `b3DefaultExplosionDef`.
 - Shape inspection and events: shape event-state getters, shape contact/sensor data, mesh material readback, geometry readback, and `b3Shape_ApplyWind`.
 - Complex geometry: compound child/material queries, compound byte conversion, arbitrary mesh creation, wave/torus/hollow/platform mesh helpers, and custom height-field creation.
