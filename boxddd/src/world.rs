@@ -1,6 +1,7 @@
+use crate::TaskSystem;
 use crate::body::{BodyDef, BodyType};
 use crate::callbacks::WorldCallbacks;
-use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec};
+use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec, task_system};
 use crate::debug_draw::{DebugShapeRegistry, create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
@@ -20,12 +21,14 @@ use std::rc::Rc;
 #[derive(Clone, Debug)]
 pub struct WorldDef {
     raw: ffi::b3WorldDef,
+    task_system: Option<TaskSystem>,
 }
 
 impl Default for WorldDef {
     fn default() -> Self {
         Self {
             raw: unsafe { ffi::b3DefaultWorldDef() },
+            task_system: None,
         }
     }
 }
@@ -78,7 +81,13 @@ impl WorldDefBuilder {
 
     #[inline]
     pub fn worker_count(mut self, worker_count: u32) -> Self {
-        self.def.raw.workerCount = worker_count;
+        self.def.raw.workerCount = worker_count.max(1);
+        self
+    }
+
+    #[inline]
+    pub fn task_system(mut self, task_system: TaskSystem) -> Self {
+        self.def.task_system = Some(task_system);
         self
     }
 
@@ -99,6 +108,7 @@ pub struct World {
     raw: ffi::b3WorldId,
     resources: HashMap<ShapeId, ShapeResource>,
     pub(crate) callbacks: WorldCallbacks,
+    task_system: Option<TaskSystem>,
     _debug_shapes: Box<DebugShapeRegistry>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
@@ -121,7 +131,12 @@ impl World {
         def.validate()?;
 
         let debug_shapes = Box::<DebugShapeRegistry>::default();
+        let task_system = def.task_system.clone();
         let mut raw_def = *def.raw();
+        if let Some(task_system) = task_system.as_ref() {
+            task_system.reset_panics();
+            task_system::install_callbacks(&mut raw_def, task_system);
+        }
         raw_def.createDebugShape = Some(create_debug_shape);
         raw_def.destroyDebugShape = Some(destroy_debug_shape);
         raw_def.userDebugShapeContext =
@@ -134,6 +149,7 @@ impl World {
                 raw,
                 resources: HashMap::new(),
                 callbacks: WorldCallbacks::default(),
+                task_system,
                 _debug_shapes: debug_shapes,
                 _not_send_sync: PhantomData,
             })

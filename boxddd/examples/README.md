@@ -18,6 +18,7 @@ need an engine/render-loop shape.
 ## App Integration And Ownership
 
 - `physics_thread.rs`: creates and owns `World` inside a dedicated physics thread, then sends plain body snapshots over channels.
+- `task_system.rs`: configures Rust-owned Box3D task callbacks with `TaskSystem::blocking_threads()` and prints scheduler counters.
 - `tokio_async_bridge.rs`: uses `tokio::task::spawn_blocking` and async channels so async apps do not hold `World` across async tasks.
 
   ```bash
@@ -56,6 +57,7 @@ cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay
 cargo run -p boxddd --example determinism
 cargo run -p boxddd --example error_handling
+cargo run -p boxddd --example task_system
 cargo run -p boxddd --example physics_thread
 cargo run -p boxddd --example mint_interop --features mint
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example

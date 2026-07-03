@@ -23,6 +23,7 @@ Experimental `0.1.0` release candidate. The safe layer currently covers:
 - standalone collision helpers for mass, AABB, overlap, ray cast, shape cast, and local manifolds
 - allocation-aware world/body queries with reusable-buffer and visitor forms
 - body/contact/sensor/joint events plus custom filter, pre-solve, friction, and restitution callbacks
+- safe Box3D task-system callback configuration through `TaskSystem::blocking_threads()`
 - debug draw collection and callback adapters that catch Rust panics before the C ABI boundary
 - typed joint creation/runtime APIs for Box3D's joint families
 - recording/replay validation, frame stepping, query inspection, and replay debug drawing
@@ -101,6 +102,7 @@ cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay
 cargo run -p boxddd --example determinism
 cargo run -p boxddd --example error_handling
+cargo run -p boxddd --example task_system
 cargo run -p boxddd --example physics_thread
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example
 cargo run -p boxddd --example egui_debug_draw --features egui-example
@@ -143,9 +145,26 @@ BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-
 
 `World`, native resources, and replay players are intentionally `!Send`/`!Sync`. Keep physics ownership on one thread or one Bevy non-send resource.
 
+Box3D can use its internal scheduler when only `worker_count` is configured. When you need Rust-owned task callbacks, configure them at world creation:
+
+```rust
+let task_system = TaskSystem::blocking_threads();
+let mut world = World::new(
+    WorldDef::builder()
+        .worker_count(2)
+        .task_system(task_system.clone())
+        .build(),
+)?;
+world.try_step(1.0 / 60.0, 4)?;
+println!("{:?}", task_system.stats());
+# Ok::<(), boxddd::Error>(())
+```
+
+`TaskSystem::blocking_threads()` runs Box3D tasks on blocking OS threads and joins them from Box3D's `finishTask` callback. `World::try_step` must therefore run on a thread that is allowed to block. Do not call it from a job system that cannot park or yield while waiting for child work, because Box3D requires `finishTask` to wait for completion.
+
 For async apps, do not hold `World` across async tasks. Use `spawn_blocking`, channels, and plain snapshots such as body positions or transforms. See `physics_thread.rs` and `tokio_async_bridge.rs`.
 
-`bevy_boxddd` stores `boxddd::World` as a Bevy `NonSend` resource and steps it from `FixedUpdate`.
+`bevy_boxddd` stores `boxddd::World` as a Bevy `NonSend` resource and steps it from `FixedUpdate`. Bevy task-pool integration is intentionally separate from the core callback API.
 
 ## Error Handling
 

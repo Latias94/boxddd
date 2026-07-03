@@ -24,6 +24,7 @@ Status legend:
 | World runtime metrics/tuning | bounds, gravity, sleeping, continuous, warm starting, speculative, thresholds, contact tuning, worker count, profile, counters, capacity, rebuild static tree | Wrapped | Dump/debug-print functions remain raw-only. |
 | World user data | `b3World_SetUserData`, `b3World_GetUserData` | Raw-only | Raw pointers are not part of the safe 0.1 ownership model. |
 | World callbacks | custom filter, pre-solve, friction, restitution | Wrapped | Rust callback panics are caught and reentrant safe access is blocked. |
+| World task callbacks | `b3EnqueueTaskCallback`, `b3FinishTaskCallback`, `userTaskContext` | Wrapped/Deferred | `TaskSystem::blocking_threads()` provides a safe Rust-owned callback path at world creation. Tokio, Rayon, Bevy Tasks, and arbitrary executor adapters remain deferred until their blocking/deadlock contracts are designed. |
 | World queries | `b3World_OverlapAABB`, `b3World_OverlapShape`, `b3World_CastRay`, `b3World_CastRayClosest`, `b3World_CastShape`, `b3World_CastMover` | Wrapped | Owned, reusable-buffer, and visitor variants exist where the upstream callback path supports them. |
 | Character mover planes | `b3World_CollideMover`, `b3SolvePlanes`, `b3ClipVector` | Deferred | Requires a dedicated safe plane/result model and tests; `cast_mover` is wrapped. |
 | Explosion | `b3World_Explode`, `b3DefaultExplosionDef` | Deferred | Needs a safe `ExplosionDef` value wrapper and behavior coverage. |

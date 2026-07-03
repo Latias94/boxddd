@@ -14,6 +14,7 @@ mod core {
     pub(crate) mod debug_checks;
     pub(crate) mod ffi_vec;
     pub(crate) mod material_mix_registry;
+    pub(crate) mod task_system;
 }
 pub mod debug_draw;
 pub mod error;
@@ -44,6 +45,7 @@ pub use collision::{
     ray_cast_compound, ray_cast_height_field, ray_cast_hollow_sphere, ray_cast_hull, ray_cast_mesh,
     ray_cast_sphere, shape_cast_capsule, shape_cast_hull, shape_cast_sphere,
 };
+pub use core::task_system::{TaskSystem, TaskSystemStats};
 pub use debug_draw::{DebugDraw, DebugDrawCommand, DebugDrawOptions, DebugShape, HexColor};
 pub use error::{ApiError, ApiResult, Error, Result};
 pub use events::{
@@ -84,5 +86,25 @@ pub mod __private {
         CallbackGuard {
             _guard: crate::core::callback_state::CallbackGuard::enter(),
         }
+    }
+
+    pub fn task_system_panic_on_enqueue_for_test() -> crate::TaskSystem {
+        crate::TaskSystem::__panic_on_enqueue_for_test()
+    }
+
+    pub fn task_system_panic_on_task_for_test() -> crate::TaskSystem {
+        crate::TaskSystem::__panic_on_task_for_test()
+    }
+
+    pub fn task_system_panic_on_finish_for_test() -> crate::TaskSystem {
+        crate::TaskSystem::__panic_on_finish_for_test()
+    }
+
+    pub fn task_system_check_callback_guard_for_test() -> crate::TaskSystem {
+        crate::TaskSystem::__check_callback_guard_for_test()
+    }
+
+    pub fn task_system_guard_rejections_for_test(task_system: &crate::TaskSystem) -> usize {
+        task_system.__guard_rejections_for_test()
     }
 }

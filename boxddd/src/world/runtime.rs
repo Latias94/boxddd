@@ -14,8 +14,16 @@ impl World {
         }
         let _guard = box3d_lock::lock();
         self.callbacks.reset_panics();
+        if let Some(task_system) = self.task_system.as_ref() {
+            task_system.reset_panics();
+        }
         unsafe { ffi::b3World_Step(self.raw, time_step, sub_step_count) };
-        if self.callbacks.panicked() {
+        if self.callbacks.panicked()
+            || self
+                .task_system
+                .as_ref()
+                .is_some_and(|task_system| task_system.panicked())
+        {
             return Err(Error::CallbackPanicked);
         }
         Ok(())
