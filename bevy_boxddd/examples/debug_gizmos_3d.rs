@@ -109,6 +109,7 @@ fn draw_collider_gizmos(mut gizmos: Gizmos, colliders: Query<(&Transform, &Colli
                 gizmos.sphere(start, radius, LIME);
                 gizmos.sphere(end, radius, LIME);
             }
+            _ => {}
         }
     }
 }

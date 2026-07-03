@@ -17,6 +17,7 @@ pub enum BoxdddOperation {
     SyncTransform,
     StepWorld,
     ReadEvents,
+    DebugDraw,
 }
 
 #[derive(Message, Copy, Clone, Debug, Eq, PartialEq)]

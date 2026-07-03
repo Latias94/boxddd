@@ -13,10 +13,16 @@ rust-version = "1.95.0"
 keywords = ["box3d", "bevy", "physics", "game", "simulation"]
 categories = ["game-engines", "api-bindings"]
 
+[features]
+default = []
+debug-gizmos = ["dep:bevy_color", "dep:bevy_gizmos"]
+
 [dependencies]
 boxddd.workspace = true
 bevy_app.workspace = true
+bevy_color = { workspace = true, optional = true }
 bevy_ecs.workspace = true
+bevy_gizmos = { workspace = true, optional = true }
 bevy_math.workspace = true
 bevy_time.workspace = true
 bevy_transform.workspace = true
@@ -52,3 +58,8 @@ path = "examples/advanced_colliders_3d.rs"
 [[example]]
 name = "joint_gallery_3d"
 path = "examples/joint_gallery_3d.rs"
+
+[[example]]
+name = "debug_draw_overlay_3d"
+path = "examples/debug_draw_overlay_3d.rs"
+required-features = ["debug-gizmos"]

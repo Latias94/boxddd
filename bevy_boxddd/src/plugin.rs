@@ -1,3 +1,6 @@
+use crate::debug_draw::{
+    BoxdddDebugDrawCommands, BoxdddDebugDrawSettings, collect_debug_draw_commands,
+};
 use crate::messages::{
     BoxdddBodyMoveMessage, BoxdddContactBeginMessage, BoxdddContactEndMessage,
     BoxdddContactHitMessage, BoxdddErrorMessage, BoxdddOperation, BoxdddSensorBeginMessage,
@@ -35,6 +38,8 @@ impl Plugin for BoxdddPhysicsPlugin {
             .add_message::<BoxdddSensorEndMessage>();
 
         app.insert_resource(self.settings.clone());
+        app.init_resource::<BoxdddDebugDrawSettings>()
+            .init_resource::<BoxdddDebugDrawCommands>();
 
         if let Some(seconds) = self.settings.fixed_timestep_seconds {
             if seconds.is_finite() && seconds > 0.0 {
@@ -78,6 +83,7 @@ impl Plugin for BoxdddPhysicsPlugin {
                 apply_body_controls,
                 sync_bevy_transforms_to_boxddd,
                 step_world,
+                collect_debug_draw_commands,
                 publish_physics_messages,
                 sync_boxddd_transforms_to_bevy,
             )

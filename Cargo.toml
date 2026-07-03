@@ -24,7 +24,9 @@ documentation = "https://docs.rs/boxddd"
 boxddd = { version = "0.1.0", path = "boxddd" }
 boxddd-sys = { version = "0.1.0", path = "boxddd-sys" }
 bevy_app = "0.19.0"
+bevy_color = "0.19.0"
 bevy_ecs = "0.19.0"
+bevy_gizmos = "0.19.0"
 bevy_math = "0.19.0"
 bevy_time = "0.19.0"
 bevy_transform = "0.19.0"

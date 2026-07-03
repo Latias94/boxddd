@@ -4,6 +4,7 @@
 //! plugin, components, resources, systems, and teaching examples.
 
 pub mod components;
+pub mod debug_draw;
 pub mod errors;
 pub mod messages;
 pub mod plugin;
@@ -13,6 +14,7 @@ pub mod systems;
 
 pub use boxddd;
 pub use components::*;
+pub use debug_draw::*;
 pub use messages::*;
 pub use plugin::BoxdddPhysicsPlugin;
 pub use resources::*;
