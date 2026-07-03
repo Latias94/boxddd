@@ -21,7 +21,7 @@ threaded Box3D scheduling yet.
 | `boxddd` | `wasm32-wasip1` | runtime smoke | `wasm_smoke` creates a world, steps a body, runs a query, and exits successfully. |
 | `bevy_boxddd` minimal library | `wasm32-unknown-unknown` | compile-only | `--no-default-features` type-checks the library surface. |
 | Bevy examples and renderer integrations | browser WASM | deferred | Native examples use windowing/rendering assumptions. Bevy Web needs a separate renderer/input/testbed plan. |
-| Task-system callbacks | all WASM targets | single-thread only | `TaskSystem::blocking_threads()` is native-only. WASM APIs reject unsupported worker counts. |
+| Task-system callbacks and replay worker counts | all WASM targets | single-thread only | `TaskSystem::blocking_threads()` is native-only. WASM APIs reject unsupported world and replay worker counts. |
 
 ## Compile-Only Checks
 

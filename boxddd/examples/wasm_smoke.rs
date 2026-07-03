@@ -1,6 +1,10 @@
 use boxddd::{Aabb, BodyDef, BodyType, BoxHull, QueryFilter, ShapeDef, Vec3, World, WorldDef};
+#[cfg(target_arch = "wasm32")]
+use boxddd::{Error, TaskSystem, validate_replay_bytes};
 
 fn main() -> boxddd::Result<()> {
+    assert_wasm_thread_guardrails()?;
+
     let mut world = World::new(
         WorldDef::builder()
             .gravity(Vec3::new(0.0, -10.0, 0.0))
@@ -52,5 +56,33 @@ fn main() -> boxddd::Result<()> {
         end_y,
         hits.len()
     );
+    Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn assert_wasm_thread_guardrails() -> boxddd::Result<()> {
+    assert_eq!(
+        TaskSystem::try_blocking_threads().unwrap_err(),
+        Error::UnsupportedOnWasm
+    );
+    assert_eq!(
+        World::new(WorldDef::builder().worker_count(2).build()).unwrap_err(),
+        Error::UnsupportedOnWasm
+    );
+
+    let mut world = World::new(WorldDef::builder().worker_count(1).build())?;
+    assert_eq!(
+        world.try_set_worker_count(2).unwrap_err(),
+        Error::UnsupportedOnWasm
+    );
+    assert_eq!(
+        validate_replay_bytes(&[0], 2).unwrap_err(),
+        Error::UnsupportedOnWasm
+    );
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn assert_wasm_thread_guardrails() -> boxddd::Result<()> {
     Ok(())
 }

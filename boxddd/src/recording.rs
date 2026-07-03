@@ -430,9 +430,7 @@ impl RecPlayer {
     }
 
     pub fn set_worker_count(&mut self, count: i32) -> Result<()> {
-        if count < 1 {
-            return Err(Error::InvalidArgument);
-        }
+        validate_replay_worker_count(count)?;
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_SetWorkerCount(self.raw.as_ptr(), count) };
@@ -633,11 +631,23 @@ pub fn validate_replay_bytes(bytes: &[u8], worker_count: i32) -> Result<bool> {
 }
 
 fn validate_replay_input(bytes: &[u8], worker_count: i32) -> Result<()> {
-    if bytes.is_empty() || bytes.len() > i32::MAX as usize || worker_count < 1 {
+    validate_replay_worker_count(worker_count)?;
+    if bytes.is_empty() || bytes.len() > i32::MAX as usize {
         Err(Error::InvalidArgument)
     } else {
         Ok(())
     }
+}
+
+fn validate_replay_worker_count(worker_count: i32) -> Result<()> {
+    if worker_count < 1 {
+        return Err(Error::InvalidArgument);
+    }
+    #[cfg(target_arch = "wasm32")]
+    if worker_count > 1 {
+        return Err(Error::UnsupportedOnWasm);
+    }
+    Ok(())
 }
 
 fn checked_optional_index(index: Option<i32>) -> Result<i32> {
