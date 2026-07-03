@@ -224,7 +224,117 @@ void b3JoinThread( b3Thread* t )
 	b3Free( t, sizeof( b3Thread ) );
 }
 
-#elif defined( __linux__ ) || defined( __EMSCRIPTEN__ )
+#elif defined( __EMSCRIPTEN__ ) && defined( BOX3D_WASM_SINGLE_THREADED )
+
+#include <emscripten/emscripten.h>
+
+uint64_t b3GetTicks( void )
+{
+	return (uint64_t)( emscripten_get_now() * 1000000.0 );
+}
+
+float b3GetMilliseconds( uint64_t ticks )
+{
+	uint64_t ticksNow = b3GetTicks();
+	return (float)( ( ticksNow - ticks ) / 1000000.0 );
+}
+
+float b3GetMillisecondsAndReset( uint64_t* ticks )
+{
+	uint64_t ticksNow = b3GetTicks();
+	float ms = (float)( ( ticksNow - *ticks ) / 1000000.0 );
+	*ticks = ticksNow;
+	return ms;
+}
+
+void b3Yield( void )
+{
+}
+
+void b3Sleep( int milliseconds )
+{
+	( (void)( milliseconds ) );
+}
+
+typedef struct b3Mutex
+{
+	int dummy;
+} b3Mutex;
+
+b3Mutex* b3CreateMutex( void )
+{
+	b3Mutex* m = b3Alloc( sizeof( b3Mutex ) );
+	m->dummy = 42;
+	return m;
+}
+
+void b3DestroyMutex( b3Mutex* m )
+{
+	*m = (b3Mutex){ 0 };
+	b3Free( m, sizeof( b3Mutex ) );
+}
+
+void b3LockMutex( b3Mutex* m )
+{
+	(void)m;
+}
+
+void b3UnlockMutex( b3Mutex* m )
+{
+	(void)m;
+}
+
+typedef struct b3Semaphore
+{
+	int dummy;
+} b3Semaphore;
+
+b3Semaphore* b3CreateSemaphore( int initCount )
+{
+	b3Semaphore* s = b3Alloc( sizeof( b3Semaphore ) );
+	(void)initCount;
+	s->dummy = 42;
+	return s;
+}
+
+void b3DestroySemaphore( b3Semaphore* s )
+{
+	*s = (b3Semaphore){ 0 };
+	b3Free( s, sizeof( b3Semaphore ) );
+}
+
+void b3WaitSemaphore( b3Semaphore* s )
+{
+	(void)s;
+}
+
+void b3SignalSemaphore( b3Semaphore* s )
+{
+	(void)s;
+}
+
+typedef struct b3Thread
+{
+	int dummy;
+} b3Thread;
+
+b3Thread* b3CreateThread( b3ThreadFunction* function, void* context, const char* name )
+{
+	(void)function;
+	(void)context;
+	(void)name;
+	b3Thread* t = b3Alloc( sizeof( b3Thread ) );
+	t->dummy = 42;
+	return t;
+}
+
+void b3JoinThread( b3Thread* t )
+{
+	*t = (b3Thread){ 0 };
+	b3Free( t, sizeof( b3Thread ) );
+}
+
+#elif defined( __linux__ )
 
 #include <sched.h>
 #include <time.h>
