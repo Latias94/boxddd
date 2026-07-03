@@ -1,6 +1,6 @@
 use boxddd::{
     Aabb, Capacity, Error, Filter, MassData, Matrix3, Plane, Pos, Quat, Transform, Vec2, Vec3,
-    WorldTransform,
+    WorldTransform, closest_point_on_segment, line_distance, segment_distance,
 };
 
 #[test]
@@ -86,5 +86,72 @@ fn invalid_numeric_values_are_rejected_before_ffi() {
     assert_eq!(
         Pos::from([f32::NAN, 0.0, 0.0]).validate(),
         Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        (Plane {
+            normal: Vec3::new(2.0, 0.0, 0.0),
+            offset: 0.0,
+        })
+        .validate(),
+        Err(Error::InvalidArgument)
+    );
+}
+
+#[test]
+fn segment_distance_helpers_return_owned_values() {
+    let closest = closest_point_on_segment(Vec3::ZERO, Vec3::X, Vec3::new(0.25, 1.0, 0.0)).unwrap();
+    assert_vec3_close(closest, Vec3::new(0.25, 0.0, 0.0));
+
+    let line = line_distance(Vec3::ZERO, Vec3::X, Vec3::new(0.0, 1.0, 1.0), Vec3::Y).unwrap();
+    assert_vec3_close(line.point1, Vec3::ZERO);
+    assert_vec3_close(line.point2, Vec3::new(0.0, 0.0, 1.0));
+    assert_close(line.distance(), 1.0);
+
+    let segment = segment_distance(
+        Vec3::ZERO,
+        Vec3::X,
+        Vec3::new(0.5, -1.0, 1.0),
+        Vec3::new(0.5, 1.0, 1.0),
+    )
+    .unwrap();
+    assert_vec3_close(segment.point1, Vec3::new(0.5, 0.0, 0.0));
+    assert_vec3_close(segment.point2, Vec3::new(0.5, 0.0, 1.0));
+    assert_close(segment.fraction1, 0.5);
+    assert_close(segment.fraction2, 0.5);
+    assert_close(segment.distance_squared(), 1.0);
+}
+
+#[test]
+fn segment_distance_helpers_validate_inputs() {
+    assert_eq!(
+        closest_point_on_segment(Vec3::ZERO, Vec3::X, Vec3::new(f32::NAN, 0.0, 0.0)).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        line_distance(Vec3::ZERO, Vec3::ZERO, Vec3::X, Vec3::Y).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        segment_distance(
+            Vec3::ZERO,
+            Vec3::X,
+            Vec3::Y,
+            Vec3::new(f32::INFINITY, 0.0, 0.0)
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+}
+
+fn assert_vec3_close(actual: Vec3, expected: Vec3) {
+    assert_close(actual.x, expected.x);
+    assert_close(actual.y, expected.y);
+    assert_close(actual.z, expected.z);
+}
+
+fn assert_close(actual: f32, expected: f32) {
+    assert!(
+        (actual - expected).abs() <= 1.0e-5,
+        "expected {actual} to be close to {expected}"
     );
 }

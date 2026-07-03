@@ -1,7 +1,9 @@
 use boxddd::{
-    Capsule, Error, HeightField, Hull, MeshData, ShapeProxy, Sphere, Transform, Vec3,
-    compute_capsule_mass, compute_height_field_aabb, compute_hull_aabb, compute_mesh_aabb,
-    compute_sphere_aabb, compute_sphere_mass,
+    Capsule, CollisionPlane, DistanceInput, Error, HeightField, Hull, MeshData, Plane, Quat,
+    ShapeCastPairInput, ShapeProxy, Sphere, Sweep, TimeOfImpactInput, Transform, Vec3,
+    collide_sphere_and_triangle, compute_capsule_mass, compute_height_field_aabb,
+    compute_hull_aabb, compute_mesh_aabb, compute_sphere_aabb, compute_sphere_mass,
+    shape_cast_pair, shape_distance, solve_planes, sweep_transform, time_of_impact,
 };
 
 #[test]
@@ -49,4 +51,140 @@ fn mass_and_aabb_helpers_validate_inputs() {
     let height = HeightField::grid(4, 4, [1.0, 1.0, 1.0], false).unwrap();
     let height_aabb = compute_height_field_aabb(&height, Transform::IDENTITY).unwrap();
     assert!(height_aabb.lower_bound.z <= height_aabb.upper_bound.z);
+}
+
+#[test]
+fn advanced_collision_helpers_validate_inputs() {
+    let sphere = ShapeProxy::sphere(1.0).unwrap();
+    let invalid_transform = Transform::new(Vec3::ZERO, Quat::new(Vec3::ZERO, f32::NAN));
+    assert_eq!(
+        DistanceInput::new(sphere.clone(), sphere.clone(), invalid_transform).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        shape_distance(
+            DistanceInput::new(sphere.clone(), sphere.clone(), Transform::IDENTITY).unwrap()
+        )
+        .unwrap()
+        .distance,
+        0.0
+    );
+    assert_eq!(
+        ShapeCastPairInput::with_options(
+            sphere.clone(),
+            sphere.clone(),
+            Transform::IDENTITY,
+            [f32::NAN, 0.0, 0.0],
+            1.0,
+            false,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert!(
+        shape_cast_pair(
+            ShapeCastPairInput::new(sphere.clone(), sphere.clone(), Transform::IDENTITY, Vec3::X)
+                .unwrap(),
+        )
+        .is_ok()
+    );
+
+    assert_eq!(
+        Sweep::new(
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Vec3::ZERO,
+            Quat::new(Vec3::ZERO, f32::NAN),
+            Quat::IDENTITY,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    let invalid_sweep = Sweep {
+        local_center: Vec3::ZERO,
+        c1: Vec3::ZERO,
+        c2: Vec3::ZERO,
+        q1: Quat::new(Vec3::ZERO, f32::NAN),
+        q2: Quat::IDENTITY,
+    };
+    assert_eq!(
+        sweep_transform(invalid_sweep, 0.0).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        sweep_transform(
+            Sweep::new(
+                Vec3::ZERO,
+                Vec3::ZERO,
+                Vec3::ZERO,
+                Quat::IDENTITY,
+                Quat::IDENTITY,
+            )
+            .unwrap(),
+            f32::NAN,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        TimeOfImpactInput::with_max_fraction(
+            sphere.clone(),
+            sphere,
+            Sweep::default(),
+            Sweep::default(),
+            f32::NAN,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert!(
+        time_of_impact(
+            TimeOfImpactInput::new(
+                ShapeProxy::sphere(1.0).unwrap(),
+                ShapeProxy::sphere(1.0).unwrap(),
+                Sweep::default(),
+                Sweep::default(),
+            )
+            .unwrap()
+        )
+        .is_ok()
+    );
+
+    assert_eq!(
+        CollisionPlane::new(
+            Plane {
+                normal: Vec3::new(f32::NAN, 0.0, 0.0),
+                offset: 0.0,
+            },
+            1.0,
+            true,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        CollisionPlane::new(
+            Plane {
+                normal: Vec3::new(2.0, 0.0, 0.0),
+                offset: 0.0,
+            },
+            1.0,
+            true,
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
+    let mut empty_planes = [];
+    assert_eq!(
+        solve_planes(Vec3::ZERO, &mut empty_planes).unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        collide_sphere_and_triangle(
+            &Sphere::new(Vec3::ZERO, 1.0),
+            [Vec3::ZERO, Vec3::X, Vec3::new(2.0, 0.0, 0.0)],
+        )
+        .unwrap_err(),
+        Error::InvalidArgument
+    );
 }

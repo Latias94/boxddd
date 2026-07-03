@@ -102,6 +102,110 @@ impl Vec3 {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct SegmentDistanceResult {
+    pub point1: Vec3,
+    pub fraction1: f32,
+    pub point2: Vec3,
+    pub fraction2: f32,
+}
+
+impl SegmentDistanceResult {
+    #[inline]
+    pub fn distance_squared(self) -> f32 {
+        let delta = Vec3::new(
+            self.point2.x - self.point1.x,
+            self.point2.y - self.point1.y,
+            self.point2.z - self.point1.z,
+        );
+        vec3_length_squared(delta)
+    }
+
+    #[inline]
+    pub fn distance(self) -> f32 {
+        self.distance_squared().sqrt()
+    }
+
+    #[inline]
+    fn from_raw(raw: ffi::b3SegmentDistanceResult) -> Self {
+        Self {
+            point1: Vec3::from_raw(raw.point1),
+            fraction1: raw.fraction1,
+            point2: Vec3::from_raw(raw.point2),
+            fraction2: raw.fraction2,
+        }
+    }
+
+    #[inline]
+    fn validate(self) -> crate::error::Result<Self> {
+        if self.point1.is_valid()
+            && self.point2.is_valid()
+            && is_valid_float(self.fraction1)
+            && is_valid_float(self.fraction2)
+            && is_valid_float(self.distance_squared())
+        {
+            Ok(self)
+        } else {
+            Err(crate::error::Error::InvalidArgument)
+        }
+    }
+}
+
+pub fn closest_point_on_segment(
+    a: impl Into<Vec3>,
+    b: impl Into<Vec3>,
+    q: impl Into<Vec3>,
+) -> crate::error::Result<Vec3> {
+    let a = a.into().validate()?;
+    let b = b.into().validate()?;
+    let q = q.into().validate()?;
+    Vec3::from_raw(unsafe {
+        ffi::b3PointToSegmentDistance(a.into_raw(), b.into_raw(), q.into_raw())
+    })
+    .validate()
+}
+
+pub fn line_distance(
+    p1: impl Into<Vec3>,
+    d1: impl Into<Vec3>,
+    p2: impl Into<Vec3>,
+    d2: impl Into<Vec3>,
+) -> crate::error::Result<SegmentDistanceResult> {
+    let p1 = p1.into().validate()?;
+    let d1 = d1.into().validate()?;
+    let p2 = p2.into().validate()?;
+    let d2 = d2.into().validate()?;
+    if vec3_length_squared(d1) <= f32::EPSILON || vec3_length_squared(d2) <= f32::EPSILON {
+        return Err(crate::error::Error::InvalidArgument);
+    }
+    SegmentDistanceResult::from_raw(unsafe {
+        ffi::b3LineDistance(p1.into_raw(), d1.into_raw(), p2.into_raw(), d2.into_raw())
+    })
+    .validate()
+}
+
+pub fn segment_distance(
+    p1: impl Into<Vec3>,
+    q1: impl Into<Vec3>,
+    p2: impl Into<Vec3>,
+    q2: impl Into<Vec3>,
+) -> crate::error::Result<SegmentDistanceResult> {
+    let p1 = p1.into().validate()?;
+    let q1 = q1.into().validate()?;
+    let p2 = p2.into().validate()?;
+    let q2 = q2.into().validate()?;
+    SegmentDistanceResult::from_raw(unsafe {
+        ffi::b3SegmentDistance(p1.into_raw(), q1.into_raw(), p2.into_raw(), q2.into_raw())
+    })
+    .validate()
+}
+
+#[inline]
+fn vec3_length_squared(value: Vec3) -> f32 {
+    value.x * value.x + value.y * value.y + value.z * value.z
+}
+
 impl From<[f32; 3]> for Vec3 {
     #[inline]
     fn from(value: [f32; 3]) -> Self {
@@ -446,6 +550,20 @@ impl Plane {
         ffi::b3Plane {
             normal: self.normal.into_raw(),
             offset: self.offset,
+        }
+    }
+
+    #[inline]
+    pub fn is_valid(self) -> bool {
+        unsafe { ffi::b3IsValidPlane(self.into_raw()) }
+    }
+
+    #[inline]
+    pub fn validate(self) -> Result<Self> {
+        if self.is_valid() {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::core::box3d_lock;
 use crate::error::{Error, Result};
 use crate::shapes::{Capsule, Compound, HeightField, Hull, MeshData, Sphere, validate_mesh_scale};
-use crate::types::{Aabb, MassData, Transform, Vec3};
+use crate::types::{Aabb, MassData, Plane, Quat, Transform, Vec3};
 use boxddd_sys::ffi;
 use std::mem::MaybeUninit;
 
@@ -149,6 +149,113 @@ impl ShapeCastInput {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct DistanceInput {
+    pub proxy_a: ShapeProxy,
+    pub proxy_b: ShapeProxy,
+    pub transform_b_to_a: Transform,
+    pub use_radii: bool,
+}
+
+impl DistanceInput {
+    pub fn new(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        transform_b_to_a: Transform,
+    ) -> Result<Self> {
+        Self::with_options(proxy_a, proxy_b, transform_b_to_a, true)
+    }
+
+    pub fn with_options(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        transform_b_to_a: Transform,
+        use_radii: bool,
+    ) -> Result<Self> {
+        transform_b_to_a.validate()?;
+        Ok(Self {
+            proxy_a,
+            proxy_b,
+            transform_b_to_a,
+            use_radii,
+        })
+    }
+
+    #[inline]
+    fn raw(&self) -> ffi::b3DistanceInput {
+        ffi::b3DistanceInput {
+            proxyA: self.proxy_a.raw(),
+            proxyB: self.proxy_b.raw(),
+            transform: self.transform_b_to_a.into_raw(),
+            useRadii: self.use_radii,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShapeCastPairInput {
+    pub proxy_a: ShapeProxy,
+    pub proxy_b: ShapeProxy,
+    pub transform_b_to_a: Transform,
+    pub translation_b: Vec3,
+    pub max_fraction: f32,
+    pub can_encroach: bool,
+}
+
+impl ShapeCastPairInput {
+    pub fn new(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        transform_b_to_a: Transform,
+        translation_b: impl Into<Vec3>,
+    ) -> Result<Self> {
+        Self::with_options(
+            proxy_a,
+            proxy_b,
+            transform_b_to_a,
+            translation_b,
+            1.0,
+            false,
+        )
+    }
+
+    pub fn with_options(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        transform_b_to_a: Transform,
+        translation_b: impl Into<Vec3>,
+        max_fraction: f32,
+        can_encroach: bool,
+    ) -> Result<Self> {
+        let translation_b = translation_b.into();
+        if translation_b.is_valid() && max_fraction.is_finite() && max_fraction >= 0.0 {
+            transform_b_to_a.validate()?;
+            Ok(Self {
+                proxy_a,
+                proxy_b,
+                transform_b_to_a,
+                translation_b,
+                max_fraction,
+                can_encroach,
+            })
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    fn raw(&self) -> ffi::b3ShapeCastPairInput {
+        ffi::b3ShapeCastPairInput {
+            proxyA: self.proxy_a.raw(),
+            proxyB: self.proxy_b.raw(),
+            transform: self.transform_b_to_a.into_raw(),
+            translationB: self.translation_b.into_raw(),
+            maxFraction: self.max_fraction,
+            canEncroach: self.can_encroach,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct CastOutput {
     pub normal: Vec3,
@@ -173,6 +280,262 @@ impl CastOutput {
             child_index: raw.childIndex,
             material_index: raw.materialIndex,
             hit: raw.hit,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct DistanceOutput {
+    pub point_a: Vec3,
+    pub point_b: Vec3,
+    pub normal: Vec3,
+    pub distance: f32,
+    pub iterations: i32,
+    pub simplex_count: i32,
+}
+
+impl DistanceOutput {
+    #[inline]
+    fn from_raw(raw: ffi::b3DistanceOutput) -> Self {
+        Self {
+            point_a: Vec3::from_raw(raw.pointA),
+            point_b: Vec3::from_raw(raw.pointB),
+            normal: Vec3::from_raw(raw.normal),
+            distance: raw.distance,
+            iterations: raw.iterations,
+            simplex_count: raw.simplexCount,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Sweep {
+    pub local_center: Vec3,
+    pub c1: Vec3,
+    pub c2: Vec3,
+    pub q1: Quat,
+    pub q2: Quat,
+}
+
+impl Sweep {
+    pub fn new(local_center: Vec3, c1: Vec3, c2: Vec3, q1: Quat, q2: Quat) -> Result<Self> {
+        let sweep = Self {
+            local_center,
+            c1,
+            c2,
+            q1,
+            q2,
+        };
+        sweep.validate()
+    }
+
+    #[inline]
+    fn validate(self) -> Result<Self> {
+        if self.local_center.is_valid()
+            && self.c1.is_valid()
+            && self.c2.is_valid()
+            && self.q1.is_valid()
+            && self.q2.is_valid()
+        {
+            Ok(self)
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    fn raw(self) -> ffi::b3Sweep {
+        ffi::b3Sweep {
+            localCenter: self.local_center.into_raw(),
+            c1: self.c1.into_raw(),
+            c2: self.c2.into_raw(),
+            q1: self.q1.into_raw(),
+            q2: self.q2.into_raw(),
+        }
+    }
+}
+
+impl Default for Sweep {
+    fn default() -> Self {
+        Self {
+            local_center: Vec3::ZERO,
+            c1: Vec3::ZERO,
+            c2: Vec3::ZERO,
+            q1: Quat::IDENTITY,
+            q2: Quat::IDENTITY,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TimeOfImpactInput {
+    pub proxy_a: ShapeProxy,
+    pub proxy_b: ShapeProxy,
+    pub sweep_a: Sweep,
+    pub sweep_b: Sweep,
+    pub max_fraction: f32,
+}
+
+impl TimeOfImpactInput {
+    pub fn new(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        sweep_a: Sweep,
+        sweep_b: Sweep,
+    ) -> Result<Self> {
+        Self::with_max_fraction(proxy_a, proxy_b, sweep_a, sweep_b, 1.0)
+    }
+
+    pub fn with_max_fraction(
+        proxy_a: ShapeProxy,
+        proxy_b: ShapeProxy,
+        sweep_a: Sweep,
+        sweep_b: Sweep,
+        max_fraction: f32,
+    ) -> Result<Self> {
+        sweep_a.validate()?;
+        sweep_b.validate()?;
+        if max_fraction.is_finite() && max_fraction >= 0.0 {
+            Ok(Self {
+                proxy_a,
+                proxy_b,
+                sweep_a,
+                sweep_b,
+                max_fraction,
+            })
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    fn raw(&self) -> ffi::b3TOIInput {
+        ffi::b3TOIInput {
+            proxyA: self.proxy_a.raw(),
+            proxyB: self.proxy_b.raw(),
+            sweepA: self.sweep_a.raw(),
+            sweepB: self.sweep_b.raw(),
+            maxFraction: self.max_fraction,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum TimeOfImpactState {
+    Unknown,
+    Failed,
+    Overlapped,
+    Hit,
+    Separated,
+}
+
+impl TimeOfImpactState {
+    #[inline]
+    fn from_raw(raw: ffi::b3TOIState) -> Self {
+        match raw {
+            ffi::b3TOIState_b3_toiStateFailed => Self::Failed,
+            ffi::b3TOIState_b3_toiStateOverlapped => Self::Overlapped,
+            ffi::b3TOIState_b3_toiStateHit => Self::Hit,
+            ffi::b3TOIState_b3_toiStateSeparated => Self::Separated,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TimeOfImpactOutput {
+    pub state: TimeOfImpactState,
+    pub point: Vec3,
+    pub normal: Vec3,
+    pub fraction: f32,
+    pub distance: f32,
+    pub distance_iterations: i32,
+    pub push_back_iterations: i32,
+    pub root_iterations: i32,
+    pub used_fallback: bool,
+}
+
+impl TimeOfImpactOutput {
+    #[inline]
+    fn from_raw(raw: ffi::b3TOIOutput) -> Self {
+        Self {
+            state: TimeOfImpactState::from_raw(raw.state),
+            point: Vec3::from_raw(raw.point),
+            normal: Vec3::from_raw(raw.normal),
+            fraction: raw.fraction,
+            distance: raw.distance,
+            distance_iterations: raw.distanceIterations,
+            push_back_iterations: raw.pushBackIterations,
+            root_iterations: raw.rootIterations,
+            used_fallback: raw.usedFallback,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CollisionPlane {
+    pub plane: Plane,
+    pub push_limit: f32,
+    pub push: f32,
+    pub clip_velocity: bool,
+}
+
+impl CollisionPlane {
+    pub fn new(plane: Plane, push_limit: f32, clip_velocity: bool) -> Result<Self> {
+        Self::with_options(plane, push_limit, 0.0, clip_velocity)
+    }
+
+    pub fn with_options(
+        plane: Plane,
+        push_limit: f32,
+        push: f32,
+        clip_velocity: bool,
+    ) -> Result<Self> {
+        let input = Self {
+            plane,
+            push_limit,
+            push,
+            clip_velocity,
+        };
+        input.validate()?;
+        Ok(input)
+    }
+
+    fn validate(self) -> Result<()> {
+        if self.plane.is_valid()
+            && self.push_limit.is_finite()
+            && self.push_limit >= 0.0
+            && self.push.is_finite()
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+
+    #[inline]
+    fn raw(self) -> ffi::b3CollisionPlane {
+        ffi::b3CollisionPlane {
+            plane: self.plane.into_raw(),
+            pushLimit: self.push_limit,
+            push: self.push,
+            clipVelocity: self.clip_velocity,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct PlaneSolverResult {
+    pub delta: Vec3,
+    pub iteration_count: i32,
+}
+
+impl PlaneSolverResult {
+    #[inline]
+    fn from_raw(raw: ffi::b3PlaneSolverResult) -> Self {
+        Self {
+            delta: Vec3::from_raw(raw.delta),
+            iteration_count: raw.iterationCount,
         }
     }
 }
@@ -286,6 +649,111 @@ pub fn compute_compound_aabb(compound: &Compound, transform: Transform) -> Resul
     let _guard = box3d_lock::lock();
     Ok(Aabb::from_raw(unsafe {
         ffi::b3ComputeCompoundAABB(compound.as_ptr(), transform.into_raw())
+    }))
+}
+
+pub fn shape_distance(input: DistanceInput) -> Result<DistanceOutput> {
+    input.transform_b_to_a.validate()?;
+    let raw = input.raw();
+    let mut cache: ffi::b3SimplexCache = unsafe { std::mem::zeroed() };
+    let _guard = box3d_lock::lock();
+    Ok(DistanceOutput::from_raw(unsafe {
+        ffi::b3ShapeDistance(&raw, &mut cache, std::ptr::null_mut(), 0)
+    }))
+}
+
+pub fn shape_cast_pair(input: ShapeCastPairInput) -> Result<CastOutput> {
+    input.transform_b_to_a.validate()?;
+    if !input.translation_b.is_valid()
+        || !input.max_fraction.is_finite()
+        || input.max_fraction < 0.0
+    {
+        return Err(Error::InvalidArgument);
+    }
+    let raw = input.raw();
+    let _guard = box3d_lock::lock();
+    Ok(CastOutput::from_raw(unsafe { ffi::b3ShapeCast(&raw) }))
+}
+
+pub fn sweep_transform(sweep: Sweep, time: f32) -> Result<Transform> {
+    let sweep = sweep.validate()?;
+    if !time.is_finite() || !(0.0..=1.0).contains(&time) {
+        return Err(Error::InvalidArgument);
+    }
+    let raw = sweep.raw();
+    let _guard = box3d_lock::lock();
+    Ok(Transform::from_raw(unsafe {
+        ffi::b3GetSweepTransform(&raw, time)
+    }))
+}
+
+pub fn get_sweep_transform(sweep: &Sweep, time: f32) -> Result<Transform> {
+    sweep_transform(*sweep, time)
+}
+
+pub fn time_of_impact(input: TimeOfImpactInput) -> Result<TimeOfImpactOutput> {
+    input.sweep_a.validate()?;
+    input.sweep_b.validate()?;
+    if !input.max_fraction.is_finite() || input.max_fraction < 0.0 {
+        return Err(Error::InvalidArgument);
+    }
+    let raw = input.raw();
+    let _guard = box3d_lock::lock();
+    Ok(TimeOfImpactOutput::from_raw(unsafe {
+        ffi::b3TimeOfImpact(&raw)
+    }))
+}
+
+pub fn solve_planes(
+    target_delta: impl Into<Vec3>,
+    planes: &mut [CollisionPlane],
+) -> Result<PlaneSolverResult> {
+    let target_delta = target_delta.into().validate()?;
+    if planes.is_empty() || planes.len() > i32::MAX as usize {
+        return Err(Error::InvalidArgument);
+    }
+    let mut raw_planes = planes
+        .iter()
+        .copied()
+        .map(|plane| {
+            plane.validate()?;
+            Ok(plane.raw())
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let _guard = box3d_lock::lock();
+    let raw = unsafe {
+        ffi::b3SolvePlanes(
+            target_delta.into_raw(),
+            raw_planes.as_mut_ptr(),
+            raw_planes.len() as i32,
+        )
+    };
+    for (plane, raw) in planes.iter_mut().zip(raw_planes.iter()) {
+        plane.push = raw.push;
+    }
+    Ok(PlaneSolverResult::from_raw(raw))
+}
+
+pub fn clip_vector(vector: impl Into<Vec3>, planes: &[CollisionPlane]) -> Result<Vec3> {
+    let vector = vector.into().validate()?;
+    if planes.is_empty() || planes.len() > i32::MAX as usize {
+        return Err(Error::InvalidArgument);
+    }
+    let raw_planes = planes
+        .iter()
+        .copied()
+        .map(|plane| {
+            plane.validate()?;
+            Ok(plane.raw())
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let _guard = box3d_lock::lock();
+    Ok(Vec3::from_raw(unsafe {
+        ffi::b3ClipVector(
+            vector.into_raw(),
+            raw_planes.as_ptr(),
+            raw_planes.len() as i32,
+        )
     }))
 }
 
@@ -424,6 +892,35 @@ pub fn shape_cast_hull(hull: &Hull, input: ShapeCastInput) -> Result<CastOutput>
     })
 }
 
+pub fn shape_cast_mesh(
+    mesh: &MeshData,
+    scale: impl Into<Vec3>,
+    input: ShapeCastInput,
+) -> Result<CastOutput> {
+    let raw_mesh = ffi::b3Mesh {
+        data: mesh.as_ptr(),
+        scale: validate_mesh_scale(scale.into())?.into_raw(),
+    };
+    shape_cast(input, |input| unsafe {
+        ffi::b3ShapeCastMesh(&raw_mesh, input)
+    })
+}
+
+pub fn shape_cast_height_field(
+    height_field: &HeightField,
+    input: ShapeCastInput,
+) -> Result<CastOutput> {
+    shape_cast(input, |input| unsafe {
+        ffi::b3ShapeCastHeightField(height_field.as_ptr(), input)
+    })
+}
+
+pub fn shape_cast_compound(compound: &Compound, input: ShapeCastInput) -> Result<CastOutput> {
+    shape_cast(input, |input| unsafe {
+        ffi::b3ShapeCastCompound(compound.as_ptr(), input)
+    })
+}
+
 pub fn collide_spheres(
     a: &Sphere,
     b: &Sphere,
@@ -438,6 +935,43 @@ pub fn collide_spheres(
             a.raw(),
             b.raw(),
             transform_b_to_a.into_raw(),
+        )
+    })
+}
+
+pub fn collide_capsule_and_sphere(
+    capsule_a: &Capsule,
+    sphere_b: &Sphere,
+    transform_b_to_a: Transform,
+) -> Result<LocalManifold> {
+    capsule_a.validate()?;
+    sphere_b.validate()?;
+    collide(transform_b_to_a, |manifold, capacity| unsafe {
+        ffi::b3CollideCapsuleAndSphere(
+            manifold,
+            capacity,
+            capsule_a.raw(),
+            sphere_b.raw(),
+            transform_b_to_a.into_raw(),
+        )
+    })
+}
+
+pub fn collide_hull_and_sphere(
+    hull_a: &Hull,
+    sphere_b: &Sphere,
+    transform_b_to_a: Transform,
+) -> Result<LocalManifold> {
+    sphere_b.validate()?;
+    let mut cache: ffi::b3SimplexCache = unsafe { std::mem::zeroed() };
+    collide(transform_b_to_a, |manifold, capacity| unsafe {
+        ffi::b3CollideHullAndSphere(
+            manifold,
+            capacity,
+            hull_a.as_ptr(),
+            sphere_b.raw(),
+            transform_b_to_a.into_raw(),
+            &mut cache,
         )
     })
 }
@@ -457,6 +991,98 @@ pub fn collide_capsules(
             b.raw(),
             transform_b_to_a.into_raw(),
         )
+    })
+}
+
+pub fn collide_hull_and_capsule(
+    hull_a: &Hull,
+    capsule_b: &Capsule,
+    transform_b_to_a: Transform,
+) -> Result<LocalManifold> {
+    capsule_b.validate()?;
+    let mut cache: ffi::b3SimplexCache = unsafe { std::mem::zeroed() };
+    collide(transform_b_to_a, |manifold, capacity| unsafe {
+        ffi::b3CollideHullAndCapsule(
+            manifold,
+            capacity,
+            hull_a.as_ptr(),
+            capsule_b.raw(),
+            transform_b_to_a.into_raw(),
+            &mut cache,
+        )
+    })
+}
+
+pub fn collide_hulls(
+    hull_a: &Hull,
+    hull_b: &Hull,
+    transform_b_to_a: Transform,
+) -> Result<LocalManifold> {
+    let mut cache: ffi::b3SATCache = unsafe { std::mem::zeroed() };
+    collide(transform_b_to_a, |manifold, capacity| unsafe {
+        ffi::b3CollideHulls(
+            manifold,
+            capacity,
+            hull_a.as_ptr(),
+            hull_b.as_ptr(),
+            transform_b_to_a.into_raw(),
+            &mut cache,
+        )
+    })
+}
+
+pub fn collide_capsule_and_triangle(
+    capsule_a: &Capsule,
+    triangle_b: [Vec3; 3],
+) -> Result<LocalManifold> {
+    capsule_a.validate()?;
+    validate_triangle(triangle_b)?;
+    let raw_triangle = triangle_b.map(Vec3::into_raw);
+    let mut cache: ffi::b3SimplexCache = unsafe { std::mem::zeroed() };
+    collide(Transform::IDENTITY, |manifold, capacity| unsafe {
+        ffi::b3CollideCapsuleAndTriangle(
+            manifold,
+            capacity,
+            capsule_a.raw(),
+            raw_triangle.as_ptr(),
+            &mut cache,
+        )
+    })
+}
+
+pub fn collide_hull_and_triangle(
+    hull_a: &Hull,
+    triangle_b: [Vec3; 3],
+    triangle_flags: i32,
+) -> Result<LocalManifold> {
+    validate_triangle(triangle_b)?;
+    if triangle_flags < 0 {
+        return Err(Error::InvalidArgument);
+    }
+    let mut cache: ffi::b3SATCache = unsafe { std::mem::zeroed() };
+    collide(Transform::IDENTITY, |manifold, capacity| unsafe {
+        ffi::b3CollideHullAndTriangle(
+            manifold,
+            capacity,
+            hull_a.as_ptr(),
+            triangle_b[0].into_raw(),
+            triangle_b[1].into_raw(),
+            triangle_b[2].into_raw(),
+            triangle_flags,
+            &mut cache,
+        )
+    })
+}
+
+pub fn collide_sphere_and_triangle(
+    sphere_a: &Sphere,
+    triangle_b: [Vec3; 3],
+) -> Result<LocalManifold> {
+    sphere_a.validate()?;
+    validate_triangle(triangle_b)?;
+    let raw_triangle = triangle_b.map(Vec3::into_raw);
+    collide(Transform::IDENTITY, |manifold, capacity| unsafe {
+        ffi::b3CollideSphereAndTriangle(manifold, capacity, sphere_a.raw(), raw_triangle.as_ptr())
     })
 }
 
@@ -514,4 +1140,25 @@ fn validate_density(density: f32) -> Result<()> {
     } else {
         Err(Error::InvalidArgument)
     }
+}
+
+fn validate_triangle(triangle: [Vec3; 3]) -> Result<()> {
+    if triangle.iter().all(|point| point.is_valid())
+        && triangle_area_squared(triangle[0], triangle[1], triangle[2]) > f32::EPSILON
+    {
+        Ok(())
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
+fn triangle_area_squared(a: Vec3, b: Vec3, c: Vec3) -> f32 {
+    let ab = Vec3::new(b.x - a.x, b.y - a.y, b.z - a.z);
+    let ac = Vec3::new(c.x - a.x, c.y - a.y, c.z - a.z);
+    let cross = Vec3::new(
+        ab.y * ac.z - ab.z * ac.y,
+        ab.z * ac.x - ab.x * ac.z,
+        ab.x * ac.y - ab.y * ac.x,
+    );
+    cross.x * cross.x + cross.y * cross.y + cross.z * cross.z
 }
