@@ -1,11 +1,13 @@
 use crate::core::callback_state::CallbackGuard;
 use crate::error::Error;
 use boxddd_sys::ffi;
+#[cfg(not(target_arch = "wasm32"))]
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread::{self, JoinHandle};
 
 /// A safe Box3D task-system adapter used by [`crate::WorldDefBuilder`].
@@ -24,9 +26,26 @@ impl TaskSystem {
     /// This scheduler is intentionally conservative: it contains panics,
     /// returns them as [`Error::CallbackPanicked`] from `World::try_step`, and
     /// joins every task in the corresponding Box3D `finishTask` callback.
+    #[cfg(not(target_arch = "wasm32"))]
     #[inline]
     pub fn blocking_threads() -> Self {
         Self::new(FaultMode::None)
+    }
+
+    /// Attempts to create the blocking-thread scheduler.
+    ///
+    /// Browser and WASI targets do not expose this scheduler because Box3D's
+    /// `finishTask` callback must block until child tasks complete.
+    #[inline]
+    pub fn try_blocking_threads() -> crate::Result<Self> {
+        #[cfg(target_arch = "wasm32")]
+        {
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Ok(Self::blocking_threads())
+        }
     }
 
     /// Returns counters for diagnostics and tests.
@@ -164,6 +183,7 @@ impl TaskSystemInner {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FaultMode {
+    #[cfg(not(target_arch = "wasm32"))]
     None,
     PanicOnEnqueue,
     PanicOnTask,
@@ -179,10 +199,12 @@ struct TaskInvocation {
 
 unsafe impl Send for TaskInvocation {}
 
+#[cfg(not(target_arch = "wasm32"))]
 struct TaskHandle {
     join: Option<JoinHandle<()>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) unsafe extern "C" fn enqueue_task(
     task: ffi::b3TaskCallback,
     task_context: *mut c_void,
@@ -227,6 +249,33 @@ pub(crate) unsafe extern "C" fn enqueue_task(
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+pub(crate) unsafe extern "C" fn enqueue_task(
+    task: ffi::b3TaskCallback,
+    task_context: *mut c_void,
+    user_context: *mut c_void,
+    _task_name: *const c_char,
+) -> *mut c_void {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let scheduler = unsafe { scheduler_from_context(user_context) };
+        scheduler.enqueued.fetch_add(1, Ordering::Relaxed);
+        if let Some(task) = task {
+            scheduler.run_task(TaskInvocation {
+                task: Some(task),
+                task_context,
+            });
+        }
+    }));
+
+    if result.is_err() {
+        if let Some(scheduler) = unsafe { scheduler_from_context_checked(user_context) } {
+            scheduler.mark_panicked();
+        }
+    }
+    std::ptr::null_mut()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) unsafe extern "C" fn finish_task(user_task: *mut c_void, user_context: *mut c_void) {
     let result = catch_unwind(AssertUnwindSafe(|| {
         if user_task.is_null() {
@@ -244,6 +293,23 @@ pub(crate) unsafe extern "C" fn finish_task(user_task: *mut c_void, user_context
         if scheduler.fault_mode == FaultMode::PanicOnFinish {
             panic!("injected Box3D finish panic");
         }
+    }));
+
+    if result.is_err() {
+        if let Some(scheduler) = unsafe { scheduler_from_context_checked(user_context) } {
+            scheduler.mark_panicked();
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) unsafe extern "C" fn finish_task(user_task: *mut c_void, user_context: *mut c_void) {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let scheduler = unsafe { scheduler_from_context(user_context) };
+        if !user_task.is_null() {
+            scheduler.mark_panicked();
+        }
+        scheduler.finished.fetch_add(1, Ordering::Relaxed);
     }));
 
     if result.is_err() {
@@ -273,6 +339,7 @@ unsafe fn scheduler_from_context_checked<'a>(context: *mut c_void) -> Option<&'a
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 unsafe fn clone_scheduler(ptr: *const TaskSystemInner) -> Arc<TaskSystemInner> {
     unsafe {
         Arc::increment_strong_count(ptr);
@@ -280,6 +347,7 @@ unsafe fn clone_scheduler(ptr: *const TaskSystemInner) -> Arc<TaskSystemInner> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn task_thread_name(task_name: *const c_char) -> String {
     let suffix: String = if task_name.is_null() {
         "unnamed".into()

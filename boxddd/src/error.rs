@@ -41,6 +41,8 @@ pub enum Error {
     NulByteInString,
     #[error("native resource lifetime would be violated")]
     ResourceLifetimeViolation,
+    #[error("this API is not supported on the current WASM target")]
+    UnsupportedOnWasm,
     #[error("Rust callback panicked and native traversal was stopped")]
     CallbackPanicked,
     #[error("no callback slot is available")]

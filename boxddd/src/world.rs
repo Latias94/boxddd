@@ -45,6 +45,11 @@ impl WorldDef {
     }
 
     pub fn validate(&self) -> Result<()> {
+        #[cfg(target_arch = "wasm32")]
+        if self.raw.workerCount > 1 || self.task_system.is_some() {
+            return Err(Error::UnsupportedOnWasm);
+        }
+
         Vec3::from_raw(self.raw.gravity).validate()?;
         if self.raw.restitutionThreshold.is_finite()
             && self.raw.hitEventThreshold.is_finite()

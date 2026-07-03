@@ -312,6 +312,10 @@ impl World {
         if count < 0 {
             return Err(Error::InvalidArgument);
         }
+        #[cfg(target_arch = "wasm32")]
+        if count > 1 {
+            return Err(Error::UnsupportedOnWasm);
+        }
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
         self.check_world_valid_locked()?;
