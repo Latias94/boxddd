@@ -39,11 +39,16 @@ fn main() -> boxddd::Result<()> {
         DynamicTreeFilter::default(),
         1_000_000.0,
         |hit| {
+            let next_min = if hit.proxy_id == crate_proxy {
+                0.0
+            } else {
+                100.0
+            };
             println!(
-                "closest visitor saw user_data={} distance2={:.3}",
+                "closest visitor saw user_data={} current_min2={:.3} next_min2={next_min:.3}",
                 hit.user_data, hit.min_distance_squared
             );
-            hit.min_distance_squared
+            next_min
         },
     )?;
     println!(
