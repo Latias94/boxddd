@@ -102,7 +102,7 @@ fn validate_length_range(lower: f32, upper: f32) -> Result<()> {
 }
 
 #[inline]
-fn lock_joint_checked(
+pub(crate) fn lock_joint_checked(
     world: &World,
     joint_id: JointId,
 ) -> Result<std::sync::MutexGuard<'static, ()>> {

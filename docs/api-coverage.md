@@ -19,7 +19,7 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 | Status | Count | Typical areas |
 |---|---:|---|
 | `safe` | 519 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
-| `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, raw `void*` user data, file-backed dynamic tree or height-field helpers |
+| `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
 | `deferred` | 22 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers |
 
@@ -30,8 +30,8 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 - Safe APIs must validate handles and scalar/vector inputs before crossing FFI when validation is possible.
 - Safe APIs must not expose borrowed Box3D-owned memory beyond the owning `World` or native resource lifetime.
 - Callback APIs must follow the existing callback guard pattern: do not unwind through C, return `Error::CallbackPanicked` where panic containment is possible, and return `Error::UnsupportedOnWasm` for provider-mode WASM callback paths that are not sound yet.
-- Process-global hooks are not ordinary safe convenience APIs. Allocator, assert, log, timer, file IO, global units, and stall threshold functions stay raw or require an explicit raw/unsafe policy.
-- Raw `void*` user data is not a typed Rust ownership mechanism. Any exposure must make the raw boundary visible in the name and documentation, for example `raw_user_data` fields or `unsafe fn try_set_*_raw_user_data`.
+- Process-global hooks are not ordinary safe convenience APIs. Allocator, assert, log, timer, and file IO functions stay in `boxddd_sys::ffi`; length-unit and stall-threshold tuning is exposed only through `boxddd::raw` with validation and process-global docs.
+- Raw `void*` user data is not a typed Rust ownership mechanism. Storage and retrieval live behind `boxddd::raw` `unsafe fn try_*_raw_user_data` functions; event snapshots may expose `raw_user_data` pointer values but never typed references.
 - `World`, native resources, dynamic trees, recording, and replay player types remain single-owner and are not made `Send` or `Sync`.
 
 ## High-Priority Deferred Areas

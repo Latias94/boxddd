@@ -3,8 +3,8 @@
 //!
 //! The crate wraps the primary Box3D simulation APIs with Rust-owned value types, builders,
 //! recoverable `try_*` methods, and callback panic containment.
-//! Low-level process-global hooks and raw `void*` user data stay outside the ordinary safe API
-//! until they have an explicit raw interop policy.
+//! Low-level process-global hooks and raw `void*` user data stay outside the ordinary safe API;
+//! APIs with an explicit policy live under `boxddd::raw` and are not re-exported by the prelude.
 //!
 //! See the repository's `docs/api-coverage.md` for the tested upstream API coverage inventory.
 
@@ -34,6 +34,7 @@ mod interop;
 pub mod joints;
 pub mod prelude;
 pub mod query;
+pub mod raw;
 pub mod recording;
 pub mod shapes;
 pub mod types;

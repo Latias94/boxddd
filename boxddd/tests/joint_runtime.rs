@@ -1,6 +1,6 @@
 use boxddd::{
     BodyDef, BodyId, BodyType, DistanceJointDef, Error, JointTuning, PrismaticJointDef, Quat,
-    Transform, Vec3, World, WorldDef,
+    Transform, Vec3, World, WorldDef, raw,
 };
 use std::ffi::c_void;
 
@@ -63,9 +63,9 @@ fn common_joint_runtime_setters_getters_and_raw_user_data_work() {
 
     let mut marker = 7_i32;
     let ptr = (&mut marker as *mut i32).cast::<c_void>();
-    unsafe { world.try_set_joint_raw_user_data(joint, ptr).unwrap() };
+    unsafe { raw::try_set_joint_raw_user_data(&mut world, joint, ptr).unwrap() };
     assert_eq!(
-        unsafe { world.try_joint_raw_user_data(joint).unwrap() },
+        unsafe { raw::try_joint_raw_user_data(&world, joint).unwrap() },
         ptr
     );
 

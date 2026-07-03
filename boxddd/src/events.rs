@@ -21,6 +21,10 @@ impl BodyMove<'_> {
         self.0.fellAsleep
     }
 
+    /// Returns the raw Box3D `userData` pointer value observed in this event.
+    ///
+    /// The pointer is untyped and not owned by `boxddd`; interpreting or dereferencing it is the
+    /// caller's unsafe interop responsibility.
     pub fn raw_user_data(&self) -> *mut c_void {
         self.0.userData
     }
@@ -45,6 +49,7 @@ pub struct BodyMoveEvent {
     pub body_id: BodyId,
     pub transform: WorldTransform,
     pub fell_asleep: bool,
+    /// Raw Box3D `userData` pointer value observed in the event.
     pub raw_user_data: *mut c_void,
 }
 
@@ -274,6 +279,10 @@ impl JointEventView<'_> {
         JointId::from_raw(self.0.jointId)
     }
 
+    /// Returns the raw Box3D `userData` pointer value observed in this event.
+    ///
+    /// The pointer is untyped and not owned by `boxddd`; interpreting or dereferencing it is the
+    /// caller's unsafe interop responsibility.
     pub fn raw_user_data(&self) -> *mut c_void {
         self.0.userData
     }
@@ -296,6 +305,7 @@ impl<'a> Iterator for JointEventIter<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct JointEvent {
     pub joint_id: JointId,
+    /// Raw Box3D `userData` pointer value observed in the event.
     pub raw_user_data: *mut c_void,
 }
 

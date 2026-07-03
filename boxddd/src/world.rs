@@ -283,7 +283,10 @@ impl World {
     }
 
     #[inline]
-    fn lock_body_checked(&self, body_id: BodyId) -> Result<std::sync::MutexGuard<'static, ()>> {
+    pub(crate) fn lock_body_checked(
+        &self,
+        body_id: BodyId,
+    ) -> Result<std::sync::MutexGuard<'static, ()>> {
         callback_state::check_not_in_callback()?;
         let guard = box3d_lock::lock();
         self.check_body_belongs_locked(body_id)?;
@@ -291,7 +294,10 @@ impl World {
     }
 
     #[inline]
-    fn lock_shape_checked(&self, shape_id: ShapeId) -> Result<std::sync::MutexGuard<'static, ()>> {
+    pub(crate) fn lock_shape_checked(
+        &self,
+        shape_id: ShapeId,
+    ) -> Result<std::sync::MutexGuard<'static, ()>> {
         callback_state::check_not_in_callback()?;
         let guard = box3d_lock::lock();
         self.check_shape_belongs_locked(shape_id)?;
