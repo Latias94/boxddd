@@ -25,11 +25,10 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 
 | Surface | Status |
 |---|---|
-| `boxddd` core on Windows, Linux, macOS | Tested in CI with native Box3D C builds |
-| `bevy_boxddd` on native desktop | Usable for examples, testbeds, fixed-step ECS integration, debug draw, and picking |
-| `wasm32-wasip1` | Core runtime smoke with WASI SDK and wasmtime |
-| `wasm32-unknown-unknown` provider mode | Headless shared-memory provider smoke; callback-heavy APIs return `Error::UnsupportedOnWasm` |
-| mobile and extra cross targets | Compile/type-check sentinels, not runtime support claims |
+| Core `boxddd` on Windows, Linux, macOS | Supported and tested |
+| `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
+| WASM | Experimental core support; browser apps are not ready yet |
+| Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
 
@@ -160,11 +159,11 @@ The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.m
 
 ## Platform Notes
 
-Native Windows, Linux, and macOS are the primary runtime targets. WASM support exists, but the current browser/provider route is still headless and core-only. Bevy Web, browser rendering, web workers, pthreads, and cross-module callback support are deferred.
+Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and core-only: it is useful for compatibility work today, but not yet a recommended browser app path. Bevy Web, browser rendering, web workers, pthreads, and cross-module callbacks are deferred.
 
 Read more:
 
-- [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the WASM support matrix and smoke commands
+- [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the detailed WASM support matrix
 - [`docs/development/ci.md`](docs/development/ci.md) for CI jobs, target checks, and maintainer build commands
 - [`docs/upstream-parity/box3d-api-matrix.md`](docs/upstream-parity/box3d-api-matrix.md) for upstream Box3D API parity
 
