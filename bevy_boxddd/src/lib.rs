@@ -9,6 +9,7 @@ pub mod errors;
 pub mod messages;
 pub mod plugin;
 pub mod prelude;
+pub mod query;
 pub mod resources;
 pub mod systems;
 
@@ -17,4 +18,5 @@ pub use components::*;
 pub use debug_draw::*;
 pub use messages::*;
 pub use plugin::BoxdddPhysicsPlugin;
+pub use query::*;
 pub use resources::*;

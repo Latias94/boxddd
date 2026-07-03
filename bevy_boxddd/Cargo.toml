@@ -16,6 +16,7 @@ categories = ["game-engines", "api-bindings"]
 [features]
 default = []
 debug-gizmos = ["dep:bevy_color", "dep:bevy_gizmos"]
+physics-picking = []
 
 [dependencies]
 boxddd.workspace = true
@@ -63,3 +64,8 @@ path = "examples/joint_gallery_3d.rs"
 name = "debug_draw_overlay_3d"
 path = "examples/debug_draw_overlay_3d.rs"
 required-features = ["debug-gizmos"]
+
+[[example]]
+name = "physics_picking_3d"
+path = "examples/physics_picking_3d.rs"
+required-features = ["physics-picking"]

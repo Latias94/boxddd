@@ -6,7 +6,8 @@ pub use crate::{
     BoxdddDebugDrawSettings, BoxdddErrorMessage, BoxdddJoint, BoxdddOperation,
     BoxdddPhysicsContext, BoxdddPhysicsPlugin, BoxdddPhysicsSettings, BoxdddSensorBeginMessage,
     BoxdddSensorEndMessage, BoxdddShape, Collider, ExternalForce, ExternalImpulse, Joint,
-    JointTarget, LinearVelocity, PhysicsMaterial, RigidBody, TransformSyncMode, boxddd,
+    JointTarget, LinearVelocity, PhysicsMaterial, PhysicsQueryHit, PhysicsRayHit, RigidBody,
+    TransformSyncMode, boxddd, cast_ray, cast_ray_closest, overlap_aabb,
 };
 
 #[cfg(feature = "debug-gizmos")]
