@@ -1,6 +1,9 @@
 use super::*;
 use crate::collision::{ShapeCastInput, ShapeProxy};
-use crate::query::{BodyCastHit, BodyClosestPoint, QueryFilter};
+use crate::query::{BodyCastHit, BodyClosestPoint, MoverPlane, QueryFilter};
+
+const INITIAL_BODY_MOVER_PLANE_CAPACITY: usize = 4;
+const MAX_BODY_MOVER_PLANE_CAPACITY: usize = 64;
 
 impl World {
     pub fn body_position(&self, body_id: BodyId) -> Pos {
@@ -670,6 +673,82 @@ impl World {
                 body_transform.into_raw(),
             )
         })
+    }
+
+    pub fn try_body_collide_mover(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+    ) -> Result<Vec<MoverPlane>> {
+        let body_transform = self.try_body_transform(body_id)?;
+        self.try_body_collide_mover_with_transform(body_id, origin, mover, filter, body_transform)
+    }
+
+    pub fn try_body_collide_mover_with_transform(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+        body_transform: WorldTransform,
+    ) -> Result<Vec<MoverPlane>> {
+        let mut out = Vec::new();
+        self.try_body_collide_mover_into_with_transform(
+            body_id,
+            origin,
+            mover,
+            filter,
+            body_transform,
+            &mut out,
+        )?;
+        Ok(out)
+    }
+
+    pub fn try_body_collide_mover_into_with_transform(
+        &self,
+        body_id: BodyId,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+        body_transform: WorldTransform,
+        out: &mut Vec<MoverPlane>,
+    ) -> Result<()> {
+        let origin = origin.into().validate()?;
+        mover.validate()?;
+        validate_world_transform(body_transform)?;
+
+        let _guard = self.lock_body_checked(body_id)?;
+        let mut capacity = INITIAL_BODY_MOVER_PLANE_CAPACITY;
+        loop {
+            let mut raw_planes = Vec::<ffi::b3BodyPlaneResult>::with_capacity(capacity);
+            let raw_count = unsafe {
+                ffi::b3Body_CollideMover(
+                    body_id.into_raw(),
+                    raw_planes.as_mut_ptr(),
+                    capacity as i32,
+                    origin.into_raw(),
+                    mover.raw(),
+                    filter.raw(),
+                    body_transform.into_raw(),
+                )
+            };
+            let filled = raw_count.clamp(0, capacity as i32) as usize;
+            unsafe { raw_planes.set_len(filled) };
+
+            if raw_count < capacity as i32 || capacity == MAX_BODY_MOVER_PLANE_CAPACITY {
+                out.clear();
+                out.extend(
+                    raw_planes
+                        .into_iter()
+                        .map(|raw| MoverPlane::from_raw(raw.shapeId, raw.result)),
+                );
+                return Ok(());
+            }
+
+            capacity = (capacity * 2).min(MAX_BODY_MOVER_PLANE_CAPACITY);
+        }
     }
 
     pub fn body_shapes(&self, body_id: BodyId) -> Vec<ShapeId> {

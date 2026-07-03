@@ -110,6 +110,100 @@ impl Default for WorldDefBuilder {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ExplosionDef {
+    raw: ffi::b3ExplosionDef,
+}
+
+impl Default for ExplosionDef {
+    fn default() -> Self {
+        Self {
+            raw: unsafe { ffi::b3DefaultExplosionDef() },
+        }
+    }
+}
+
+impl ExplosionDef {
+    #[inline]
+    pub fn builder() -> ExplosionDefBuilder {
+        ExplosionDefBuilder::new()
+    }
+
+    #[inline]
+    pub fn raw(&self) -> &ffi::b3ExplosionDef {
+        &self.raw
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        Pos::from_raw(self.raw.position).validate()?;
+        if self.raw.radius.is_finite()
+            && self.raw.radius > 0.0
+            && self.raw.falloff.is_finite()
+            && self.raw.falloff >= 0.0
+            && self.raw.impulsePerArea.is_finite()
+        {
+            Ok(())
+        } else {
+            Err(Error::InvalidArgument)
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ExplosionDefBuilder {
+    def: ExplosionDef,
+}
+
+impl ExplosionDefBuilder {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            def: ExplosionDef::default(),
+        }
+    }
+
+    #[inline]
+    pub fn mask_bits(mut self, mask_bits: u64) -> Self {
+        self.def.raw.maskBits = mask_bits;
+        self
+    }
+
+    #[inline]
+    pub fn position(mut self, position: impl Into<Pos>) -> Self {
+        self.def.raw.position = position.into().into_raw();
+        self
+    }
+
+    #[inline]
+    pub fn radius(mut self, radius: f32) -> Self {
+        self.def.raw.radius = radius;
+        self
+    }
+
+    #[inline]
+    pub fn falloff(mut self, falloff: f32) -> Self {
+        self.def.raw.falloff = falloff;
+        self
+    }
+
+    #[inline]
+    pub fn impulse_per_area(mut self, impulse_per_area: f32) -> Self {
+        self.def.raw.impulsePerArea = impulse_per_area;
+        self
+    }
+
+    #[inline]
+    pub fn build(self) -> ExplosionDef {
+        self.def
+    }
+}
+
+impl Default for ExplosionDefBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct World {
     raw: ffi::b3WorldId,

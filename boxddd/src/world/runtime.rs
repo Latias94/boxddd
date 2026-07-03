@@ -61,6 +61,21 @@ impl World {
         unsafe { ffi::b3World_SetGravity(self.raw, gravity.into_raw()) };
         Ok(())
     }
+
+    pub fn explode(&mut self, explosion: &ExplosionDef) {
+        self.try_explode(explosion)
+            .expect("invalid explosion or Box3D world");
+    }
+
+    pub fn try_explode(&mut self, explosion: &ExplosionDef) -> Result<()> {
+        callback_state::check_not_in_callback()?;
+        explosion.validate()?;
+        let _guard = box3d_lock::lock();
+        self.check_world_valid_locked()?;
+        unsafe { ffi::b3World_Explode(self.raw, explosion.raw()) };
+        Ok(())
+    }
+
     pub fn bounds(&self) -> Aabb {
         self.try_bounds().expect("invalid Box3D world")
     }

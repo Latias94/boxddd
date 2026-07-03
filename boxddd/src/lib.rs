@@ -63,7 +63,8 @@ pub use joints::{
     PrismaticJointDef, RevoluteJointDef, SphericalJointDef, WeldJointDef, WheelJointDef,
 };
 pub use query::{
-    BodyCastHit, BodyClosestPoint, QueryFilter, QueryHit, RayHit, ShapeRayHit, TreeStats,
+    BodyCastHit, BodyClosestPoint, MoverPlane, QueryFilter, QueryHit, RayHit, ShapeRayHit,
+    TreeStats,
 };
 pub use recording::{
     RecPlayer, RecPlayerInfo, RecQueryHit, RecQueryInfo, RecQueryType, Recording, ReplayWorldId,
@@ -79,7 +80,8 @@ pub use types::{
     Vec2, Vec3, Version, WorldTransform, is_valid_float,
 };
 pub use world::{
-    World, WorldDef, WorldDefBuilder, allocated_byte_count, is_double_precision, version,
+    ExplosionDef, ExplosionDefBuilder, World, WorldDef, WorldDefBuilder, allocated_byte_count,
+    is_double_precision, version,
 };
 
 #[doc(hidden)]

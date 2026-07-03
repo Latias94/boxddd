@@ -35,7 +35,7 @@ b3World_CastRay|safe|world|box3d.h|covered by current safe wrapper implementatio
 b3World_CastRayClosest|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_CastShape|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_CastMover|safe|world|box3d.h|covered by current safe wrapper implementation
-b3World_CollideMover|deferred|world|box3d.h|planned safe wrapper in API completion work
+b3World_CollideMover|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_EnableSleeping|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_IsSleepingEnabled|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_EnableContinuous|safe|world|box3d.h|covered by current safe wrapper implementation
@@ -48,7 +48,7 @@ b3World_SetCustomFilterCallback|safe|world|box3d.h|covered by current safe wrapp
 b3World_SetPreSolveCallback|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_SetGravity|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_GetGravity|safe|world|box3d.h|covered by current safe wrapper implementation
-b3World_Explode|deferred|world|box3d.h|planned safe wrapper in API completion work
+b3World_Explode|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_SetContactTuning|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_SetContactRecycleDistance|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_GetContactRecycleDistance|safe|world|box3d.h|covered by current safe wrapper implementation
@@ -179,7 +179,7 @@ b3Body_GetClosestPoint|safe|body|box3d.h|covered by current safe wrapper impleme
 b3Body_CastRay|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_CastShape|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_OverlapShape|safe|body|box3d.h|covered by current safe wrapper implementation
-b3Body_CollideMover|deferred|body|box3d.h|planned safe wrapper in API completion work
+b3Body_CollideMover|safe|body|box3d.h|covered by current safe wrapper implementation
 b3CreateSphereShape|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3CreateCapsuleShape|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3CreateHullShape|safe|shape|box3d.h|covered by current safe wrapper implementation
@@ -576,7 +576,7 @@ b3DefaultRevoluteJointDef|safe|joints|types.h|covered by current safe wrapper im
 b3DefaultSphericalJointDef|safe|joints|types.h|covered by current safe wrapper implementation
 b3DefaultWeldJointDef|safe|joints|types.h|covered by current safe wrapper implementation
 b3DefaultWheelJointDef|safe|joints|types.h|covered by current safe wrapper implementation
-b3DefaultExplosionDef|deferred|defaults|types.h|planned safe wrapper in API completion work
+b3DefaultExplosionDef|safe|defaults|types.h|covered by current safe wrapper implementation
 b3DefaultQueryFilter|deferred|defaults|types.h|known upstream API awaiting safe design or implementation
 b3GetGraphColor|deferred|defaults|types.h|known upstream API awaiting safe design or implementation
 b3DefaultDebugDraw|safe|defaults|types.h|covered by current safe wrapper implementation

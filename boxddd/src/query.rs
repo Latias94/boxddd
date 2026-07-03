@@ -4,7 +4,7 @@ use crate::collision::{ShapeCastInput, ShapeProxy};
 use crate::core::{box3d_lock, callback_state};
 use crate::error::{Error, Result};
 use crate::shapes::Capsule;
-use crate::types::{Aabb, Pos, ShapeId, Vec3};
+use crate::types::{Aabb, Plane, Pos, ShapeId, Vec3};
 use crate::world::World;
 use boxddd_sys::ffi;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -165,6 +165,25 @@ impl ShapeRayHit {
             material_index: raw.materialIndex,
             iterations: raw.iterations,
         })
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MoverPlane {
+    pub shape_id: ShapeId,
+    pub plane: Plane,
+    pub point: Vec3,
+}
+
+impl MoverPlane {
+    #[inline]
+    pub(crate) fn from_raw(shape_id: ffi::b3ShapeId, raw: ffi::b3PlaneResult) -> Self {
+        Self {
+            shape_id: ShapeId::from_raw(shape_id),
+            plane: Plane::from_raw(raw.plane),
+            point: Vec3::from_raw(raw.point),
+        }
     }
 }
 
@@ -498,6 +517,75 @@ impl World {
             )
         })
     }
+
+    pub fn collide_mover(
+        &self,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+    ) -> Result<Vec<MoverPlane>> {
+        let mut out = Vec::new();
+        self.collide_mover_into(origin, mover, filter, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn collide_mover_into(
+        &self,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+        out: &mut Vec<MoverPlane>,
+    ) -> Result<()> {
+        out.clear();
+        self.visit_collide_mover(origin, mover, filter, |plane| {
+            out.push(plane);
+            true
+        })
+    }
+
+    pub fn visit_collide_mover<F>(
+        &self,
+        origin: impl Into<Pos>,
+        mover: &Capsule,
+        filter: QueryFilter,
+        visitor: F,
+    ) -> Result<()>
+    where
+        F: FnMut(MoverPlane) -> bool,
+    {
+        callback_state::check_not_in_callback()?;
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (origin, mover, filter, visitor);
+            Err(Error::UnsupportedOnWasm)
+        }
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let origin = origin.into().validate()?;
+            mover.validate()?;
+            let mut ctx = MoverPlaneContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            self.check_world_valid_locked()?;
+            unsafe {
+                ffi::b3World_CollideMover(
+                    self.raw(),
+                    origin.into_raw(),
+                    mover.raw(),
+                    filter.raw(),
+                    Some(mover_plane_trampoline::<F>),
+                    (&mut ctx as *mut MoverPlaneContext<_>).cast(),
+                )
+            };
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(())
+            }
+        }
+    }
 }
 
 struct OverlapContext<F> {
@@ -562,4 +650,40 @@ where
             0.0
         }
     }
+}
+
+struct MoverPlaneContext<F> {
+    visitor: F,
+    panicked: bool,
+}
+
+unsafe extern "C" fn mover_plane_trampoline<F>(
+    shape_id: ffi::b3ShapeId,
+    plane: *const ffi::b3PlaneResult,
+    plane_count: i32,
+    context: *mut std::ffi::c_void,
+) -> bool
+where
+    F: FnMut(MoverPlane) -> bool,
+{
+    let _guard = callback_state::CallbackGuard::enter();
+    let ctx = unsafe { &mut *context.cast::<MoverPlaneContext<F>>() };
+    if plane.is_null() || plane_count <= 0 {
+        return true;
+    }
+
+    let planes = unsafe { std::slice::from_raw_parts(plane, plane_count as usize) };
+    for raw_plane in planes {
+        let mover_plane = MoverPlane::from_raw(shape_id, *raw_plane);
+        match catch_unwind(AssertUnwindSafe(|| (ctx.visitor)(mover_plane))) {
+            Ok(true) => {}
+            Ok(false) => return false,
+            Err(_) => {
+                ctx.panicked = true;
+                return false;
+            }
+        }
+    }
+
+    true
 }
