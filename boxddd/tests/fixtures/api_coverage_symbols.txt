@@ -205,35 +205,35 @@ b3Shape_SetSurfaceMaterial|safe|shape|box3d.h|covered by current safe wrapper im
 b3Shape_GetSurfaceMaterial|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetMeshMaterialCount|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetMeshMaterial|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_GetMeshSurfaceMaterial|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_GetMeshSurfaceMaterial|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetFilter|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetFilter|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_EnableSensorEvents|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_AreSensorEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_AreSensorEventsEnabled|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_EnableContactEvents|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_AreContactEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_AreContactEventsEnabled|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_EnablePreSolveEvents|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_ArePreSolveEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_ArePreSolveEventsEnabled|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_EnableHitEvents|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_AreHitEventsEnabled|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_AreHitEventsEnabled|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_RayCast|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetSphere|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetCapsule|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_GetHull|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetMesh|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetHeightField|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_GetHull|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetMesh|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetHeightField|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetSphere|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetCapsule|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetHull|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_SetMesh|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_GetContactCapacity|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetContactData|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetSensorCapacity|deferred|shape|box3d.h|planned safe wrapper in API completion work
-b3Shape_GetSensorData|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_GetContactCapacity|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetContactData|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetSensorCapacity|safe|shape|box3d.h|covered by current safe wrapper implementation
+b3Shape_GetSensorData|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetAABB|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_ComputeMassData|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3Shape_GetClosestPoint|safe|shape|box3d.h|covered by current safe wrapper implementation
-b3Shape_ApplyWind|deferred|shape|box3d.h|planned safe wrapper in API completion work
+b3Shape_ApplyWind|safe|shape|box3d.h|covered by current safe wrapper implementation
 b3DestroyJoint|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_IsValid|safe|joints|box3d.h|covered by current safe wrapper implementation
 b3Joint_GetType|safe|joints|box3d.h|covered by current safe wrapper implementation

@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 450 | world lifecycle and stepping, body runtime, body/shape scoped queries, mover collision, explosions, shape creation and core properties, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 463 | world lifecycle and stepping, body runtime, body/shape scoped queries, mover collision, explosions, shape creation and runtime introspection, shape event/contact/sensor readback, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 35 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, raw `void*` user data, file-backed dynamic tree or height-field helpers |
 | `omitted` | 2 | global world-count diagnostics that do not fit the safe ownership model |
-| `deferred` | 91 | dynamic tree, advanced collision, compound/mesh/height-field completion, selected shape inspection/event APIs, selected math helpers |
+| `deferred` | 78 | dynamic tree, advanced collision, compound/mesh/height-field authoring completion, selected math helpers |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -38,7 +38,6 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 
 These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
 
-- Shape inspection and events: shape event-state getters, shape contact/sensor data, mesh material readback, geometry readback, and `b3Shape_ApplyWind`.
 - Complex geometry: compound child/material queries, compound byte conversion, arbitrary mesh creation, wave/torus/hollow/platform mesh helpers, and custom height-field creation.
 - Advanced collision: GJK distance, shape cast pair input, time of impact, sweep transforms, missing collision pair helpers, plane solving, and clipping.
 - Dynamic tree: the independent `b3DynamicTree_*` broadphase API needs a dedicated RAII wrapper.

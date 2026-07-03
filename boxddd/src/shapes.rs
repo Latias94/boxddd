@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use crate::types::{Filter, Transform, Vec3};
+use crate::types::{Aabb, Filter, Transform, Vec3};
 use boxddd_sys::ffi;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
@@ -624,6 +624,191 @@ impl HeightField {
 impl Drop for HeightField {
     fn drop(&mut self) {
         unsafe { ffi::b3DestroyHeightField(self.raw.as_ptr()) };
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ShapeHull<'a> {
+    raw: &'a ffi::b3HullData,
+}
+
+impl<'a> ShapeHull<'a> {
+    #[inline]
+    pub(crate) const fn from_raw(raw: &'a ffi::b3HullData) -> Self {
+        Self { raw }
+    }
+
+    #[inline]
+    pub const fn byte_count(&self) -> i32 {
+        self.raw.byteCount
+    }
+
+    #[inline]
+    pub const fn hash(&self) -> u32 {
+        self.raw.hash
+    }
+
+    #[inline]
+    pub const fn aabb(&self) -> Aabb {
+        Aabb::from_raw(self.raw.aabb)
+    }
+
+    #[inline]
+    pub const fn surface_area(&self) -> f32 {
+        self.raw.surfaceArea
+    }
+
+    #[inline]
+    pub const fn volume(&self) -> f32 {
+        self.raw.volume
+    }
+
+    #[inline]
+    pub const fn inner_radius(&self) -> f32 {
+        self.raw.innerRadius
+    }
+
+    #[inline]
+    pub const fn center(&self) -> Vec3 {
+        Vec3::from_raw(self.raw.center)
+    }
+
+    #[inline]
+    pub const fn vertex_count(&self) -> i32 {
+        self.raw.vertexCount
+    }
+
+    #[inline]
+    pub const fn edge_count(&self) -> i32 {
+        self.raw.edgeCount
+    }
+
+    #[inline]
+    pub const fn face_count(&self) -> i32 {
+        self.raw.faceCount
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ShapeMesh<'a> {
+    data: &'a ffi::b3MeshData,
+    scale: Vec3,
+}
+
+impl<'a> ShapeMesh<'a> {
+    #[inline]
+    pub(crate) fn from_raw(raw: ffi::b3Mesh) -> Option<Self> {
+        unsafe { raw.data.as_ref() }.map(|data| Self {
+            data,
+            scale: Vec3::from_raw(raw.scale),
+        })
+    }
+
+    #[inline]
+    pub const fn scale(&self) -> Vec3 {
+        self.scale
+    }
+
+    #[inline]
+    pub const fn byte_count(&self) -> i32 {
+        self.data.byteCount
+    }
+
+    #[inline]
+    pub const fn hash(&self) -> u32 {
+        self.data.hash
+    }
+
+    #[inline]
+    pub const fn bounds(&self) -> Aabb {
+        Aabb::from_raw(self.data.bounds)
+    }
+
+    #[inline]
+    pub const fn surface_area(&self) -> f32 {
+        self.data.surfaceArea
+    }
+
+    #[inline]
+    pub const fn tree_height(&self) -> i32 {
+        self.data.treeHeight
+    }
+
+    #[inline]
+    pub const fn degenerate_count(&self) -> i32 {
+        self.data.degenerateCount
+    }
+
+    #[inline]
+    pub const fn vertex_count(&self) -> i32 {
+        self.data.vertexCount
+    }
+
+    #[inline]
+    pub const fn triangle_count(&self) -> i32 {
+        self.data.triangleCount
+    }
+
+    #[inline]
+    pub const fn material_count(&self) -> i32 {
+        self.data.materialCount
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ShapeHeightField<'a> {
+    raw: &'a ffi::b3HeightFieldData,
+}
+
+impl<'a> ShapeHeightField<'a> {
+    #[inline]
+    pub(crate) const fn from_raw(raw: &'a ffi::b3HeightFieldData) -> Self {
+        Self { raw }
+    }
+
+    #[inline]
+    pub const fn byte_count(&self) -> i32 {
+        self.raw.byteCount
+    }
+
+    #[inline]
+    pub const fn hash(&self) -> u32 {
+        self.raw.hash
+    }
+
+    #[inline]
+    pub const fn aabb(&self) -> Aabb {
+        Aabb::from_raw(self.raw.aabb)
+    }
+
+    #[inline]
+    pub const fn min_height(&self) -> f32 {
+        self.raw.minHeight
+    }
+
+    #[inline]
+    pub const fn max_height(&self) -> f32 {
+        self.raw.maxHeight
+    }
+
+    #[inline]
+    pub const fn scale(&self) -> Vec3 {
+        Vec3::from_raw(self.raw.scale)
+    }
+
+    #[inline]
+    pub const fn column_count(&self) -> i32 {
+        self.raw.columnCount
+    }
+
+    #[inline]
+    pub const fn row_count(&self) -> i32 {
+        self.raw.rowCount
+    }
+
+    #[inline]
+    pub const fn clockwise(&self) -> bool {
+        self.raw.clockwise
     }
 }
 

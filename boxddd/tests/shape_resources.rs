@@ -1,6 +1,6 @@
 use boxddd::{
     BodyDef, BodyType, BoxHull, Capsule, Compound, Error, HeightField, Hull, MeshData, ShapeDef,
-    ShapeType, Sphere, SurfaceMaterial, Transform, World, WorldDef,
+    ShapeType, Sphere, SurfaceMaterial, Transform, Vec3, World, WorldDef,
 };
 
 #[test]
@@ -27,6 +27,13 @@ fn shape_creation_covers_value_and_native_resources() {
         &BoxHull::offset(0.5, 0.5, 0.5, [1.0, 0.0, 0.0]),
     );
     assert_eq!(world.try_shape_type(box_hull).unwrap(), ShapeType::Hull);
+    let hull_view = world.try_shape_hull(box_hull).unwrap();
+    assert_eq!(hull_view.vertex_count(), 8);
+    assert!(hull_view.surface_area() > 0.0);
+    assert_eq!(
+        world.try_shape_hull(sphere).unwrap_err(),
+        Error::InvalidArgument
+    );
 
     let created_hull = Hull::rock(0.5).unwrap();
     let created_hull_shape = world
@@ -63,6 +70,10 @@ fn shape_creation_covers_value_and_native_resources() {
         )
         .unwrap();
     assert_eq!(world.try_shape_type(mesh_shape).unwrap(), ShapeType::Mesh);
+    let mesh_view = world.try_shape_mesh(mesh_shape).unwrap();
+    assert_eq!(mesh_view.scale(), Vec3::new(1.0, 1.0, 1.0));
+    assert!(mesh_view.vertex_count() > 0);
+    assert!(mesh_view.triangle_count() > 0);
 
     let height_shape = world
         .try_create_height_field_shape(
@@ -75,6 +86,9 @@ fn shape_creation_covers_value_and_native_resources() {
         world.try_shape_type(height_shape).unwrap(),
         ShapeType::HeightField
     );
+    let height_view = world.try_shape_height_field(height_shape).unwrap();
+    assert_eq!(height_view.column_count(), 4);
+    assert_eq!(height_view.row_count(), 4);
 
     let compound_shape = world
         .try_create_compound_shape(

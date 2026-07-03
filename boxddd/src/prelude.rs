@@ -9,8 +9,8 @@ pub use crate::{
     Profile, Quat, QueryFilter, QueryHit, RayCastInput, RayHit, RecPlayer, RecPlayerInfo,
     RecQueryHit, RecQueryInfo, RecQueryType, Recording, ReplayWorldId, Result, RevoluteJointDef,
     SensorBeginTouchEvent, SensorEndTouchEvent, SensorEvents, ShapeCastInput, ShapeDef,
-    ShapeDefBuilder, ShapeId, ShapeProxy, ShapeRayHit, ShapeType, Sphere, SurfaceMaterial,
-    TaskSystem, TaskSystemStats, Transform, TreeStats, Vec2, Vec3, Version, WeldJointDef,
-    WheelJointDef, World, WorldDef, WorldDefBuilder, WorldTransform, allocated_byte_count,
-    is_double_precision, validate_replay_bytes, version,
+    ShapeDefBuilder, ShapeHeightField, ShapeHull, ShapeId, ShapeMesh, ShapeProxy, ShapeRayHit,
+    ShapeType, Sphere, SurfaceMaterial, TaskSystem, TaskSystemStats, Transform, TreeStats, Vec2,
+    Vec3, Version, WeldJointDef, WheelJointDef, World, WorldDef, WorldDefBuilder, WorldTransform,
+    allocated_byte_count, is_double_precision, validate_replay_bytes, version,
 };

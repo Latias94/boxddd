@@ -71,8 +71,8 @@ pub use recording::{
     validate_replay_bytes,
 };
 pub use shapes::{
-    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder, ShapeType,
-    Sphere, SurfaceMaterial,
+    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeDefBuilder,
+    ShapeHeightField, ShapeHull, ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
 };
 pub use types::{
     Aabb, BodyId, Capacity, ContactData, ContactId, Counters, Filter, JointId, Manifold,

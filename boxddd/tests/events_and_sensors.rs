@@ -61,6 +61,64 @@ fn sensor_events_support_owned_into_and_view_reads() {
 }
 
 #[test]
+fn shape_sensor_data_reports_current_overlaps() {
+    let mut world = World::new(WorldDef::default()).unwrap();
+
+    let sensor_body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Kinematic)
+            .position([0.0, 2.0, 0.0])
+            .build(),
+    );
+    let sensor_shape = world.create_hull_shape(
+        sensor_body,
+        &ShapeDef::builder()
+            .sensor(true)
+            .enable_sensor_events(true)
+            .build(),
+        &BoxHull::new(2.0, 2.0, 2.0),
+    );
+
+    let visitor_body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Dynamic)
+            .position([0.0, 7.0, 0.0])
+            .build(),
+    );
+    let visitor_shape = world.create_sphere_shape(
+        visitor_body,
+        &ShapeDef::builder()
+            .density(1.0)
+            .enable_sensor_events(true)
+            .build(),
+        &Sphere::new(Vec3::ZERO, 0.5),
+    );
+
+    let mut begin_seen = false;
+    for _ in 0..180 {
+        world.step(1.0 / 60.0, 4);
+        let events = world.sensor_events();
+        begin_seen |= events.begin.iter().any(|event| {
+            [event.sensor_shape, event.visitor_shape].contains(&sensor_shape)
+                && [event.sensor_shape, event.visitor_shape].contains(&visitor_shape)
+        });
+        if begin_seen {
+            break;
+        }
+    }
+    assert!(begin_seen);
+
+    let visitors = world.try_shape_sensor_data(sensor_shape).unwrap();
+    assert!(visitors.contains(&visitor_shape), "{visitors:?}");
+
+    let mut reusable = vec![sensor_shape];
+    world
+        .try_shape_sensor_data_into(sensor_shape, &mut reusable)
+        .unwrap();
+    assert!(reusable.contains(&visitor_shape));
+}
+
+#[test]
 fn contact_and_hit_events_capture_ids_materials_and_reuse_buffers() {
     let mut world = World::new(
         WorldDef::builder()
@@ -138,6 +196,24 @@ fn contact_and_hit_events_capture_ids_materials_and_reuse_buffers() {
 
     assert!(begin_seen);
     assert!(hit_seen);
+
+    let shape_contacts = world.try_shape_contacts(sphere_shape).unwrap();
+    assert!(
+        shape_contacts.iter().any(|contact| {
+            [contact.shape_id_a, contact.shape_id_b].contains(&ground_shape)
+                && [contact.shape_id_a, contact.shape_id_b].contains(&sphere_shape)
+        }),
+        "{shape_contacts:?}"
+    );
+
+    let mut reusable_contacts = vec![Default::default()];
+    world
+        .try_shape_contacts_into(sphere_shape, &mut reusable_contacts)
+        .unwrap();
+    assert!(reusable_contacts.iter().any(|contact| {
+        [contact.shape_id_a, contact.shape_id_b].contains(&ground_shape)
+            && [contact.shape_id_a, contact.shape_id_b].contains(&sphere_shape)
+    }));
 }
 
 #[test]

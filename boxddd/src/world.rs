@@ -7,8 +7,8 @@ use crate::debug_draw::DebugShapeRegistry;
 use crate::debug_draw::{create_debug_shape, destroy_debug_shape};
 use crate::error::{Error, Result};
 use crate::shapes::{
-    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeType, Sphere,
-    SurfaceMaterial,
+    BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeHeightField, ShapeHull,
+    ShapeMesh, ShapeType, Sphere, SurfaceMaterial,
 };
 use crate::types::{
     Aabb, BodyId, Capacity, ContactData, Counters, Filter, JointId, MassData, Matrix3, MotionLocks,
@@ -366,6 +366,15 @@ fn validate_scalar(value: f32) -> Result<()> {
 #[inline]
 fn validate_nonnegative_scalar(value: f32) -> Result<()> {
     if value.is_finite() && value >= 0.0 {
+        Ok(())
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
+#[inline]
+fn validate_positive_scalar(value: f32) -> Result<()> {
+    if value.is_finite() && value > 0.0 {
         Ok(())
     } else {
         Err(Error::InvalidArgument)

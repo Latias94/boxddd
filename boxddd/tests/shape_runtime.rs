@@ -52,11 +52,15 @@ fn shape_runtime_properties_and_geometry_can_be_updated() {
     world.try_set_shape_filter(shape, filter, false).unwrap();
     assert_eq!(world.try_shape_filter(shape).unwrap(), filter);
     world.try_enable_shape_sensor_events(shape, true).unwrap();
+    assert!(world.try_shape_sensor_events_enabled(shape).unwrap());
     world.try_enable_shape_contact_events(shape, true).unwrap();
+    assert!(world.try_shape_contact_events_enabled(shape).unwrap());
     world
         .try_enable_shape_pre_solve_events(shape, true)
         .unwrap();
+    assert!(world.try_shape_pre_solve_events_enabled(shape).unwrap());
     world.try_enable_shape_hit_events(shape, true).unwrap();
+    assert!(world.try_shape_hit_events_enabled(shape).unwrap());
 
     let replacement_sphere = Sphere::new([1.0, 0.0, 0.0], 0.25);
     world
@@ -101,6 +105,27 @@ fn shape_runtime_properties_and_geometry_can_be_updated() {
             .unwrap_err(),
         Error::IndexOutOfRange
     );
+    let mesh_material = SurfaceMaterial {
+        friction: 0.9,
+        restitution: 0.1,
+        user_material_id: 42,
+        ..Default::default()
+    };
+    world
+        .try_set_shape_mesh_material(mesh_shape, 0, mesh_material)
+        .unwrap();
+    assert_eq!(
+        world
+            .try_shape_mesh_surface_material(mesh_shape, 0)
+            .unwrap(),
+        mesh_material
+    );
+    assert_eq!(
+        world
+            .try_shape_mesh_surface_material(mesh_shape, 999)
+            .unwrap_err(),
+        Error::IndexOutOfRange
+    );
     world
         .try_set_shape_mesh(
             mesh_shape,
@@ -111,4 +136,39 @@ fn shape_runtime_properties_and_geometry_can_be_updated() {
 
     world.destroy_shape(shape, true);
     assert!(!shape.is_valid());
+}
+
+#[test]
+fn apply_shape_wind_changes_dynamic_body_velocity_and_validates_inputs() {
+    let mut world = World::new(WorldDef::builder().gravity([0.0, 0.0, 0.0]).build()).unwrap();
+    let body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Dynamic)
+            .position([0.0, 0.0, 0.0])
+            .build(),
+    );
+    let shape = world.create_sphere_shape(
+        body,
+        &ShapeDef::builder().density(1.0).build(),
+        &Sphere::new([0.0, 0.0, 0.0], 0.5),
+    );
+
+    world
+        .try_apply_shape_wind(shape, [8.0, 0.0, 0.0], 1.0, 0.0, 10.0, true)
+        .unwrap();
+    world.step(1.0 / 60.0, 4);
+    assert!(world.body_linear_velocity(body).x > 0.0);
+
+    assert_eq!(
+        world
+            .try_apply_shape_wind(shape, [f32::NAN, 0.0, 0.0], 1.0, 0.0, 10.0, true)
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+    assert_eq!(
+        world
+            .try_apply_shape_wind(shape, [1.0, 0.0, 0.0], -1.0, 0.0, 10.0, true)
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
 }

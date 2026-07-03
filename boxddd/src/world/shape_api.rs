@@ -113,6 +113,21 @@ impl World {
         Ok(())
     }
 
+    pub fn try_shape_mesh_surface_material(
+        &self,
+        shape_id: ShapeId,
+        index: i32,
+    ) -> Result<SurfaceMaterial> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        let count = unsafe { ffi::b3Shape_GetMeshMaterialCount(shape_id.into_raw()) };
+        if index < 0 || index >= count {
+            return Err(Error::IndexOutOfRange);
+        }
+        Ok(SurfaceMaterial::from_raw(unsafe {
+            ffi::b3Shape_GetMeshSurfaceMaterial(shape_id.into_raw(), index)
+        }))
+    }
+
     pub fn try_shape_filter(&self, shape_id: ShapeId) -> Result<Filter> {
         let _guard = self.lock_shape_checked(shape_id)?;
         Ok(Filter::from_raw(unsafe {
@@ -141,6 +156,11 @@ impl World {
         Ok(())
     }
 
+    pub fn try_shape_sensor_events_enabled(&self, shape_id: ShapeId) -> Result<bool> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(unsafe { ffi::b3Shape_AreSensorEventsEnabled(shape_id.into_raw()) })
+    }
+
     pub fn try_enable_shape_contact_events(
         &mut self,
         shape_id: ShapeId,
@@ -149,6 +169,11 @@ impl World {
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_EnableContactEvents(shape_id.into_raw(), enabled) };
         Ok(())
+    }
+
+    pub fn try_shape_contact_events_enabled(&self, shape_id: ShapeId) -> Result<bool> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(unsafe { ffi::b3Shape_AreContactEventsEnabled(shape_id.into_raw()) })
     }
 
     pub fn try_enable_shape_pre_solve_events(
@@ -161,10 +186,20 @@ impl World {
         Ok(())
     }
 
+    pub fn try_shape_pre_solve_events_enabled(&self, shape_id: ShapeId) -> Result<bool> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(unsafe { ffi::b3Shape_ArePreSolveEventsEnabled(shape_id.into_raw()) })
+    }
+
     pub fn try_enable_shape_hit_events(&mut self, shape_id: ShapeId, enabled: bool) -> Result<()> {
         let _guard = self.lock_shape_checked(shape_id)?;
         unsafe { ffi::b3Shape_EnableHitEvents(shape_id.into_raw(), enabled) };
         Ok(())
+    }
+
+    pub fn try_shape_hit_events_enabled(&self, shape_id: ShapeId) -> Result<bool> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        Ok(unsafe { ffi::b3Shape_AreHitEventsEnabled(shape_id.into_raw()) })
     }
 
     pub fn try_shape_aabb(&self, shape_id: ShapeId) -> Result<Aabb> {
@@ -212,6 +247,88 @@ impl World {
         }))
     }
 
+    pub fn try_shape_contacts(&self, shape_id: ShapeId) -> Result<Vec<ContactData>> {
+        let mut out = Vec::new();
+        self.try_shape_contacts_into(shape_id, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn try_shape_contacts_into(
+        &self,
+        shape_id: ShapeId,
+        out: &mut Vec<ContactData>,
+    ) -> Result<()> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        let capacity =
+            unsafe { ffi::b3Shape_GetContactCapacity(shape_id.into_raw()) }.max(0) as usize;
+        let raw = unsafe {
+            ffi_vec::read_from_ffi(capacity, |ptr, cap| {
+                ffi::b3Shape_GetContactData(shape_id.into_raw(), ptr, cap)
+            })
+        };
+        out.clear();
+        out.extend(
+            raw.into_iter()
+                .map(|contact| unsafe { ContactData::from_raw(contact) }),
+        );
+        Ok(())
+    }
+
+    pub fn try_shape_sensor_data(&self, shape_id: ShapeId) -> Result<Vec<ShapeId>> {
+        let mut out = Vec::new();
+        self.try_shape_sensor_data_into(shape_id, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn try_shape_sensor_data_into(
+        &self,
+        shape_id: ShapeId,
+        out: &mut Vec<ShapeId>,
+    ) -> Result<()> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        let world0 = self.world0_locked()?;
+        let capacity =
+            unsafe { ffi::b3Shape_GetSensorCapacity(shape_id.into_raw()) }.max(0) as usize;
+        let raw = unsafe {
+            ffi_vec::read_from_ffi(capacity, |ptr: *mut ffi::b3ShapeId, cap| {
+                ffi::b3Shape_GetSensorData(shape_id.into_raw(), ptr, cap)
+            })
+        };
+        out.clear();
+        out.extend(raw.into_iter().filter_map(|raw_shape| {
+            let shape = ShapeId::from_raw(raw_shape);
+            (unsafe { ffi::b3Shape_IsValid(raw_shape) } && shape.world0 == world0).then_some(shape)
+        }));
+        Ok(())
+    }
+
+    pub fn try_apply_shape_wind(
+        &mut self,
+        shape_id: ShapeId,
+        wind: impl Into<Vec3>,
+        drag: f32,
+        lift: f32,
+        max_speed: f32,
+        wake: bool,
+    ) -> Result<()> {
+        let wind = wind.into().validate()?;
+        validate_nonnegative_scalar(drag)?;
+        validate_nonnegative_scalar(lift)?;
+        validate_positive_scalar(max_speed)?;
+        let _guard = self.lock_shape_checked(shape_id)?;
+        unsafe {
+            ffi::b3Shape_ApplyWind(
+                shape_id.into_raw(),
+                wind.into_raw(),
+                drag,
+                lift,
+                max_speed,
+                wake,
+            )
+        };
+        Ok(())
+    }
+
     pub fn try_shape_sphere(&self, shape_id: ShapeId) -> Result<Sphere> {
         let _guard = self.lock_shape_checked(shape_id)?;
         Ok(Sphere::from_raw(unsafe {
@@ -224,6 +341,43 @@ impl World {
         Ok(Capsule::from_raw(unsafe {
             ffi::b3Shape_GetCapsule(shape_id.into_raw())
         }))
+    }
+
+    pub fn try_shape_hull(&self, shape_id: ShapeId) -> Result<ShapeHull<'_>> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        if ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) })
+            != Some(ShapeType::Hull)
+        {
+            return Err(Error::InvalidArgument);
+        }
+        let raw = unsafe { ffi::b3Shape_GetHull(shape_id.into_raw()) };
+        unsafe { raw.as_ref() }
+            .map(ShapeHull::from_raw)
+            .ok_or(Error::InvalidArgument)
+    }
+
+    pub fn try_shape_mesh(&self, shape_id: ShapeId) -> Result<ShapeMesh<'_>> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        if ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) })
+            != Some(ShapeType::Mesh)
+        {
+            return Err(Error::InvalidArgument);
+        }
+        ShapeMesh::from_raw(unsafe { ffi::b3Shape_GetMesh(shape_id.into_raw()) })
+            .ok_or(Error::InvalidArgument)
+    }
+
+    pub fn try_shape_height_field(&self, shape_id: ShapeId) -> Result<ShapeHeightField<'_>> {
+        let _guard = self.lock_shape_checked(shape_id)?;
+        if ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) })
+            != Some(ShapeType::HeightField)
+        {
+            return Err(Error::InvalidArgument);
+        }
+        let raw = unsafe { ffi::b3Shape_GetHeightField(shape_id.into_raw()) };
+        unsafe { raw.as_ref() }
+            .map(ShapeHeightField::from_raw)
+            .ok_or(Error::InvalidArgument)
     }
 
     pub fn try_set_shape_sphere(&mut self, shape_id: ShapeId, sphere: &Sphere) -> Result<()> {
