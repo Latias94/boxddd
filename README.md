@@ -22,6 +22,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 ## Status
 
 `boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today.
+The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](docs/api-coverage.md).
 
 | Surface | Status |
 |---|---|

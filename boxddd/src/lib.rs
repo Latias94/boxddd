@@ -1,9 +1,12 @@
 #![allow(rustdoc::broken_intra_doc_links)]
 //! Safe, ergonomic Rust bindings for Box3D.
 //!
-//! This first slice intentionally mirrors the proven shape of `boxdd`: raw Box3D ids are wrapped
-//! in crate-owned types, temporary C definitions are exposed through builders, and raw interop is
-//! explicit through `from_raw` / `into_raw`.
+//! The crate wraps the primary Box3D simulation APIs with Rust-owned value types, builders,
+//! recoverable `try_*` methods, and callback panic containment.
+//! Low-level process-global hooks and raw `void*` user data stay outside the ordinary safe API
+//! until they have an explicit raw interop policy.
+//!
+//! See the repository's `docs/api-coverage.md` for the tested upstream API coverage inventory.
 
 pub mod body;
 pub mod callbacks;
