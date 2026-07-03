@@ -141,6 +141,9 @@ Start here:
 |---|---|---|
 | Core hello world | `cargo run -p boxddd --example hello_world` | World creation, ground, dynamic body, stepping |
 | Error handling | `cargo run -p boxddd --example error_handling` | Recoverable `try_*` APIs |
+| Shape queries | `cargo run -p boxddd --example shape_queries` | World, body, and shape-scoped query APIs |
+| Advanced collision | `cargo run -p boxddd --example advanced_collision` | Standalone distance, shape-cast, manifold, and plane helpers |
+| Dynamic tree | `cargo run -p boxddd --example dynamic_tree` | Standalone broad-phase tree lifecycle, filters, and visitor callbacks |
 | Joints | `cargo run -p boxddd --example joints` | Joint creation and runtime reads |
 | Recording | `cargo run -p boxddd --example recording_replay` | Recording and replay validation |
 | Native debug viewer | `cargo run -p boxddd --example egui_debug_draw --features egui-example` | Consuming debug draw data in an app-owned renderer |
@@ -188,6 +191,7 @@ Core feature flags:
 For async apps, use `spawn_blocking`, channels, and snapshots. See `physics_thread.rs` and `tokio_async_bridge.rs`.
 
 The terse APIs panic on programming misuse such as invalid stale ids. Use `try_*` APIs at engine, editor, scripting, and tooling boundaries where invalid input should become `boxddd::Error`.
+Unsafe native interop such as raw `void*` user data and process-global scalar tuning lives under `boxddd::raw`, outside the prelude.
 
 ## Development
 

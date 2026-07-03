@@ -10,7 +10,14 @@ need an engine/render-loop shape.
 
 - `hello_world.rs`: minimal world, static ground hull, dynamic box hull, stepping, and body position reads.
 - `error_handling.rs`: `anyhow::Context` at app boundaries plus recoverable `try_*` errors for invalid user/tooling input.
+- `shape_queries.rs`: world, body, and shape-scoped query APIs for editor tools, picking, and gameplay probes.
 - `wasm_smoke.rs`: minimal no-rendering smoke used by native and WASI runtime checks.
+
+## Queries, Collision, And Broad Phase
+
+- `shape_queries.rs`: creates a body with multiple shapes, then runs world, body, and shape-scoped query APIs.
+- `advanced_collision.rs`: uses standalone distance, shape-cast, local manifold, and plane solver helpers without creating a `World`.
+- `dynamic_tree.rs`: owns a standalone broad-phase tree, creates proxies with category bits, runs overlap/closest/ray visitors, and moves proxies.
 
 ## Joints
 
@@ -77,6 +84,9 @@ need an engine/render-loop shape.
 ```bash
 cargo check -p boxddd --examples
 cargo run -p boxddd --example hello_world
+cargo run -p boxddd --example shape_queries
+cargo run -p boxddd --example advanced_collision
+cargo run -p boxddd --example dynamic_tree
 cargo run -p boxddd --example wasm_smoke
 cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay
