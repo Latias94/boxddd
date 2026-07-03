@@ -31,7 +31,8 @@ Box3D C provider module:
 BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unknown
 ```
 
-The headless provider smoke verifies the same shape used by browser apps:
+The headless provider smoke verifies the same shared-memory import shape used by
+browser apps:
 
 ```bash
 rustup target add wasm32-unknown-unknown
@@ -49,7 +50,8 @@ boxddd provider smoke passed
 
 `provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
 imports it expects from `box3d-sys-v0`. `provider-smoke` additionally builds the
-Emscripten provider and runs Node with a shared `WebAssembly.Memory`.
+Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
+does not cover APIs that pass Rust callbacks into the C provider yet.
 
 A visual Bevy Web or renderer-specific example is still deferred until this
 runtime layer is packaged for browser use.

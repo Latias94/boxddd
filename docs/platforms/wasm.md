@@ -46,7 +46,8 @@ extern functions import from the stable module name `box3d-sys-v0`.
 ## Browser-Style Provider Smoke
 
 The provider smoke is intentionally headless. It proves the import-provider
-architecture before adding Bevy Web, canvas setup, renderer state, or input.
+architecture before adding Bevy Web, canvas setup, renderer state, input, or
+cross-module callback APIs.
 
 Prerequisites:
 
@@ -73,7 +74,10 @@ cargo run -p xtask -- provider-smoke
 `b3*` imports from the Rust wasm, builds `target/boxddd-provider-smoke/box3d-sys-v0.mjs`
 with Emscripten, and runs `target/boxddd-provider-smoke/run-provider-smoke.mjs`
 under Node. The runner instantiates both modules with the same
-`WebAssembly.Memory` and calls `boxddd_provider_smoke`.
+`WebAssembly.Memory` and calls `boxddd_provider_smoke`. The smoke intentionally
+uses APIs that do not pass Rust function pointers into the C provider; query,
+contact, debug draw, and task callbacks need a separate shared-table or
+dynamic-linking design before they are claimed for browser provider mode.
 
 Expected output:
 
@@ -136,6 +140,7 @@ CI separates WASM support into visible jobs:
 
 The browser route follows the same shape as `dear-imgui-rs`: a Rust app WASM
 module imports C symbols from a provider module, and both modules share the same
-`WebAssembly.Memory`. The current provider smoke proves this runtime contract
-without a UI. A future browser plan should add packaged browser artifacts,
-visual examples, and then Bevy Web or other renderer integrations.
+`WebAssembly.Memory`. The current provider smoke proves the memory/import part
+of this runtime contract without a UI. A future browser plan should add
+cross-module callback support, packaged browser artifacts, visual examples, and
+then Bevy Web or other renderer integrations.
