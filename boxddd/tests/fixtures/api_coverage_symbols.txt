@@ -491,8 +491,8 @@ b3GetCompoundSphere|safe|geometry_resources|collision.h|covered by current safe 
 b3GetCompoundMaterials|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyCompound|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3ConvertCompoundToBytes|deferred|geometry_resources|collision.h|U5 will consume Box3D-owned Compound into a CompoundBytes owner
-b3ConvertBytesToCompound|deferred|geometry_resources|collision.h|U5 will restore Compound only from a CompoundBytes owner created by boxddd
+b3ConvertCompoundToBytes|safe|geometry_resources|collision.h|Compound::into_bytes consumes Box3D-owned Compound into a CompoundBytes owner
+b3ConvertBytesToCompound|safe|geometry_resources|collision.h|CompoundBytes::into_compound restores only bytes created by Compound::into_bytes
 b3ComputeSphereMass|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ComputeCapsuleMass|safe|collision|collision.h|covered by current safe wrapper implementation
 b3ComputeHullMass|safe|collision|collision.h|covered by current safe wrapper implementation

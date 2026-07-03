@@ -85,7 +85,7 @@ pub use recording::{
     validate_replay_bytes,
 };
 pub use shapes::{
-    BoxHull, Capsule, Compound, CompoundBuilder, CompoundCapsule, CompoundChild,
+    BoxHull, Capsule, Compound, CompoundBuilder, CompoundBytes, CompoundCapsule, CompoundChild,
     CompoundChildShape, CompoundHull, CompoundMesh, CompoundQueryHit, CompoundSphere,
     HEIGHT_FIELD_HOLE, HeightField, HeightFieldBuilder, Hull, MAX_COMPOUND_MESH_MATERIALS,
     MeshData, MeshDataBuilder, MeshDataOptions, MeshTriangleHit, ScaledBox, ShapeDef,

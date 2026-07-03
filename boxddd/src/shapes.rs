@@ -4,9 +4,11 @@ use crate::types::{Aabb, Filter, Transform, Vec3};
 use boxddd_sys::ffi;
 use std::ffi::c_void;
 use std::marker::PhantomData;
+use std::mem::{ManuallyDrop, forget};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr::NonNull;
 use std::rc::Rc;
+use std::slice;
 
 pub const HEIGHT_FIELD_HOLE: u8 = ffi::B3_HEIGHT_FIELD_HOLE as u8;
 pub const MAX_COMPOUND_MESH_MATERIALS: usize = ffi::B3_MAX_COMPOUND_MESH_MATERIALS as usize;
@@ -1589,6 +1591,13 @@ pub struct Compound {
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
+#[derive(Debug)]
+pub struct CompoundBytes {
+    raw: NonNull<u8>,
+    byte_count: i32,
+    _not_send_sync: PhantomData<Rc<()>>,
+}
+
 impl Compound {
     #[inline]
     pub fn builder<'a>() -> CompoundBuilder<'a> {
@@ -1745,6 +1754,17 @@ impl Compound {
         }
     }
 
+    pub fn into_bytes(self) -> CompoundBytes {
+        let compound = ManuallyDrop::new(self);
+        let byte_count = compound.byte_count();
+        let raw = unsafe { ffi::b3ConvertCompoundToBytes(compound.raw.as_ptr()) };
+        CompoundBytes {
+            raw: NonNull::new(raw).expect("valid Compound converted to null bytes"),
+            byte_count,
+            _not_send_sync: PhantomData,
+        }
+    }
+
     #[inline]
     pub(crate) fn as_ptr(&self) -> *const ffi::b3CompoundData {
         self.raw.as_ptr()
@@ -1763,6 +1783,31 @@ impl Compound {
 impl Drop for Compound {
     fn drop(&mut self) {
         unsafe { ffi::b3DestroyCompound(self.raw.as_ptr()) };
+    }
+}
+
+impl CompoundBytes {
+    #[inline]
+    pub const fn byte_count(&self) -> i32 {
+        self.byte_count
+    }
+
+    #[inline]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(self.raw.as_ptr(), self.byte_count as usize) }
+    }
+
+    pub fn into_compound(self) -> Result<Compound> {
+        let raw = unsafe { ffi::b3ConvertBytesToCompound(self.raw.as_ptr(), self.byte_count) };
+        let compound = Compound::from_ptr(raw)?;
+        forget(self);
+        Ok(compound)
+    }
+}
+
+impl Drop for CompoundBytes {
+    fn drop(&mut self) {
+        unsafe { ffi::b3DestroyCompound(self.raw.as_ptr().cast()) };
     }
 }
 

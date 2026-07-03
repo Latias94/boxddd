@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 528 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring, query, and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 530 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring, query, byte ownership transfer, and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 36 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers, low-level debug graph color helper |
 | `omitted` | 4 | global world-count diagnostics and redundant shape/joint world-handle getters that do not fit the safe ownership model |
-| `deferred` | 10 | compound byte-conversion design and selected math helpers and validators |
+| `deferred` | 8 | selected math helpers and validators |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -32,13 +32,13 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 - Callback APIs must follow the existing callback guard pattern: do not unwind through C, return `Error::CallbackPanicked` where panic containment is possible, and return `Error::UnsupportedOnWasm` for provider-mode WASM callback paths that are not sound yet.
 - Process-global hooks are not ordinary safe convenience APIs. Allocator, assert, log, timer, and file IO functions stay in `boxddd_sys::ffi`; length-unit and stall-threshold tuning is exposed only through `boxddd::raw` with validation and process-global docs.
 - Raw `void*` user data is not a typed Rust ownership mechanism. Storage and retrieval live behind `boxddd::raw` `unsafe fn try_*_raw_user_data` functions; event snapshots may expose `raw_user_data` pointer values but never typed references.
+- `CompoundBytes` is an owner for Box3D-created compound allocations only. Its byte slice is for inspection or caller-side copying, not a stable safe deserialization format, and there is no safe `from_slice` or `from_vec` path for arbitrary bytes.
 - `World`, native resources, dynamic trees, recording, and replay player types remain single-owner and are not made `Send` or `Sync`.
 
 ## High-Priority Deferred Areas
 
 These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
 
-- Complex geometry edge cases: compound byte conversion still needs dedicated ownership design.
 - Deterministic math tail: scalar/quaternion/matrix helpers plus matrix and AABB validators need safe wrappers with input validation.
 
 ## How To Update Coverage

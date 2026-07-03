@@ -309,6 +309,23 @@ fn shape_creation_covers_value_and_native_resources() {
         Error::InvalidArgument
     );
 
+    let compound_byte_count = compound.byte_count();
+    let compound_bytes = compound.into_bytes();
+    assert_eq!(compound_bytes.byte_count(), compound_byte_count);
+    assert_eq!(
+        compound_bytes.as_slice().len(),
+        compound_byte_count as usize
+    );
+    assert!(!compound_bytes.as_slice().is_empty());
+    let compound = compound_bytes.into_compound().unwrap();
+    assert_eq!(compound.child_count(), 4);
+    assert_eq!(compound.material(0).unwrap().user_material_id, 11);
+    drop(
+        Compound::single_sphere(Sphere::new(Vec3::ZERO, 0.25), SurfaceMaterial::default())
+            .unwrap()
+            .into_bytes(),
+    );
+
     let compound_shape = world
         .try_create_compound_shape(static_body, &def, compound)
         .unwrap();
