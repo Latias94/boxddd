@@ -307,10 +307,13 @@ jobs:
           cache-bin: "false"
 
       - name: Install LLVM for bindgen
-        uses: KyleMayes/install-llvm-action@v2
-        with:
-          cached: true
-          version: "14.0"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang \
+            libclang-dev \
+            llvm-dev
+          echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> "$GITHUB_ENV"
 
       - name: Package crates
         run: |
