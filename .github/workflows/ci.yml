@@ -69,6 +69,9 @@ jobs:
       - run: cargo check -p boxddd --examples
       - run: cargo check -p bevy_boxddd --no-default-features
       - run: cargo check -p bevy_boxddd --examples
+      - run: cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+      - run: cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
+      - run: cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 
   docs-and-features:
     name: docs and feature matrix
@@ -76,6 +79,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
@@ -94,6 +99,9 @@ jobs:
       - run: cargo check -p boxddd --features nalgebra
       - run: cargo check -p boxddd --features cgmath
       - run: cargo check -p boxddd --all-features --tests --examples
+      - run: cargo check -p boxddd-sys --target wasm32-unknown-unknown
+      - run: cargo check -p boxddd --target wasm32-unknown-unknown
+      - run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
       - run: cargo test -p boxddd --features serde --test serde_values
       - run: cargo test -p boxddd --features mint --test interop
       - run: cargo test -p boxddd --features glam --test interop

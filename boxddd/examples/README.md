@@ -25,7 +25,16 @@ need an engine/render-loop shape.
   cargo run -p boxddd --example tokio_async_bridge --features tokio-example
   ```
 
-- Bevy integration now lives in the sibling `bevy_boxddd` crate. Use its windowed examples when you want a real Bevy app with camera, light, meshes, messages, and gizmos.
+- Bevy integration now lives in the sibling `bevy_boxddd` crate. Use its windowed examples when you want a real Bevy app with camera, light, meshes, messages, joints, queries, debug draw, and gizmos.
+
+  ```bash
+  cargo run -p bevy_boxddd --example falling_stack_3d
+  cargo run -p bevy_boxddd --example advanced_colliders_3d
+  cargo run -p bevy_boxddd --example joint_gallery_3d
+  cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+  cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d
+  cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
+  ```
 
 ## Visual Debugging
 
@@ -63,6 +72,9 @@ cargo run -p boxddd --example mint_interop --features mint
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example
 cargo check -p boxddd --example egui_debug_draw --features egui-example
 cargo check -p bevy_boxddd --examples
+cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
+cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
 
 ## Porting Targets From Official Box3D Samples

@@ -1,6 +1,6 @@
 # bevy_boxddd
 
-`bevy_boxddd` integrates [`boxddd`](https://github.com/Latias94/boxddd) with Bevy 0.19. It is a separate crate so non-Bevy users can keep using the engine-agnostic `boxddd` bindings without Bevy dependencies.
+`bevy_boxddd` integrates [`boxddd`](https://github.com/Latias94/boxddd) with Bevy 0.19. It keeps the core `boxddd` crate engine-agnostic while providing ECS authoring, fixed-step systems, messages, queries, debug drawing, and teaching examples for Bevy users.
 
 ## Quick Facts
 
@@ -10,8 +10,10 @@
 | Rust version | `1.95.0` or newer |
 | Physics owner | `NonSend<BoxdddPhysicsContext>` |
 | Schedule | `FixedUpdate` |
-| Rendering | Examples only; the library has no renderer dependency |
-| Async/threading | Keep `boxddd::World` on the Bevy main thread; move snapshots across threads |
+| Default rendering deps | None |
+| Debug rendering | Optional `debug-gizmos` feature |
+| Picking example | Optional `physics-picking` feature |
+| Threading | Keep `boxddd::World` on the Bevy main thread; move snapshots across threads |
 
 ## Quickstart
 
@@ -28,53 +30,87 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn((
-        RigidBody::Static,
-        Collider::cuboid(8.0, 0.25, 8.0),
-        Transform::from_xyz(0.0, -0.25, 0.0),
-    ));
+    let body = commands
+        .spawn((
+            RigidBody::Dynamic,
+            Transform::from_xyz(0.0, 4.0, 0.0),
+        ))
+        .id();
 
-    commands.spawn((
-        RigidBody::Dynamic,
-        Collider::cube(0.5),
-        Transform::from_xyz(0.0, 4.0, 0.0),
-    ));
+    commands.spawn((Collider::sphere(0.35), ChildOf(body)));
+    commands.spawn((Collider::cube(0.4), ChildOf(body)));
 }
 ```
+
+Child collider entities are plugin-owned shapes attached to the nearest parent entity with `BoxdddBody`. A body entity can also carry its own `Collider`.
+
+## Components
+
+- `RigidBody`: `Static`, `Kinematic`, or `Dynamic`.
+- `Collider`: basic `cuboid`, `cube`, `sphere`, and `capsule_y` descriptors plus advanced mesh, height-field, compound, created-hull, and transformed-hull descriptors.
+- `PhysicsMaterial`: density, friction, restitution, sensor/contact flags, and Box3D filter data.
+- `JointTarget` + `Joint`: declarative joint authoring between two Bevy body entities.
+- `TransformSyncMode`: dynamic bodies default to physics-authored transforms; static and kinematic bodies default to Bevy-authored transforms.
+- `LinearVelocity`, `AngularVelocity`, `ExternalForce`, `ExternalImpulse`: control inputs applied before stepping.
+- `BoxdddBody`, `BoxdddShape`, `BoxdddJoint`: native id components inserted by the plugin after successful creation.
+
+Advanced collider descriptors that create Box3D native resource shapes are static-body only. Attaching them to dynamic bodies emits `BoxdddErrorMessage { operation: CreateShape, error: InvalidArgument, .. }`.
+
+## Queries And Picking
+
+Default library helpers are renderer-free:
+
+```rust
+let context = world.get_non_send::<BoxdddPhysicsContext>().unwrap();
+let hit = cast_ray_closest(
+    context,
+    Vec3::new(-2.0, 0.0, 0.0),
+    Vec3::new(5.0, 0.0, 0.0),
+    boxddd::QueryFilter::default(),
+)?;
+```
+
+Hits include both the Box3D `ShapeId` and the mapped Bevy entity when the shape is plugin-owned.
+
+## Debug Draw
+
+The plugin always exposes `BoxdddDebugDrawSettings` and `BoxdddDebugDrawCommands`. By default collection is disabled. Enable collection without rendering dependencies:
+
+```rust
+commands.insert_resource(BoxdddDebugDrawSettings {
+    enabled: true,
+    options: boxddd::DebugDrawOptions::default(),
+});
+```
+
+Enable `debug-gizmos` to render collected commands through Bevy `Gizmos`:
+
+```bash
+cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+```
+
+## Messages And Errors
+
+The plugin registers Bevy messages for errors, body moves, contact begin/end/hit, and sensor begin/end. Recoverable errors follow `BoxdddPhysicsSettings.error_policy`: message only, message plus log, or panic.
 
 ## Examples
 
 | Example | Run command | Purpose |
 |---|---|---|
-| `falling_stack_3d` | `cargo run -p bevy_boxddd --example falling_stack_3d` | Windowed 3D scene with ground, cubes, spheres, camera, light, and plugin-driven transforms. |
-| `contact_messages_3d` | `cargo run -p bevy_boxddd --example contact_messages_3d` | Reads `BoxdddContactBeginMessage` / `BoxdddContactEndMessage` and updates Bevy materials from plugin messages. |
-| `debug_gizmos_3d` | `cargo run -p bevy_boxddd --example debug_gizmos_3d` | Draws collider outlines with Bevy `Gizmos` without putting debug rendering into the plugin core. |
+| `falling_stack_3d` | `cargo run -p bevy_boxddd --example falling_stack_3d` | Basic windowed stack with plugin-driven transforms. |
+| `contact_messages_3d` | `cargo run -p bevy_boxddd --example contact_messages_3d` | Reads contact messages and updates Bevy materials. |
+| `debug_gizmos_3d` | `cargo run -p bevy_boxddd --example debug_gizmos_3d` | App-authored collider gizmos without Box3D debug draw collection. |
+| `advanced_colliders_3d` | `cargo run -p bevy_boxddd --example advanced_colliders_3d` | Static mesh, height-field, compound, and hull-backed collider descriptors. |
+| `joint_gallery_3d` | `cargo run -p bevy_boxddd --example joint_gallery_3d` | Visible connected bodies using declarative joints. |
+| `debug_draw_overlay_3d` | `cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d` | Box3D debug draw commands rendered through Bevy `Gizmos`. |
+| `physics_picking_3d` | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera/cursor ray mapped through Box3D queries, not mesh picking. |
+| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable teaching scenes for stacks, advanced colliders, joints, contacts, picking, and debug draw. |
 
-## Components
+## Platform And Concurrency Boundaries
 
-Spawn an entity with:
+Native desktop targets are the supported runtime target for the Bevy plugin. `wasm32-unknown-unknown` is compile-only for the minimal library surface; windowed examples are native-only in this release.
 
-- `RigidBody`: `Static`, `Kinematic`, or `Dynamic`.
-- `Collider`: `cuboid`, `cube`, `sphere`, or `capsule_y`.
-- `PhysicsMaterial`: density, friction, restitution, sensor/contact flags, and Box3D filter data.
-- `TransformSyncMode`: default dynamic bodies are physics-authored; static and kinematic bodies are Bevy-authored.
-- `LinearVelocity`, `AngularVelocity`, `ExternalForce`, `ExternalImpulse`: control inputs applied before stepping.
-
-The plugin inserts `BoxdddBody` and `BoxdddShape` after native resource creation. The first slice supports one collider component per entity.
-
-## Messages And Errors
-
-The plugin registers Bevy messages for:
-
-- `BoxdddErrorMessage`
-- `BoxdddBodyMoveMessage`
-- `BoxdddContactBeginMessage`
-- `BoxdddContactEndMessage`
-- `BoxdddContactHitMessage`
-- `BoxdddSensorBeginMessage`
-- `BoxdddSensorEndMessage`
-
-Recoverable errors follow `BoxdddPhysicsSettings.error_policy`: message only, message plus log, or panic for debugging.
+`boxddd::World` is intentionally non-send and lives in `BoxdddPhysicsContext`. Do not move it into Bevy worker systems. The core crate has `TaskSystem::blocking_threads()` for Box3D's native task callbacks, but Bevy task-pool integration is deferred until that contract has more usage.
 
 ## Development Checks
 
@@ -82,4 +118,7 @@ Recoverable errors follow `BoxdddPhysicsSettings.error_policy`: message only, me
 cargo check -p bevy_boxddd --no-default-features
 cargo nextest run -p bevy_boxddd
 cargo check -p bevy_boxddd --examples
+cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
+cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```

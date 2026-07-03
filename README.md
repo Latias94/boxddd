@@ -14,6 +14,15 @@
 | `boxddd` | Engine-agnostic safe Rust layer over worlds, bodies, shapes, joints, queries, events, debug draw, recording, and common value types. |
 | `bevy_boxddd` | First-party Bevy 0.19 plugin crate with components, fixed-step systems, messages, and visible 3D examples. |
 
+## Target Support
+
+| Target | Tier | Notes |
+|---|---|---|
+| Native Windows/Linux/macOS | supported | Primary development target. Vendored Box3D C sources are compiled by `boxddd-sys`. |
+| `wasm32-unknown-unknown` | compile-only | The Rust crates type-check for a narrow subset, but `boxddd-sys` currently skips Box3D C compilation for wasm32. |
+
+See [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the exact WASM matrix.
+
 ## Status
 
 Experimental `0.1.0` release candidate. The safe layer currently covers:
@@ -109,6 +118,11 @@ cargo run -p boxddd --example egui_debug_draw --features egui-example
 cargo run -p bevy_boxddd --example falling_stack_3d
 cargo run -p bevy_boxddd --example contact_messages_3d
 cargo run -p bevy_boxddd --example debug_gizmos_3d
+cargo run -p bevy_boxddd --example advanced_colliders_3d
+cargo run -p bevy_boxddd --example joint_gallery_3d
+cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d
+cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d
+cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
 
 ## Features
@@ -123,6 +137,11 @@ cargo run -p bevy_boxddd --example debug_gizmos_3d
 - `tokio-example`: enables the Tokio async bridge example.
 - `egui-example`: enables the native egui/wgpu visual debug example.
 
+`bevy_boxddd` feature flags:
+
+- `debug-gizmos`: enables the Bevy `Gizmos` bridge for collected Box3D debug draw commands.
+- `physics-picking`: marks the native camera/cursor physics picking example. Core query helpers remain available without this feature.
+
 ## Build
 
 Default builds use vendored Box3D C sources and pregenerated bindings, so normal builds do not require LLVM or libclang.
@@ -131,6 +150,7 @@ Default builds use vendored Box3D C sources and pregenerated bindings, so normal
 cargo build --workspace
 cargo nextest run --workspace
 cargo check -p bevy_boxddd --examples
+cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
