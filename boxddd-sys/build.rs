@@ -124,6 +124,15 @@ fn main() {
     }
     if config.wasm_mode == Some(WasmMode::Provider) {
         println!("cargo:rustc-cfg=boxddd_sys_wasm_provider");
+        if config.force_bindgen {
+            panic!(
+                "BOXDDD_SYS_WASM_MODE=provider cannot be combined with BOXDDD_SYS_FORCE_BINDGEN=1 yet"
+            );
+        }
+        if !has_pregenerated {
+            panic!("BOXDDD_SYS_WASM_MODE=provider requires checked-in pregenerated bindings");
+        }
+        generate_wasm_provider_bindings(&pregenerated, &config.out_dir);
     }
 
     if config.force_bindgen || (!has_pregenerated && !config.is_docsrs) {
@@ -210,6 +219,28 @@ fn emit_external_link_directives() {
     if !lib.is_empty() {
         println!("cargo:rustc-link-lib={lib}");
     }
+}
+
+fn generate_wasm_provider_bindings(pregenerated: &Path, out_dir: &Path) {
+    const IMPORT_MODULE: &str = "box3d-sys-v0";
+    let source = fs::read_to_string(pregenerated).unwrap_or_else(|err| {
+        panic!(
+            "failed to read pregenerated bindings at {}: {err}",
+            pregenerated.display()
+        )
+    });
+    let rewritten = source.replace(
+        "unsafe extern \"C\" {",
+        &format!("#[link(wasm_import_module = \"{IMPORT_MODULE}\")]\nunsafe extern \"C\" {{"),
+    );
+    if rewritten == source {
+        panic!(
+            "failed to generate WASM provider bindings from {}; no extern blocks were found",
+            pregenerated.display()
+        );
+    }
+    fs::write(out_dir.join("wasm_provider_bindings.rs"), rewritten)
+        .expect("failed to write WASM provider bindings");
 }
 
 #[cfg(feature = "bindgen")]

@@ -515,6 +515,11 @@ jobs:
       - name: Check boxddd wasm compile-only path
         run: cargo check -p boxddd --target wasm32-unknown-unknown
 
+      - name: Check boxddd wasm provider import path
+        run: cargo check -p boxddd --target wasm32-unknown-unknown
+        env:
+          BOXDDD_SYS_WASM_MODE: provider
+
       - name: Check minimal bevy_boxddd wasm compile-only path
         run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
 

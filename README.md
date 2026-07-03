@@ -26,7 +26,8 @@
 | `aarch64-apple-ios` | compile-only | Rust wrapper and pregenerated bindings are type-checked. Native C linking is skipped. |
 | `aarch64-apple-ios-sim` | compile-only | Simulator compile sentinel. Native C linking is skipped. |
 | `aarch64-linux-android` | compile-only | Android compile sentinel. Native C linking is skipped. |
-| `wasm32-unknown-unknown` | compile-only | The Rust crates type-check for a narrow subset, but `boxddd-sys` currently skips Box3D C compilation for wasm32. |
+| `wasm32-unknown-unknown` | compile-only + provider check | Browser-oriented target. Default checks skip Box3D C; `BOXDDD_SYS_WASM_MODE=provider` checks import bindings for module `box3d-sys-v0`. |
+| `wasm32-wasip1` | runtime smoke | CI builds vendored Box3D C with WASI SDK and runs `boxddd/examples/wasm_smoke.rs` under wasmtime. |
 
 See [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the exact WASM matrix.
 
@@ -44,6 +45,7 @@ The GitHub Actions workflow is intentionally shaped like a native binding crate 
 - forced bindgen refresh checks for single and double precision
 - default `boxddd-sys` dependency checks proving `bindgen` and `clang-sys` are not required for normal users
 - Windows GNU, armv7, mobile, and WASM compile/link sentinels
+- C-backed `wasm32-wasip1` runtime smoke with WASI SDK and wasmtime
 
 ## Status
 
@@ -134,6 +136,7 @@ cargo run -p boxddd --example recording_replay
 cargo run -p boxddd --example determinism
 cargo run -p boxddd --example error_handling
 cargo run -p boxddd --example task_system
+cargo run -p boxddd --example wasm_smoke
 cargo run -p boxddd --example physics_thread
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example
 cargo run -p boxddd --example egui_debug_draw --features egui-example
@@ -194,7 +197,19 @@ rustup target add armv7-unknown-linux-gnueabihf wasm32-unknown-unknown aarch64-l
 BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target armv7-unknown-linux-gnueabihf
 BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target aarch64-linux-android
 cargo check -p boxddd --target wasm32-unknown-unknown
+BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unknown
 cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
+```
+
+C-backed WASI runtime smoke:
+
+```bash
+rustup target add wasm32-wasip1
+export WASI_SDK_PATH=/path/to/wasi-sdk-33.0-x86_64-linux
+export WASI_SYSROOT="$WASI_SDK_PATH/share/wasi-sysroot"
+export CC_wasm32_wasip1="$WASI_SDK_PATH/bin/clang"
+cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
+wasmtime target/wasm32-wasip1/debug/examples/wasm_smoke.wasm
 ```
 
 On macOS, CI also runs:
@@ -209,7 +224,7 @@ BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys -p boxddd --target aarch64-apple-
 
 `World`, native resources, and replay players are intentionally `!Send`/`!Sync`. Keep physics ownership on one thread or one Bevy non-send resource.
 
-Box3D can use its internal scheduler when only `worker_count` is configured. When you need Rust-owned task callbacks, configure them at world creation:
+Box3D can use its internal scheduler when only `worker_count` is configured on native targets. On WASM, `boxddd` keeps the supported contract single-threaded: `TaskSystem::blocking_threads()` is native-only and checked worker-count APIs reject unsupported values above one. When you need Rust-owned task callbacks on native targets, configure them at world creation:
 
 ```rust
 let task_system = TaskSystem::blocking_threads();

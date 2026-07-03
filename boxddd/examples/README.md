@@ -10,6 +10,7 @@ need an engine/render-loop shape.
 
 - `hello_world.rs`: minimal world, static ground hull, dynamic box hull, stepping, and body position reads.
 - `error_handling.rs`: `anyhow::Context` at app boundaries plus recoverable `try_*` errors for invalid user/tooling input.
+- `wasm_smoke.rs`: minimal no-rendering smoke used by native and WASI runtime checks.
 
 ## Joints
 
@@ -44,6 +45,20 @@ need an engine/render-loop shape.
   cargo run -p boxddd --example egui_debug_draw --features egui-example
   ```
 
+## WASM Runtime Smoke
+
+- `wasm_smoke.rs`: creates a single-thread world, steps a falling dynamic box, runs an AABB query, and exits successfully. It is intentionally renderer-free so the same physics smoke can run under `wasm32-wasip1`.
+
+  ```bash
+  cargo run -p boxddd --example wasm_smoke
+  rustup target add wasm32-wasip1
+  export WASI_SDK_PATH=/path/to/wasi-sdk-33.0-x86_64-linux
+  export WASI_SYSROOT="$WASI_SDK_PATH/share/wasi-sysroot"
+  export CC_wasm32_wasip1="$WASI_SDK_PATH/bin/clang"
+  cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
+  wasmtime target/wasm32-wasip1/debug/examples/wasm_smoke.wasm
+  ```
+
 ## Recording And Replay
 
 - `recording_replay.rs`: records a short simulation, creates a replay player, steps it to the end, and reports divergence status.
@@ -62,6 +77,7 @@ need an engine/render-loop shape.
 ```bash
 cargo check -p boxddd --examples
 cargo run -p boxddd --example hello_world
+cargo run -p boxddd --example wasm_smoke
 cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay
 cargo run -p boxddd --example determinism

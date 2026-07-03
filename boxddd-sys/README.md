@@ -14,6 +14,9 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 - Bindings: uses checked-in pregenerated bindings so normal builds do not require LLVM or libclang.
 - Refresh: enable the `bindgen` feature and set `BOXDDD_SYS_FORCE_BINDGEN=1`.
 - Docs.rs/offline docs: uses pregenerated bindings and skips native C compilation.
+- WASM compile-only: `wasm32-unknown-unknown` skips C compilation by default.
+- WASM runtime smoke: `wasm32-wasip1` builds vendored C sources when `WASI_SYSROOT` or `WASI_SDK_PATH` points at WASI SDK.
+- WASM provider scaffold: `BOXDDD_SYS_WASM_MODE=provider` generates import bindings for module `box3d-sys-v0`.
 
 ## Features
 
@@ -27,9 +30,37 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 
 - `BOXDDD_SYS_FORCE_BINDGEN=1`: regenerate bindings into Cargo's `OUT_DIR`; requires `--features bindgen`.
 - `BOXDDD_SYS_SKIP_CC=1`: skip native C compilation for check-only workflows.
+- `BOXDDD_SYS_WASM_MODE`: override wasm mode. Accepted values are `compile-only`, `source`, and `provider`.
 - `BOXDDD_SYS_LINK_LIB`: external library name used when `build-from-source` is disabled. Defaults to `box3d`.
 - `BOXDDD_SYS_LINK_SEARCH`: optional native library search directory used when `build-from-source` is disabled.
+- `WASI_SYSROOT`: WASI libc sysroot used by `wasm32-wasip1` source builds.
+- `WASI_SDK_PATH`: WASI SDK root. If `WASI_SYSROOT` is unset, `build.rs` uses `$WASI_SDK_PATH/share/wasi-sysroot`.
 - `DOCS_RS=1` or `--cfg docsrs`: skip native C compilation for documentation.
+
+## WASM Commands
+
+Compile-only browser target:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo check -p boxddd-sys --target wasm32-unknown-unknown
+```
+
+Provider import-mode check:
+
+```bash
+BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd-sys --target wasm32-unknown-unknown
+```
+
+C-backed WASI source build:
+
+```bash
+rustup target add wasm32-wasip1
+export WASI_SDK_PATH=/path/to/wasi-sdk-33.0-x86_64-linux
+export WASI_SYSROOT="$WASI_SDK_PATH/share/wasi-sysroot"
+export CC_wasm32_wasip1="$WASI_SDK_PATH/bin/clang"
+cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
+```
 
 ## Notes
 
