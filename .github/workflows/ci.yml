@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-15]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -466,9 +466,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-15
             target: aarch64-apple-ios
-          - os: macos-latest
+          - os: macos-15
             target: aarch64-apple-ios-sim
           - os: ubuntu-latest
             target: aarch64-linux-android
