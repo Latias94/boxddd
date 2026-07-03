@@ -179,6 +179,8 @@ Core feature flags:
 - `mint`, `glam`, `nalgebra`, `cgmath`: enable conversions for common math crates.
 - `egui-example`, `tokio-example`: opt into heavier example-only dependencies.
 
+Math interop is feature-gated and covered by runnable examples: `mint_interop`, `glam_interop`, and `nalgebra_interop`.
+
 `bevy_boxddd` feature flags:
 
 - `debug-gizmos`: render collected Box3D debug draw commands through Bevy `Gizmos`.

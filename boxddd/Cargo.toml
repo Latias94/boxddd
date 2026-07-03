@@ -58,6 +58,16 @@ path = "examples/mint_interop.rs"
 required-features = ["mint"]
 
 [[example]]
+name = "glam_interop"
+path = "examples/glam_interop.rs"
+required-features = ["glam"]
+
+[[example]]
+name = "nalgebra_interop"
+path = "examples/nalgebra_interop.rs"
+required-features = ["nalgebra"]
+
+[[example]]
 name = "egui_debug_draw"
 path = "examples/egui_debug_draw.rs"
 required-features = ["egui-example"]

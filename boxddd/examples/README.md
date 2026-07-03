@@ -74,9 +74,13 @@ need an engine/render-loop shape.
 ## Interop
 
 - `mint_interop.rs`: uses `mint::Vector3`, `mint::Point3`, and `mint::Quaternion` conversions in a normal world setup.
+- `glam_interop.rs`: uses `glam::Vec3`, `glam::Quat`, and velocity snapshots in a normal world setup.
+- `nalgebra_interop.rs`: uses `nalgebra::Vector3`, `nalgebra::Point3`, `UnitQuaternion`, and `Isometry3` conversions in a normal world setup.
 
   ```bash
   cargo run -p boxddd --example mint_interop --features mint
+  cargo run -p boxddd --example glam_interop --features glam
+  cargo run -p boxddd --example nalgebra_interop --features nalgebra
   ```
 
 ## Suggested Verification Sweep
@@ -95,6 +99,8 @@ cargo run -p boxddd --example error_handling
 cargo run -p boxddd --example task_system
 cargo run -p boxddd --example physics_thread
 cargo run -p boxddd --example mint_interop --features mint
+cargo run -p boxddd --example glam_interop --features glam
+cargo run -p boxddd --example nalgebra_interop --features nalgebra
 cargo run -p boxddd --example tokio_async_bridge --features tokio-example
 cargo check -p boxddd --example egui_debug_draw --features egui-example
 cargo check -p bevy_boxddd --examples
