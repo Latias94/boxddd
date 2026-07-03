@@ -18,10 +18,10 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 | Status | Count | Typical areas |
 |---|---:|---|
-| `safe` | 525 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
+| `safe` | 526 | world lifecycle and stepping, body runtime, body/shape scoped queries, dynamic tree, mover collision, explosions, shape creation and runtime introspection, compound/mesh/height-field authoring, query, and readback, shape event/contact/sensor readback, contact data, hull cloning and box scaling, advanced standalone collision, joints, events, world queries, debug draw, recording/replay, core math/value validation |
 | `raw` | 36 | allocator/assert/log hooks, timers/sleep/hash, file IO, dump helpers, explicit `boxddd::raw` user data and process-global scalar tuning, file-backed dynamic tree or height-field helpers, low-level debug graph color helper |
 | `omitted` | 4 | global world-count diagnostics and redundant shape/joint world-handle getters that do not fit the safe ownership model |
-| `deferred` | 13 | compound callback/byte-conversion design, mesh and height-field query callbacks, selected math helpers and validators |
+| `deferred` | 12 | compound byte-conversion design, mesh and height-field query callbacks, selected math helpers and validators |
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
@@ -38,7 +38,7 @@ Counts are intentionally checked by tests instead of maintained only in prose. W
 
 These areas are intentionally visible in the fixture as `deferred` until their implementation units land:
 
-- Complex geometry edge cases: compound overlap callback queries and compound byte conversion still need dedicated callback/ownership design.
+- Complex geometry edge cases: compound byte conversion still needs dedicated ownership design.
 - Geometry query callbacks: mesh and height-field callback queries still need dedicated visitor/lifetime design.
 - Deterministic math tail: scalar/quaternion/matrix helpers plus matrix and AABB validators need safe wrappers with input validation.
 

@@ -1,7 +1,10 @@
+use crate::core::{box3d_lock, callback_state};
 use crate::error::{Error, Result};
 use crate::types::{Aabb, Filter, Transform, Vec3};
 use boxddd_sys::ffi;
+use std::ffi::c_void;
 use std::marker::PhantomData;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr::NonNull;
 use std::rc::Rc;
 
@@ -1493,6 +1496,54 @@ impl Compound {
         Ok(CompoundSphere::from_raw(raw))
     }
 
+    pub fn query_aabb(&self, aabb: Aabb) -> Result<Vec<CompoundQueryHit<'_>>> {
+        let mut out = Vec::new();
+        self.query_aabb_into(aabb, &mut out)?;
+        Ok(out)
+    }
+
+    pub fn query_aabb_into<'a>(
+        &'a self,
+        aabb: Aabb,
+        out: &mut Vec<CompoundQueryHit<'a>>,
+    ) -> Result<()> {
+        out.clear();
+        self.visit_query_aabb(aabb, |hit| {
+            out.push(hit);
+            true
+        })
+    }
+
+    pub fn visit_query_aabb<'a, F>(&'a self, aabb: Aabb, visitor: F) -> Result<()>
+    where
+        F: FnMut(CompoundQueryHit<'a>) -> bool,
+    {
+        callback_state::check_not_in_callback()?;
+        let aabb = aabb.validate()?;
+        let mut ctx = CompoundQueryContext {
+            visitor,
+            error: None,
+            panicked: false,
+            _lifetime: PhantomData,
+        };
+        let _guard = box3d_lock::lock();
+        unsafe {
+            ffi::b3QueryCompound(
+                self.raw.as_ptr(),
+                aabb.into_raw(),
+                Some(compound_query_trampoline::<F>),
+                (&mut ctx as *mut CompoundQueryContext<'a, F>).cast(),
+            );
+        }
+        if ctx.panicked {
+            Err(Error::CallbackPanicked)
+        } else if let Some(error) = ctx.error {
+            Err(error)
+        } else {
+            Ok(())
+        }
+    }
+
     #[inline]
     pub(crate) fn as_ptr(&self) -> *const ffi::b3CompoundData {
         self.raw.as_ptr()
@@ -1894,6 +1945,57 @@ impl<'a> CompoundChild<'a> {
     #[inline]
     pub const fn primary_material_index(&self) -> i32 {
         self.material_indices[0]
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CompoundQueryHit<'a> {
+    pub child_index: i32,
+    pub child: CompoundChild<'a>,
+}
+
+struct CompoundQueryContext<'a, F> {
+    visitor: F,
+    error: Option<Error>,
+    panicked: bool,
+    _lifetime: PhantomData<&'a Compound>,
+}
+
+unsafe extern "C" fn compound_query_trampoline<'a, F>(
+    compound: *const ffi::b3CompoundData,
+    child_index: i32,
+    context: *mut c_void,
+) -> bool
+where
+    F: FnMut(CompoundQueryHit<'a>) -> bool,
+{
+    let _guard = callback_state::CallbackGuard::enter();
+    let ctx = unsafe { &mut *context.cast::<CompoundQueryContext<'a, F>>() };
+    if ctx.panicked || ctx.error.is_some() {
+        return false;
+    }
+
+    if compound.is_null() || child_index < 0 {
+        ctx.error = Some(Error::InvalidArgument);
+        return false;
+    }
+
+    let raw_child = unsafe { ffi::b3GetCompoundChild(compound, child_index) };
+    let child = match CompoundChild::from_raw(raw_child) {
+        Ok(child) => child,
+        Err(error) => {
+            ctx.error = Some(error);
+            return false;
+        }
+    };
+    let hit = CompoundQueryHit { child_index, child };
+
+    match catch_unwind(AssertUnwindSafe(|| (ctx.visitor)(hit))) {
+        Ok(keep_going) => keep_going,
+        Err(_) => {
+            ctx.panicked = true;
+            false
+        }
     }
 }
 

@@ -245,6 +245,70 @@ fn shape_creation_covers_value_and_native_resources() {
     assert_eq!(compound.child(3).unwrap().shape_type(), ShapeType::Sphere);
     assert_eq!(compound.child(4).unwrap_err(), Error::IndexOutOfRange);
 
+    let query_bounds = boxddd::Aabb {
+        lower_bound: [-2.0, -2.0, -2.0].into(),
+        upper_bound: [2.0, 2.0, 2.0].into(),
+    };
+    let query_hits = compound.query_aabb(query_bounds).unwrap();
+    assert_eq!(query_hits.len(), compound.child_count() as usize);
+    assert!(query_hits.iter().all(|hit| hit.child_index >= 0));
+    assert!(
+        query_hits
+            .iter()
+            .any(|hit| hit.child.shape_type() == ShapeType::Capsule)
+    );
+    assert!(
+        query_hits
+            .iter()
+            .any(|hit| hit.child.shape_type() == ShapeType::Hull)
+    );
+    assert!(
+        query_hits
+            .iter()
+            .any(|hit| hit.child.shape_type() == ShapeType::Mesh)
+    );
+    assert!(
+        query_hits
+            .iter()
+            .any(|hit| hit.child.shape_type() == ShapeType::Sphere)
+    );
+
+    let mut reusable_hits = Vec::with_capacity(8);
+    compound
+        .query_aabb_into(query_bounds, &mut reusable_hits)
+        .unwrap();
+    assert_eq!(reusable_hits.len(), query_hits.len());
+
+    let mut visited = 0;
+    compound
+        .visit_query_aabb(query_bounds, |hit| {
+            visited += 1;
+            assert!(hit.child_index >= 0);
+            false
+        })
+        .unwrap();
+    assert_eq!(visited, 1);
+
+    compound
+        .visit_query_aabb(query_bounds, |_| {
+            assert_eq!(
+                compound.query_aabb(query_bounds).unwrap_err(),
+                Error::InCallback
+            );
+            false
+        })
+        .unwrap();
+
+    assert_eq!(
+        compound
+            .query_aabb(boxddd::Aabb {
+                lower_bound: [1.0, 0.0, 0.0].into(),
+                upper_bound: [0.0, 0.0, 0.0].into(),
+            })
+            .unwrap_err(),
+        Error::InvalidArgument
+    );
+
     let compound_shape = world
         .try_create_compound_shape(static_body, &def, compound)
         .unwrap();

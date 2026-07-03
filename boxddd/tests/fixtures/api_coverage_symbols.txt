@@ -483,7 +483,7 @@ b3DestroyHeightField|safe|geometry_resources|collision.h|covered by current safe
 b3DumpHeightData|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3LoadHeightField|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
 b3GetCompoundChild|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3QueryCompound|deferred|geometry_resources|collision.h|U3 will add callback-contained Compound query visitor and collection APIs
+b3QueryCompound|safe|geometry_resources|collision.h|Compound::query_aabb and visit_query_aabb provide callback-contained child queries
 b3GetCompoundCapsule|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3GetCompoundHull|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3GetCompoundMesh|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
