@@ -1,3 +1,10 @@
+#![cfg(any(
+    feature = "mint",
+    feature = "glam",
+    feature = "cgmath",
+    feature = "nalgebra"
+))]
+
 use boxddd::{Aabb, Error, Matrix3, Plane, Pos, Quat, Transform, Vec2, Vec3, WorldTransform};
 
 fn sample_matrix() -> Matrix3 {

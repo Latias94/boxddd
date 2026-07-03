@@ -31,7 +31,7 @@ than a single workspace smoke test:
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
-- no-default-feature and optional interop feature checks
+- no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
 - forced bindgen refresh checks for single and double precision
 - default `boxddd-sys` dependency checks proving `bindgen` and `clang-sys` are not required for normal users
@@ -50,6 +50,7 @@ cargo fmt --all --check
 cargo build --workspace
 cargo nextest run --workspace
 cargo check --workspace --all-features
+cargo nextest run -p boxddd --features "mint glam nalgebra cgmath serde" --test interop
 cargo check -p bevy_boxddd --examples
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
@@ -95,6 +96,10 @@ done
 
 tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
 tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
+tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
+tar -tf "$core_crate" | grep -F '/examples/mesh_height_field_query.rs'
+tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
+tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
 tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
 ```

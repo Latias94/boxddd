@@ -25,13 +25,13 @@ Status legend:
 | World runtime metrics/tuning | bounds, gravity, sleeping, continuous, warm starting, speculative, thresholds, contact tuning, worker count, profile, counters, capacity, rebuild static tree | Wrapped | Dump/debug-print functions remain raw-only. |
 | World user data | `b3World_SetUserData`, `b3World_GetUserData` | Unsafe raw | Exposed through `boxddd::raw`; raw pointer ownership remains entirely caller-defined. |
 | World callbacks | custom filter, pre-solve, friction, restitution | Wrapped | Rust callback panics are caught and reentrant safe access is blocked. |
-| World task callbacks | `b3EnqueueTaskCallback`, `b3FinishTaskCallback`, `userTaskContext` | Wrapped/Deferred | `TaskSystem::blocking_threads()` provides a safe Rust-owned callback path at world creation. Tokio, Rayon, Bevy Tasks, and arbitrary executor adapters remain deferred until their blocking/deadlock contracts are designed. |
+| World task callbacks | `b3EnqueueTaskCallback`, `b3FinishTaskCallback`, `userTaskContext` | Wrapped | `TaskSystem::blocking_threads()` provides a safe Rust-owned callback path at world creation. Tokio, Rayon, Bevy Tasks, and arbitrary executor adapters are application integration work, not unclassified Box3D symbols. |
 | World queries | `b3World_OverlapAABB`, `b3World_OverlapShape`, `b3World_CastRay`, `b3World_CastRayClosest`, `b3World_CastShape`, `b3World_CastMover` | Wrapped | Owned, reusable-buffer, and visitor variants exist where the upstream callback path supports them. |
 | Character mover planes | `b3World_CollideMover`, `b3Body_CollideMover`, `b3SolvePlanes`, `b3ClipVector` | Wrapped | World/body collide-mover plane collection, plane solving, and clipping helpers are wrapped with owned values. |
 | Explosion | `b3World_Explode`, `b3DefaultExplosionDef` | Wrapped | `ExplosionDef` validates finite position/radius/falloff/impulse values before applying the world explosion. |
 | Memory/stat dump helpers | `b3World_DumpMemoryStats`, `b3World_DumpShapeBounds`, `b3World_DumpAwake`, `b3World_Dump` | Raw-only | Diagnostic printing is not wrapped in the safe API. |
 | Recording/replay | `b3CreateRecording`, `b3World_StartRecording`, `b3World_StopRecording`, save/load, validate, `b3RecPlayer_*` except debug-shape callbacks | Wrapped | Replay world id is intentionally read-only and not exposed as a normal `World`. |
-| Replay debug-shape callbacks | `b3RecPlayer_SetDebugShapeCallbacks` | Raw-only | Safe replay query drawing reuses the debug draw adapter; custom replay debug-shape lifetime callbacks are deferred. |
+| Replay debug-shape callbacks | `b3RecPlayer_SetDebugShapeCallbacks` | Raw-only | Safe replay query drawing reuses the debug draw adapter; custom replay debug-shape lifetime callbacks stay raw-only for this release. |
 | Body lifecycle/type/name/transform | `b3CreateBody`, `b3DestroyBody`, type, name, position, rotation, transforms, local/world point/vector conversion | Wrapped | Safe `BodyDef` validates pointer-sensitive fields through builders. |
 | Body user data | `b3Body_SetUserData`, `b3Body_GetUserData` | Unsafe raw | Exposed through `boxddd::raw`; raw pointer ownership remains entirely caller-defined. |
 | Body velocity/forces/impulses/mass/damping/sleep/enabled/bullet/motion locks | `b3Body_*` runtime methods | Wrapped | Recoverable `try_*` variants front-load validity and scalar checks. |
@@ -42,7 +42,7 @@ Status legend:
 | Shape contacts/sensors/query helpers | `b3Shape_GetContactData`, `b3Shape_GetSensorData`, `b3Shape_RayCast`, closest point | Wrapped | Contact/sensor buffers, AABB, mass data, direct ray-cast, closest-point, and geometry view helpers are wrapped. |
 | Geometry resources | hull/mesh/height field/compound create/destroy helpers | Wrapped/Raw-only | RAII constructors, hull clone/transform helpers, box scaling, arbitrary mesh creation, wave/torus/hollow/platform meshes, custom height fields, compound builders, compound child/material introspection, compound child queries, and `CompoundBytes` owner round-trips are wrapped. File-backed height fields and arbitrary caller-owned compound byte buffers stay raw-only. |
 | Dynamic tree | `b3DynamicTree_*` except file save/load | Wrapped/Raw-only | `DynamicTree` owns create/destroy, proxy lifecycle, metrics, rebuild/validation, AABB/closest/ray/box cast visitors, and panic containment. File save/load stays raw file IO. |
-| Standalone collision | sphere/capsule/hull/mesh/height field/compound mass/AABB/overlap/ray/shape cast; GJK distance, TOI, sweep transforms, plane solving, clipping, and sphere/capsule/hull/triangle manifolds | Wrapped/Deferred | The value-returning collision helpers are wrapped with validation and owned outputs. Mesh queries support early-stop visitors; height-field triangle queries return owned hits without promising native early stop. |
+| Standalone collision | sphere/capsule/hull/mesh/height field/compound mass/AABB/overlap/ray/shape cast; GJK distance, TOI, sweep transforms, plane solving, clipping, and sphere/capsule/hull/triangle manifolds | Wrapped | The value-returning collision helpers are wrapped with validation and owned outputs. Mesh queries support early-stop visitors; height-field triangle queries return owned hits without promising native early stop. |
 | Joints common runtime | destroy, valid, type, bodies, redundant world getter, local frames, collide connected, wake, forces/torques, separations, tuning, thresholds | Wrapped/Omitted | Wrong-family typed calls return `Error::WrongJointType`; the raw joint-to-world getter is omitted because safe APIs validate ownership through `World`. |
 | Joint user data | `b3Joint_SetUserData`, `b3Joint_GetUserData` | Unsafe raw | Exposed through `boxddd::raw`; definition/event fields use `raw_user_data` naming where pointer values can surface. |
 | Parallel joint | create, spring, damping, max torque | Wrapped | Typed definition and runtime APIs. |
@@ -58,13 +58,13 @@ Status legend:
 | Default definition values | `b3DefaultWorldDef`, `b3DefaultBodyDef`, `b3DefaultShapeDef`, `b3DefaultSurfaceMaterial`, joint defaults, query filter, debug draw | Wrapped | Safe builders keep raw pointer fields out of ordinary user code; `SurfaceMaterial::default` and `QueryFilter::default` mirror upstream defaults without exposing raw pointer fields. |
 | Debug draw default/color | `b3DefaultDebugDraw`, `b3GetGraphColor` | Wrapped/Raw-only | Default debug draw is used internally; graph color helper remains a raw low-level diagnostic helper. |
 
-## Release Policy For Deferred APIs
+## Release Policy For Future Deferred APIs
 
-Deferred entries are not hidden unknowns. They are intentionally outside the `0.1.x` safe claim because they need one of:
+No vendored upstream `B3_API` symbols are currently classified as deferred. Future deferred entries are not hidden unknowns; they must stay outside the safe claim until they have one of:
 
 - raw pointer/user-data ownership policy
 - callback/threading design
 - allocation and lifetime tests for callback-returned buffers
 - representative examples proving the intended workflow
 
-Until then, downstream users can access them explicitly through `boxddd_sys::ffi`.
+Until then, downstream users can access the underlying C API explicitly through `boxddd_sys::ffi`.

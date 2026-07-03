@@ -234,12 +234,15 @@ jobs:
 
       - name: Run feature interop tests
         run: |
-          cargo test -p boxddd --features serde --test serde_values
-          cargo test -p boxddd --features mint --test interop
-          cargo test -p boxddd --features glam --test interop
-          cargo test -p boxddd --features nalgebra --test interop
-          cargo test -p boxddd --features cgmath --test interop
+          cargo nextest run -p boxddd --features serde --test serde_values
+          cargo nextest run -p boxddd --features mint --test interop
+          cargo nextest run -p boxddd --features glam --test interop
+          cargo nextest run -p boxddd --features nalgebra --test interop
+          cargo nextest run -p boxddd --features cgmath --test interop
+          cargo nextest run -p boxddd --features "mint glam nalgebra cgmath serde" --test interop
           cargo run -p boxddd --example mint_interop --features mint
+          cargo run -p boxddd --example glam_interop --features glam
+          cargo run -p boxddd --example nalgebra_interop --features nalgebra
 
   all-features:
     name: All features (Ubuntu)
@@ -317,9 +320,9 @@ jobs:
 
       - name: Package crates
         run: |
-          cargo package -p boxddd-sys
-          cargo package -p boxddd --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
-          cargo package -p bevy_boxddd --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+          cargo package -p boxddd-sys --locked
+          cargo package -p boxddd --locked --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+          cargo package -p bevy_boxddd --locked --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
 
       - name: Audit package contents
         shell: bash
@@ -341,6 +344,10 @@ jobs:
 
           tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
           tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
+          tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
+          tar -tf "$core_crate" | grep -F '/examples/mesh_height_field_query.rs'
+          tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
+          tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
           tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
 

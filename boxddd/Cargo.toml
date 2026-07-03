@@ -53,6 +53,14 @@ name = "hello_world"
 path = "examples/hello_world.rs"
 
 [[example]]
+name = "compound_query"
+path = "examples/compound_query.rs"
+
+[[example]]
+name = "mesh_height_field_query"
+path = "examples/mesh_height_field_query.rs"
+
+[[example]]
 name = "mint_interop"
 path = "examples/mint_interop.rs"
 required-features = ["mint"]
