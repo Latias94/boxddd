@@ -32,6 +32,12 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
 
+## Version Compatibility
+
+| `boxddd` release | Box3D API target | Vendored Box3D source | Notes |
+|---|---|---|---|
+| `0.1.0` | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) plus a local single-thread WASM timer portability patch | First `boxddd` release; native desktop is the supported runtime path |
+
 ## Crates
 
 | Crate | Purpose |
@@ -43,14 +49,6 @@ The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95`
 ## Getting Started
 
 Add the core crate when you want to own the physics loop yourself.
-
-From git today:
-
-```bash
-cargo add boxddd --git https://github.com/Latias94/boxddd
-```
-
-After the crates are published:
 
 ```bash
 cargo add boxddd
