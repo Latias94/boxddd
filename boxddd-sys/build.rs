@@ -327,9 +327,15 @@ fn configure_wasi_sysroot(build: &mut cc::Build) {
             )
         });
 
-    if !sysroot.join("include").join("math.h").exists() {
+    let has_libc_headers = sysroot.join("include").join("math.h").exists()
+        || sysroot
+            .join("include")
+            .join("wasm32-wasi")
+            .join("math.h")
+            .exists();
+    if !has_libc_headers {
         panic!(
-            "WASI sysroot at {} does not contain include/math.h",
+            "WASI sysroot at {} does not contain WASI libc headers",
             sysroot.display()
         );
     }

@@ -517,3 +517,47 @@ jobs:
 
       - name: Check minimal bevy_boxddd wasm compile-only path
         run: cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
+
+  wasm-runtime:
+    name: WASM runtime smoke (WASI)
+    runs-on: ubuntu-latest
+    env:
+      WASI_SDK_VERSION: "33"
+      WASI_SDK_VERSION_FULL: "33.0"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+
+      - name: Install wasmtime
+        uses: bytecodealliance/actions/wasmtime/setup@v1
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Install WASI SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -o wasi-sdk.tar.gz \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION_FULL}-x86_64-linux.tar.gz"
+          tar -xzf wasi-sdk.tar.gz
+          wasi_sdk_path="$PWD/wasi-sdk-${WASI_SDK_VERSION_FULL}-x86_64-linux"
+          echo "WASI_SDK_PATH=${wasi_sdk_path}" >> "$GITHUB_ENV"
+          echo "WASI_SYSROOT=${wasi_sdk_path}/share/wasi-sysroot" >> "$GITHUB_ENV"
+          echo "${wasi_sdk_path}/bin" >> "$GITHUB_PATH"
+
+      - name: Build C-backed WASM smoke
+        run: cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
+        env:
+          CC_wasm32_wasip1: clang
+
+      - name: Run C-backed WASM smoke
+        run: wasmtime target/wasm32-wasip1/debug/examples/wasm_smoke.wasm

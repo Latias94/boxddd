@@ -66,3 +66,7 @@ required-features = ["egui-example"]
 name = "tokio_async_bridge"
 path = "examples/tokio_async_bridge.rs"
 required-features = ["tokio-example"]
+
+[[example]]
+name = "wasm_smoke"
+path = "examples/wasm_smoke.rs"
