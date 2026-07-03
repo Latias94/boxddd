@@ -59,15 +59,32 @@ pub enum Collider {
         radius: f32,
         material: SurfaceMaterial,
     },
-    CreatedRockHull {
-        radius: f32,
+    CreatedHull {
+        hull: HullDescriptor,
     },
-    TransformedRockHull {
-        radius: f32,
+    TransformedHull {
+        hull: HullDescriptor,
         translation: Vec3,
         rotation: bevy_math::Quat,
         scale: Vec3,
     },
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum HullDescriptor {
+    Rock { radius: f32 },
+}
+
+impl HullDescriptor {
+    pub const fn rock(radius: f32) -> Self {
+        Self::Rock { radius }
+    }
+
+    pub fn validate(self) -> boxddd::Result<()> {
+        match self {
+            Self::Rock { radius } => validate_positive_scalar(radius),
+        }
+    }
 }
 
 impl Collider {
@@ -147,8 +164,26 @@ impl Collider {
         }
     }
 
+    pub fn created_hull(hull: HullDescriptor) -> Self {
+        Self::CreatedHull { hull }
+    }
+
+    pub fn transformed_hull(
+        hull: HullDescriptor,
+        translation: Vec3,
+        rotation: bevy_math::Quat,
+        scale: Vec3,
+    ) -> Self {
+        Self::TransformedHull {
+            hull,
+            translation,
+            rotation,
+            scale,
+        }
+    }
+
     pub fn created_rock_hull(radius: f32) -> Self {
-        Self::CreatedRockHull { radius }
+        Self::created_hull(HullDescriptor::rock(radius))
     }
 
     pub fn transformed_rock_hull(
@@ -157,12 +192,7 @@ impl Collider {
         rotation: bevy_math::Quat,
         scale: Vec3,
     ) -> Self {
-        Self::TransformedRockHull {
-            radius,
-            translation,
-            rotation,
-            scale,
-        }
+        Self::transformed_hull(HullDescriptor::rock(radius), translation, rotation, scale)
     }
 
     pub const fn requires_static_body(self) -> bool {
@@ -172,8 +202,6 @@ impl Collider {
                 | Self::MeshGrid { .. }
                 | Self::HeightFieldGrid { .. }
                 | Self::CompoundSphere { .. }
-                | Self::CreatedRockHull { .. }
-                | Self::TransformedRockHull { .. }
         )
     }
 
@@ -237,14 +265,14 @@ impl Collider {
                 validate_positive_scalar(radius)?;
                 material.validate()
             }
-            Self::CreatedRockHull { radius } => validate_positive_scalar(radius),
-            Self::TransformedRockHull {
-                radius,
+            Self::CreatedHull { hull } => hull.validate(),
+            Self::TransformedHull {
+                hull,
                 translation,
                 rotation,
                 scale,
             } => {
-                validate_positive_scalar(radius)?;
+                hull.validate()?;
                 validate_vec3(translation)?;
                 if rotation.is_finite() {
                     validate_positive_vec3(scale)

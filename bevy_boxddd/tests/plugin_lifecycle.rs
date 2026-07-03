@@ -262,6 +262,38 @@ fn child_colliders_create_multiple_shapes_for_one_body() {
 }
 
 #[test]
+fn child_collider_transform_offsets_shape_geometry() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let body = app
+        .world_mut()
+        .spawn((RigidBody::Static, Transform::from_xyz(0.0, 0.0, 0.0)))
+        .id();
+    let collider = app
+        .world_mut()
+        .spawn((
+            Collider::sphere(0.25),
+            Transform::from_xyz(1.0, 0.0, 0.0),
+            ChildOf(body),
+        ))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let hit = bevy_boxddd::cast_ray_closest(
+        context,
+        Vec3::new(1.0, -1.0, 0.0),
+        Vec3::new(0.0, 2.0, 0.0),
+        boxddd::QueryFilter::default(),
+    )
+    .unwrap()
+    .unwrap();
+
+    assert_eq!(hit.entity, Some(collider));
+    assert!((hit.point.x - 1.0).abs() < 0.01, "hit: {hit:?}");
+}
+
+#[test]
 fn removing_one_child_collider_only_destroys_that_shape() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
     let body = app
@@ -362,6 +394,107 @@ fn readding_child_collider_component_replaces_shape_id() {
 }
 
 #[test]
+fn changing_collider_descriptor_recreates_native_shape() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let entity = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            Collider::sphere(0.25),
+            Transform::from_xyz(0.0, 1.0, 0.0),
+        ))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+    let old_shape = app
+        .world()
+        .entity(entity)
+        .get::<BoxdddShape>()
+        .unwrap()
+        .id();
+
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(Collider::capsule_y(0.35, 0.12));
+    run_fixed_frames(&mut app, 3);
+
+    let new_shape = app
+        .world()
+        .entity(entity)
+        .get::<BoxdddShape>()
+        .unwrap()
+        .id();
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let world = context.world().unwrap();
+
+    assert!(!old_shape.is_valid());
+    assert!(new_shape.is_valid());
+    assert_ne!(old_shape, new_shape);
+    assert_eq!(
+        world.try_shape_type(new_shape).unwrap(),
+        boxddd::ShapeType::Capsule
+    );
+}
+
+#[test]
+fn changing_physics_material_recreates_native_shape() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let entity = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            Collider::sphere(0.25),
+            PhysicsMaterial {
+                filter: boxddd::Filter {
+                    category_bits: 0b10,
+                    mask_bits: u64::MAX,
+                    group_index: 0,
+                },
+                ..Default::default()
+            },
+            Transform::from_xyz(0.0, 1.0, 0.0),
+        ))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+    let old_shape = app
+        .world()
+        .entity(entity)
+        .get::<BoxdddShape>()
+        .unwrap()
+        .id();
+
+    app.world_mut().entity_mut(entity).insert(PhysicsMaterial {
+        is_sensor: true,
+        enable_sensor_events: true,
+        filter: boxddd::Filter {
+            category_bits: 0b100,
+            mask_bits: 0b1000,
+            group_index: 0,
+        },
+        ..Default::default()
+    });
+    run_fixed_frames(&mut app, 3);
+
+    let new_shape = app
+        .world()
+        .entity(entity)
+        .get::<BoxdddShape>()
+        .unwrap()
+        .id();
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let world = context.world().unwrap();
+    let filter = world.try_shape_filter(new_shape).unwrap();
+
+    assert!(!old_shape.is_valid());
+    assert!(new_shape.is_valid());
+    assert_ne!(old_shape, new_shape);
+    assert!(world.try_shape_sensor(new_shape).unwrap());
+    assert_eq!(filter.category_bits, 0b100);
+    assert_eq!(filter.mask_bits, 0b1000);
+}
+
+#[test]
 fn reparenting_child_collider_recreates_shape_on_new_body() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
     let first_body = app
@@ -418,6 +551,7 @@ fn advanced_static_colliders_create_shapes() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
     let descriptors = [
         Collider::mesh_box(Vec3::ZERO, Vec3::splat(1.0), Vec3::ONE, true),
+        Collider::mesh_grid(3, 3, 1.0, 1, Vec3::ONE, true),
         Collider::height_field_grid(3, 3, Vec3::ONE, false),
         Collider::compound_sphere(Vec3::ZERO, 0.5, boxddd::SurfaceMaterial::default()),
         Collider::created_rock_hull(0.5),
@@ -446,15 +580,22 @@ fn advanced_static_colliders_create_shapes() {
 #[test]
 fn advanced_colliders_on_dynamic_bodies_emit_errors() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
-    let descriptors = [
+    let static_only_descriptors = [
         Collider::mesh_box(Vec3::ZERO, Vec3::splat(1.0), Vec3::ONE, true),
+        Collider::mesh_grid(3, 3, 1.0, 1, Vec3::ONE, true),
         Collider::height_field_grid(3, 3, Vec3::ONE, false),
         Collider::compound_sphere(Vec3::ZERO, 0.5, boxddd::SurfaceMaterial::default()),
+    ];
+    let dynamic_hull_descriptors = [
         Collider::created_rock_hull(0.5),
         Collider::transformed_rock_hull(0.5, Vec3::ZERO, bevy_math::Quat::IDENTITY, Vec3::ONE),
     ];
 
-    for (index, collider) in descriptors.into_iter().enumerate() {
+    for (index, collider) in static_only_descriptors
+        .into_iter()
+        .chain(dynamic_hull_descriptors)
+        .enumerate()
+    {
         app.world_mut().spawn((
             RigidBody::Dynamic,
             collider,
@@ -469,7 +610,7 @@ fn advanced_colliders_on_dynamic_bodies_emit_errors() {
         .iter(app.world())
         .filter(|(_, shape)| shape.is_some())
         .count();
-    assert_eq!(created, 0);
+    assert_eq!(created, dynamic_hull_descriptors.len());
 
     let messages = app
         .world_mut()
@@ -484,5 +625,5 @@ fn advanced_colliders_on_dynamic_bodies_emit_errors() {
         })
         .count();
 
-    assert_eq!(create_shape_errors, descriptors.len());
+    assert_eq!(create_shape_errors, static_only_descriptors.len());
 }

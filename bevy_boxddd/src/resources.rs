@@ -1,6 +1,6 @@
-use crate::components::Joint;
+use crate::components::{Collider, Joint, PhysicsMaterial};
 use bevy_ecs::prelude::{Entity, Resource};
-use bevy_math::Vec3;
+use bevy_math::{Quat, Vec3};
 use boxddd::{BodyId, JointId, ShapeId, World, WorldDef};
 use std::collections::HashMap;
 
@@ -39,6 +39,7 @@ pub struct BoxdddPhysicsContext {
     pub(crate) entity_to_shape: HashMap<Entity, ShapeId>,
     pub(crate) shape_to_entity: HashMap<ShapeId, Entity>,
     pub(crate) shape_to_body_entity: HashMap<Entity, Entity>,
+    pub(crate) shape_descriptors: HashMap<Entity, ShapeDescriptor>,
     pub(crate) entity_to_joint: HashMap<Entity, JointId>,
     pub(crate) joint_to_entity: HashMap<JointId, Entity>,
     pub(crate) joint_to_body_entities: HashMap<Entity, (Entity, Entity)>,
@@ -61,6 +62,7 @@ impl BoxdddPhysicsContext {
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
             shape_to_body_entity: HashMap::new(),
+            shape_descriptors: HashMap::new(),
             entity_to_joint: HashMap::new(),
             joint_to_entity: HashMap::new(),
             joint_to_body_entities: HashMap::new(),
@@ -77,6 +79,7 @@ impl BoxdddPhysicsContext {
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
             shape_to_body_entity: HashMap::new(),
+            shape_descriptors: HashMap::new(),
             entity_to_joint: HashMap::new(),
             joint_to_entity: HashMap::new(),
             joint_to_body_entities: HashMap::new(),
@@ -140,20 +143,32 @@ impl BoxdddPhysicsContext {
         }
     }
 
-    pub(crate) fn insert_shape(&mut self, entity: Entity, body_entity: Entity, shape_id: ShapeId) {
+    pub(crate) fn insert_shape(
+        &mut self,
+        entity: Entity,
+        body_entity: Entity,
+        descriptor: ShapeDescriptor,
+        shape_id: ShapeId,
+    ) {
         self.entity_to_shape.insert(entity, shape_id);
         self.shape_to_entity.insert(shape_id, entity);
         self.shape_to_body_entity.insert(entity, body_entity);
+        self.shape_descriptors.insert(entity, descriptor);
     }
 
     pub(crate) fn remove_shape(&mut self, entity: Entity, shape_id: ShapeId) {
         self.entity_to_shape.remove(&entity);
         self.shape_to_entity.remove(&shape_id);
         self.shape_to_body_entity.remove(&entity);
+        self.shape_descriptors.remove(&entity);
     }
 
     pub(crate) fn shape_body_entity(&self, shape_entity: Entity) -> Option<Entity> {
         self.shape_to_body_entity.get(&shape_entity).copied()
+    }
+
+    pub(crate) fn shape_descriptor(&self, shape_entity: Entity) -> Option<ShapeDescriptor> {
+        self.shape_descriptors.get(&shape_entity).copied()
     }
 
     pub(crate) fn insert_joint(
@@ -183,5 +198,32 @@ impl BoxdddPhysicsContext {
 
     pub(crate) fn joint_descriptor(&self, joint_entity: Entity) -> Option<Joint> {
         self.joint_descriptors.get(&joint_entity).copied()
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) struct ShapeDescriptor {
+    pub collider: Collider,
+    pub material: PhysicsMaterial,
+    pub local_transform: ShapeLocalTransform,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) struct ShapeLocalTransform {
+    pub translation: Vec3,
+    pub rotation: Quat,
+}
+
+impl ShapeLocalTransform {
+    pub const IDENTITY: Self = Self {
+        translation: Vec3::ZERO,
+        rotation: Quat::IDENTITY,
+    };
+
+    pub fn from_transform(transform: Option<&bevy_transform::components::Transform>) -> Self {
+        transform.map_or(Self::IDENTITY, |transform| Self {
+            translation: transform.translation,
+            rotation: transform.rotation,
+        })
     }
 }

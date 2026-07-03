@@ -51,6 +51,28 @@ fn closest_ray_hit_maps_to_nearest_bevy_entity() {
 }
 
 #[test]
+fn ray_cast_returns_all_mapped_hits_along_ray() {
+    let mut app = physics_app();
+    let near = static_sphere(&mut app, Vec3::new(0.0, 0.0, 0.0), 0.35);
+    let far = static_sphere(&mut app, Vec3::new(2.0, 0.0, 0.0), 0.35);
+
+    run_fixed_frames(&mut app, 2);
+
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let hits = cast_ray(
+        context,
+        Vec3::new(-2.0, 0.0, 0.0),
+        Vec3::new(5.0, 0.0, 0.0),
+        boxddd::QueryFilter::default(),
+    )
+    .unwrap();
+    let entities = hits.iter().map(|hit| hit.entity).collect::<Vec<_>>();
+
+    assert!(entities.contains(&Some(near)), "hits: {hits:?}");
+    assert!(entities.contains(&Some(far)), "hits: {hits:?}");
+}
+
+#[test]
 fn ray_miss_returns_none() {
     let mut app = physics_app();
     static_sphere(&mut app, Vec3::new(0.0, 0.0, 0.0), 0.35);

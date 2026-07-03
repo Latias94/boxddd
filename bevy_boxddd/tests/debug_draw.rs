@@ -1,5 +1,6 @@
 use bevy_app::App;
 use bevy_boxddd::prelude::*;
+use bevy_ecs::message::Messages;
 use bevy_math::Vec3;
 use bevy_time::{TimePlugin, TimeUpdateStrategy};
 use bevy_transform::components::Transform;
@@ -47,6 +48,75 @@ fn debug_draw_collects_shape_commands_from_bevy_scene() {
             command,
             boxddd::DebugDrawCommand::Shape { shape: Some(_), .. }
         )
+    }));
+}
+
+#[test]
+fn disabling_debug_draw_clears_previous_commands() {
+    let mut app = physics_app(BoxdddDebugDrawSettings {
+        enabled: true,
+        options: boxddd::DebugDrawOptions::default(),
+    });
+
+    dynamic_body(&mut app, Vec3::new(0.0, 1.0, 0.0));
+    run_fixed_frames(&mut app, 2);
+    assert!(
+        !app.world()
+            .resource::<BoxdddDebugDrawCommands>()
+            .commands()
+            .is_empty()
+    );
+
+    app.world_mut()
+        .resource_mut::<BoxdddDebugDrawSettings>()
+        .enabled = false;
+    run_fixed_frames(&mut app, 1);
+
+    assert!(
+        app.world()
+            .resource::<BoxdddDebugDrawCommands>()
+            .commands()
+            .is_empty()
+    );
+}
+
+#[test]
+fn debug_draw_failure_clears_previous_commands() {
+    let mut app = physics_app(BoxdddDebugDrawSettings {
+        enabled: true,
+        options: boxddd::DebugDrawOptions::default(),
+    });
+
+    dynamic_body(&mut app, Vec3::new(0.0, 1.0, 0.0));
+    run_fixed_frames(&mut app, 2);
+    assert!(
+        !app.world()
+            .resource::<BoxdddDebugDrawCommands>()
+            .commands()
+            .is_empty()
+    );
+
+    app.world_mut()
+        .resource_mut::<BoxdddDebugDrawSettings>()
+        .options
+        .force_scale = f32::NAN;
+    run_fixed_frames(&mut app, 1);
+
+    assert!(
+        app.world()
+            .resource::<BoxdddDebugDrawCommands>()
+            .commands()
+            .is_empty()
+    );
+
+    let messages = app
+        .world_mut()
+        .resource_mut::<Messages<BoxdddErrorMessage>>()
+        .drain()
+        .collect::<Vec<_>>();
+    assert!(messages.iter().any(|message| {
+        message.operation == BoxdddOperation::DebugDraw
+            && message.error == boxddd::Error::InvalidArgument
     }));
 }
 

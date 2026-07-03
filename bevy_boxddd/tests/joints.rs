@@ -26,6 +26,45 @@ fn dynamic_body(app: &mut App, position: Vec3) -> bevy_ecs::entity::Entity {
 }
 
 #[test]
+fn every_public_joint_variant_creates_expected_native_joint_type() {
+    let cases = [
+        (Joint::distance(1.0), boxddd::JointType::Distance),
+        (Joint::revolute(), boxddd::JointType::Revolute),
+        (Joint::spherical(), boxddd::JointType::Spherical),
+        (Joint::weld(), boxddd::JointType::Weld),
+        (Joint::prismatic(), boxddd::JointType::Prismatic),
+        (Joint::wheel(), boxddd::JointType::Wheel),
+    ];
+
+    for (joint, expected_type) in cases {
+        let mut app = physics_app(BoxdddPhysicsSettings::default());
+        let body_a = dynamic_body(&mut app, Vec3::new(-0.5, 0.0, 0.0));
+        let body_b = dynamic_body(&mut app, Vec3::new(0.5, 0.0, 0.0));
+        let joint_entity = app
+            .world_mut()
+            .spawn((JointTarget::new(body_a, body_b), joint))
+            .id();
+
+        run_fixed_frames(&mut app, 2);
+
+        let joint_id = app
+            .world()
+            .entity(joint_entity)
+            .get::<BoxdddJoint>()
+            .unwrap()
+            .id();
+        let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+        let world = context.world().unwrap();
+
+        assert!(
+            joint_id.is_valid(),
+            "{joint:?} should create a native joint"
+        );
+        assert_eq!(world.try_joint_type(joint_id).unwrap(), expected_type);
+    }
+}
+
+#[test]
 fn distance_joint_between_dynamic_bodies_creates_native_joint() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
     let body_a = dynamic_body(&mut app, Vec3::new(-0.5, 0.0, 0.0));

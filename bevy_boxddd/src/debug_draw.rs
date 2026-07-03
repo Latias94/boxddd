@@ -52,6 +52,7 @@ pub fn collect_debug_draw_commands(
         .try_debug_draw_collect_into(&mut debug_commands.commands, debug_settings.options);
 
     if let Err(error) = result {
+        debug_commands.clear();
         report_error(
             &settings,
             &mut errors,

@@ -9,7 +9,9 @@ use crate::messages::{
     BoxdddContactHitMessage, BoxdddErrorMessage, BoxdddOperation, BoxdddSensorBeginMessage,
     BoxdddSensorEndMessage,
 };
-use crate::resources::{BoxdddPhysicsContext, BoxdddPhysicsSettings};
+use crate::resources::{
+    BoxdddPhysicsContext, BoxdddPhysicsSettings, ShapeDescriptor, ShapeLocalTransform,
+};
 use bevy_ecs::hierarchy::ChildOf;
 use bevy_ecs::message::MessageWriter;
 use bevy_ecs::prelude::{Commands, Entity, NonSendMut, Query, Res, With, Without};
@@ -95,6 +97,7 @@ pub fn create_missing_shapes(
             Option<&ChildOf>,
             &Collider,
             Option<&PhysicsMaterial>,
+            Option<&Transform>,
         ),
         Without<BoxdddShape>,
     >,
@@ -104,24 +107,35 @@ pub fn create_missing_shapes(
         return;
     }
 
-    for (entity, own_body, parent, collider, material) in &colliders {
+    for (entity, own_body, parent, collider, material, transform) in &colliders {
         let Some((body_entity, body)) = resolve_collider_body(entity, own_body, parent, &bodies)
         else {
             continue;
         };
-        let shape_def = material.copied().unwrap_or_default().shape_def();
+        let local_transform = if own_body.is_some() {
+            ShapeLocalTransform::IDENTITY
+        } else {
+            ShapeLocalTransform::from_transform(transform)
+        };
+        let descriptor = ShapeDescriptor {
+            collider: *collider,
+            material: material.copied().unwrap_or_default(),
+            local_transform,
+        };
+        let shape_def = descriptor.material.shape_def();
         let result = collider.validate().and_then(|()| {
             create_shape(
                 context.world_mut().expect("checked above"),
                 body.0,
-                *collider,
+                descriptor.collider,
+                descriptor.local_transform,
                 &shape_def,
             )
         });
 
         match result {
             Ok(shape_id) => {
-                context.insert_shape(entity, body_entity, shape_id);
+                context.insert_shape(entity, body_entity, descriptor, shape_id);
                 commands.entity(entity).insert(BoxdddShape(shape_id));
             }
             Err(error) => report_error(
@@ -186,6 +200,8 @@ pub fn cleanup_removed_colliders(
         Entity,
         &BoxdddShape,
         Option<&Collider>,
+        Option<&PhysicsMaterial>,
+        Option<&Transform>,
         Option<&BoxdddBody>,
         Option<&ChildOf>,
     )>,
@@ -225,7 +241,7 @@ pub fn cleanup_removed_colliders(
         }
     }
 
-    for (entity, shape, collider, own_body, parent) in &shapes {
+    for (entity, shape, collider, material, transform, own_body, parent) in &shapes {
         let current_body_entity = collider
             .is_some()
             .then(|| {
@@ -233,10 +249,22 @@ pub fn cleanup_removed_colliders(
             })
             .flatten();
         let tracked_body_entity = context.shape_body_entity(entity);
+        let local_transform = if own_body.is_some() {
+            ShapeLocalTransform::IDENTITY
+        } else {
+            ShapeLocalTransform::from_transform(transform)
+        };
+        let current_descriptor = collider.map(|collider| ShapeDescriptor {
+            collider: *collider,
+            material: material.copied().unwrap_or_default(),
+            local_transform,
+        });
+        let tracked_descriptor = context.shape_descriptor(entity);
 
         if collider.is_some()
             && current_body_entity.is_some()
             && current_body_entity == tracked_body_entity
+            && current_descriptor == tracked_descriptor
         {
             continue;
         }
@@ -782,6 +810,7 @@ fn create_shape(
     world: &mut boxddd::World,
     body_id: BodyId,
     collider: Collider,
+    local_transform: ShapeLocalTransform,
     shape_def: &ShapeDef,
 ) -> boxddd::Result<ShapeId> {
     if collider.requires_static_body() && world.try_body_type(body_id)? != BodyType::Static {
@@ -789,25 +818,37 @@ fn create_shape(
     }
 
     match collider {
-        Collider::Cuboid { half_extents } => world.try_create_hull_shape(
-            body_id,
-            shape_def,
-            &BoxHull::new(half_extents.x, half_extents.y, half_extents.z),
-        ),
+        Collider::Cuboid { half_extents } => {
+            let hull = if local_transform == ShapeLocalTransform::IDENTITY {
+                BoxHull::new(half_extents.x, half_extents.y, half_extents.z)
+            } else {
+                BoxHull::transformed(
+                    half_extents.x,
+                    half_extents.y,
+                    half_extents.z,
+                    to_boxddd_local_transform(local_transform),
+                )
+            };
+            world.try_create_hull_shape(body_id, shape_def, &hull)
+        }
         Collider::Sphere { radius, center } => world.try_create_sphere_shape(
             body_id,
             shape_def,
-            &BoxdddSphere::new(to_boxddd_vec3(center), radius),
+            &BoxdddSphere::new(to_boxddd_vec3(center + local_transform.translation), radius),
         ),
         Collider::Capsule {
             point1,
             point2,
             radius,
-        } => world.try_create_capsule_shape(
-            body_id,
-            shape_def,
-            &BoxdddCapsule::new(to_boxddd_vec3(point1), to_boxddd_vec3(point2), radius),
-        ),
+        } => {
+            let point1 = transform_local_point(local_transform, point1);
+            let point2 = transform_local_point(local_transform, point2);
+            world.try_create_capsule_shape(
+                body_id,
+                shape_def,
+                &BoxdddCapsule::new(to_boxddd_vec3(point1), to_boxddd_vec3(point2), radius),
+            )
+        }
         Collider::MeshBox {
             center,
             extent,
@@ -855,21 +896,34 @@ fn create_shape(
             shape_def,
             Compound::single_sphere(BoxdddSphere::new(to_boxddd_vec3(center), radius), material)?,
         ),
-        Collider::CreatedRockHull { radius } => {
-            world.try_create_created_hull_shape(body_id, shape_def, &Hull::rock(radius)?)
-        }
-        Collider::TransformedRockHull {
-            radius,
+        Collider::CreatedHull { hull } => world.try_create_transformed_hull_shape(
+            body_id,
+            shape_def,
+            &create_hull(hull)?,
+            to_boxddd_local_transform(local_transform),
+            boxddd::Vec3::new(1.0, 1.0, 1.0),
+        ),
+        Collider::TransformedHull {
+            hull,
             translation,
             rotation,
             scale,
         } => world.try_create_transformed_hull_shape(
             body_id,
             shape_def,
-            &Hull::rock(radius)?,
-            BoxdddTransform::new(to_boxddd_vec3(translation), to_boxddd_quat(rotation)),
+            &create_hull(hull)?,
+            to_boxddd_local_transform(ShapeLocalTransform {
+                translation: transform_local_point(local_transform, translation),
+                rotation: local_transform.rotation * rotation,
+            }),
             to_boxddd_vec3(scale),
         ),
+    }
+}
+
+fn create_hull(hull: crate::components::HullDescriptor) -> boxddd::Result<Hull> {
+    match hull {
+        crate::components::HullDescriptor::Rock { radius } => Hull::rock(radius),
     }
 }
 
@@ -936,6 +990,17 @@ fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
 
 fn to_boxddd_quat(value: Quat) -> boxddd::Quat {
     boxddd::Quat::new(boxddd::Vec3::new(value.x, value.y, value.z), value.w)
+}
+
+fn to_boxddd_local_transform(value: ShapeLocalTransform) -> BoxdddTransform {
+    BoxdddTransform::new(
+        to_boxddd_vec3(value.translation),
+        to_boxddd_quat(value.rotation),
+    )
+}
+
+fn transform_local_point(transform: ShapeLocalTransform, point: Vec3) -> Vec3 {
+    transform.translation + transform.rotation * point
 }
 
 fn to_bevy_vec3(value: boxddd::Pos) -> Vec3 {
