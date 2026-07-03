@@ -1,6 +1,7 @@
 use crate::components::{
-    AngularVelocity, BoxdddBody, BoxdddShape, Collider, ExternalForce, ExternalImpulse,
-    LinearVelocity, PhysicsMaterial, RigidBody, TransformSyncMode,
+    AngularVelocity, BoxdddBody, BoxdddJoint, BoxdddShape, Collider, ExternalForce,
+    ExternalImpulse, Joint, JointTarget, LinearVelocity, PhysicsMaterial, RigidBody,
+    TransformSyncMode,
 };
 use crate::errors::report_error;
 use crate::messages::{
@@ -16,9 +17,10 @@ use bevy_math::{Quat, Vec3};
 use bevy_time::{Fixed, Time};
 use bevy_transform::components::Transform;
 use boxddd::{
-    BodyDef, BodyId, BodyType, BoxHull, Capsule as BoxdddCapsule, Compound, HeightField, Hull,
-    MeshData, ShapeDef, ShapeId, Sphere as BoxdddSphere, Transform as BoxdddTransform,
-    WorldTransform as BoxdddWorldTransform,
+    BodyDef, BodyId, BodyType, BoxHull, Capsule as BoxdddCapsule, Compound, DistanceJointDef,
+    HeightField, Hull, JointId, MeshData, PrismaticJointDef, RevoluteJointDef, ShapeDef, ShapeId,
+    Sphere as BoxdddSphere, SphericalJointDef, Transform as BoxdddTransform, WeldJointDef,
+    WheelJointDef, WorldTransform as BoxdddWorldTransform,
 };
 
 pub fn create_missing_bodies(
@@ -135,6 +137,46 @@ pub fn create_missing_shapes(
     }
 }
 
+pub fn create_missing_joints(
+    mut commands: Commands,
+    mut context: NonSendMut<BoxdddPhysicsContext>,
+    settings: Res<BoxdddPhysicsSettings>,
+    mut errors: MessageWriter<BoxdddErrorMessage>,
+    joints: Query<(Entity, &JointTarget, &Joint), Without<BoxdddJoint>>,
+    bodies: Query<&BoxdddBody>,
+) {
+    if context.world().is_none() {
+        return;
+    }
+
+    for (entity, target, joint) in &joints {
+        let result = resolve_joint_bodies(target, &bodies).and_then(|(body_a, body_b)| {
+            create_joint(
+                context.world_mut().expect("checked above"),
+                body_a,
+                body_b,
+                *joint,
+            )
+        });
+
+        match result {
+            Ok(joint_id) => {
+                context.insert_joint(entity, target.body_a, target.body_b, joint_id);
+                commands.entity(entity).insert(BoxdddJoint(joint_id));
+            }
+            Err(error) => report_error(
+                &settings,
+                &mut errors,
+                BoxdddErrorMessage {
+                    operation: BoxdddOperation::CreateJoint,
+                    entity: Some(entity),
+                    error,
+                },
+            ),
+        }
+    }
+}
+
 pub fn cleanup_removed_colliders(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -222,6 +264,86 @@ pub fn cleanup_removed_colliders(
     }
 }
 
+pub fn cleanup_removed_joints(
+    mut commands: Commands,
+    mut context: NonSendMut<BoxdddPhysicsContext>,
+    settings: Res<BoxdddPhysicsSettings>,
+    mut errors: MessageWriter<BoxdddErrorMessage>,
+    joints: Query<(Entity, &BoxdddJoint, Option<&JointTarget>, Option<&Joint>)>,
+    bodies: Query<&BoxdddBody>,
+) {
+    if context.world().is_none() {
+        return;
+    }
+
+    let stale_joint_entities = context
+        .entity_to_joint
+        .iter()
+        .filter_map(|(entity, joint_id)| {
+            joints.get(*entity).is_err().then_some((*entity, *joint_id))
+        })
+        .collect::<Vec<_>>();
+
+    for (entity, joint_id) in stale_joint_entities {
+        let result = context
+            .world_mut()
+            .expect("checked above")
+            .try_destroy_joint(joint_id, true);
+
+        match result {
+            Ok(()) => {
+                context.remove_joint(entity, joint_id);
+            }
+            Err(error) => report_error(
+                &settings,
+                &mut errors,
+                BoxdddErrorMessage {
+                    operation: BoxdddOperation::DestroyJoint,
+                    entity: Some(entity),
+                    error,
+                },
+            ),
+        }
+    }
+
+    for (entity, joint_id, target, joint) in &joints {
+        let current_target = target.map(|target| (target.body_a, target.body_b));
+        let tracked_target = context.joint_body_entities(entity);
+        let endpoints_exist = target
+            .map(|target| bodies.get(target.body_a).is_ok() && bodies.get(target.body_b).is_ok())
+            .unwrap_or(false);
+
+        if joint.is_some()
+            && current_target.is_some()
+            && current_target == tracked_target
+            && endpoints_exist
+        {
+            continue;
+        }
+
+        let result = context
+            .world_mut()
+            .expect("checked above")
+            .try_destroy_joint(joint_id.0, true);
+
+        match result {
+            Ok(()) => {
+                context.remove_joint(entity, joint_id.0);
+                commands.entity(entity).remove::<BoxdddJoint>();
+            }
+            Err(error) => report_error(
+                &settings,
+                &mut errors,
+                BoxdddErrorMessage {
+                    operation: BoxdddOperation::DestroyJoint,
+                    entity: Some(entity),
+                    error,
+                },
+            ),
+        }
+    }
+}
+
 pub fn cleanup_removed_bodies(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -229,6 +351,7 @@ pub fn cleanup_removed_bodies(
     mut errors: MessageWriter<BoxdddErrorMessage>,
     bodies: Query<(), With<BoxdddBody>>,
     shapes: Query<Option<&BoxdddShape>>,
+    joints: Query<Option<&BoxdddJoint>>,
 ) {
     if context.world().is_none() {
         return;
@@ -255,11 +378,27 @@ pub fn cleanup_removed_bodies(
                         .flatten()
                 })
                 .collect::<Vec<_>>();
-            (entity, body_id, shapes)
+            let joints = context
+                .joint_to_body_entities
+                .iter()
+                .filter_map(|(joint_entity, (body_a, body_b))| {
+                    (*body_a == entity || *body_b == entity)
+                        .then(|| {
+                            joints
+                                .get(*joint_entity)
+                                .ok()
+                                .flatten()
+                                .copied()
+                                .map(|joint| (*joint_entity, joint))
+                        })
+                        .flatten()
+                })
+                .collect::<Vec<_>>();
+            (entity, body_id, shapes, joints)
         })
         .collect::<Vec<_>>();
 
-    for (entity, body_id, shapes) in stale {
+    for (entity, body_id, shapes, joints) in stale {
         let result = context
             .world_mut()
             .expect("checked above")
@@ -270,6 +409,9 @@ pub fn cleanup_removed_bodies(
                 context.remove_body(entity, body_id);
                 for (shape_entity, _) in shapes {
                     commands.entity(shape_entity).remove::<BoxdddShape>();
+                }
+                for (joint_entity, _) in joints {
+                    commands.entity(joint_entity).remove::<BoxdddJoint>();
                 }
             }
             Err(error) => report_error(
@@ -297,6 +439,21 @@ fn resolve_collider_body<'a>(
 
     let parent = parent?.parent();
     bodies.get(parent).ok().map(|body| (parent, body))
+}
+
+fn resolve_joint_bodies(
+    target: &JointTarget,
+    bodies: &Query<'_, '_, &BoxdddBody>,
+) -> boxddd::Result<(BodyId, BodyId)> {
+    let body_a = bodies
+        .get(target.body_a)
+        .map_err(|_| boxddd::Error::InvalidBodyId)?
+        .0;
+    let body_b = bodies
+        .get(target.body_b)
+        .map_err(|_| boxddd::Error::InvalidBodyId)?
+        .0;
+    Ok((body_a, body_b))
 }
 
 pub fn apply_body_controls(
@@ -730,6 +887,30 @@ fn apply_control_result(
                 error,
             },
         );
+    }
+}
+
+fn create_joint(
+    world: &mut boxddd::World,
+    body_a: BodyId,
+    body_b: BodyId,
+    joint: Joint,
+) -> boxddd::Result<JointId> {
+    joint.validate()?;
+
+    match joint {
+        Joint::Distance { length } => {
+            world.try_create_distance_joint(DistanceJointDef::new(body_a, body_b).length(length))
+        }
+        Joint::Revolute => world.try_create_revolute_joint(RevoluteJointDef::new(body_a, body_b)),
+        Joint::Spherical => {
+            world.try_create_spherical_joint(SphericalJointDef::new(body_a, body_b))
+        }
+        Joint::Weld => world.try_create_weld_joint(WeldJointDef::new(body_a, body_b)),
+        Joint::Prismatic => {
+            world.try_create_prismatic_joint(PrismaticJointDef::new(body_a, body_b))
+        }
+        Joint::Wheel => world.try_create_wheel_joint(WheelJointDef::new(body_a, body_b)),
     }
 }
 

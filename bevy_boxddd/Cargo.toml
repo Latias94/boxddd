@@ -48,3 +48,7 @@ path = "examples/debug_gizmos_3d.rs"
 [[example]]
 name = "advanced_colliders_3d"
 path = "examples/advanced_colliders_3d.rs"
+
+[[example]]
+name = "joint_gallery_3d"
+path = "examples/joint_gallery_3d.rs"

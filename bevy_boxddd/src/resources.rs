@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::{Entity, Resource};
 use bevy_math::Vec3;
-use boxddd::{BodyId, ShapeId, World, WorldDef};
+use boxddd::{BodyId, JointId, ShapeId, World, WorldDef};
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -38,6 +38,9 @@ pub struct BoxdddPhysicsContext {
     pub(crate) entity_to_shape: HashMap<Entity, ShapeId>,
     pub(crate) shape_to_entity: HashMap<ShapeId, Entity>,
     pub(crate) shape_to_body_entity: HashMap<Entity, Entity>,
+    pub(crate) entity_to_joint: HashMap<Entity, JointId>,
+    pub(crate) joint_to_entity: HashMap<JointId, Entity>,
+    pub(crate) joint_to_body_entities: HashMap<Entity, (Entity, Entity)>,
     pub(crate) last_step_failed: bool,
 }
 
@@ -56,6 +59,9 @@ impl BoxdddPhysicsContext {
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
             shape_to_body_entity: HashMap::new(),
+            entity_to_joint: HashMap::new(),
+            joint_to_entity: HashMap::new(),
+            joint_to_body_entities: HashMap::new(),
             last_step_failed: true,
         }
     }
@@ -68,6 +74,9 @@ impl BoxdddPhysicsContext {
             entity_to_shape: HashMap::new(),
             shape_to_entity: HashMap::new(),
             shape_to_body_entity: HashMap::new(),
+            entity_to_joint: HashMap::new(),
+            joint_to_entity: HashMap::new(),
+            joint_to_body_entities: HashMap::new(),
             last_step_failed: false,
         }
     }
@@ -86,6 +95,10 @@ impl BoxdddPhysicsContext {
 
     pub fn shape_entity(&self, shape_id: ShapeId) -> Option<Entity> {
         self.shape_to_entity.get(&shape_id).copied()
+    }
+
+    pub fn joint_entity(&self, joint_id: JointId) -> Option<Entity> {
+        self.joint_to_entity.get(&joint_id).copied()
     }
 
     pub(crate) fn insert_body(&mut self, entity: Entity, body_id: BodyId) {
@@ -108,6 +121,19 @@ impl BoxdddPhysicsContext {
                 self.remove_shape(shape_entity, shape_id);
             }
         }
+
+        let joints = self
+            .joint_to_body_entities
+            .iter()
+            .filter_map(|(joint_entity, (body_a, body_b))| {
+                (*body_a == entity || *body_b == entity).then_some(*joint_entity)
+            })
+            .collect::<Vec<_>>();
+        for joint_entity in joints {
+            if let Some(joint_id) = self.entity_to_joint.get(&joint_entity).copied() {
+                self.remove_joint(joint_entity, joint_id);
+            }
+        }
     }
 
     pub(crate) fn insert_shape(&mut self, entity: Entity, body_entity: Entity, shape_id: ShapeId) {
@@ -124,5 +150,27 @@ impl BoxdddPhysicsContext {
 
     pub(crate) fn shape_body_entity(&self, shape_entity: Entity) -> Option<Entity> {
         self.shape_to_body_entity.get(&shape_entity).copied()
+    }
+
+    pub(crate) fn insert_joint(
+        &mut self,
+        entity: Entity,
+        body_a: Entity,
+        body_b: Entity,
+        joint_id: JointId,
+    ) {
+        self.entity_to_joint.insert(entity, joint_id);
+        self.joint_to_entity.insert(joint_id, entity);
+        self.joint_to_body_entities.insert(entity, (body_a, body_b));
+    }
+
+    pub(crate) fn remove_joint(&mut self, entity: Entity, joint_id: JointId) {
+        self.entity_to_joint.remove(&entity);
+        self.joint_to_entity.remove(&joint_id);
+        self.joint_to_body_entities.remove(&entity);
+    }
+
+    pub(crate) fn joint_body_entities(&self, joint_entity: Entity) -> Option<(Entity, Entity)> {
+        self.joint_to_body_entities.get(&joint_entity).copied()
     }
 }

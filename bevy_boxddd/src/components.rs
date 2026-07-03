@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::{Component, Entity};
 use bevy_math::Vec3;
-use boxddd::{BodyId, BodyType, Filter, ShapeDef, ShapeId, SurfaceMaterial};
+use boxddd::{BodyId, BodyType, Filter, JointId, ShapeDef, ShapeId, SurfaceMaterial};
 
 #[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum RigidBody {
@@ -316,6 +316,76 @@ impl BoxdddShape {
     }
 }
 
+#[derive(Component, Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct JointTarget {
+    pub body_a: Entity,
+    pub body_b: Entity,
+}
+
+impl JointTarget {
+    pub const fn new(body_a: Entity, body_b: Entity) -> Self {
+        Self { body_a, body_b }
+    }
+}
+
+#[derive(Component, Copy, Clone, Debug, PartialEq)]
+pub enum Joint {
+    Distance { length: f32 },
+    Revolute,
+    Spherical,
+    Weld,
+    Prismatic,
+    Wheel,
+}
+
+impl Joint {
+    pub const fn distance(length: f32) -> Self {
+        Self::Distance { length }
+    }
+
+    pub const fn revolute() -> Self {
+        Self::Revolute
+    }
+
+    pub const fn spherical() -> Self {
+        Self::Spherical
+    }
+
+    pub const fn weld() -> Self {
+        Self::Weld
+    }
+
+    pub const fn prismatic() -> Self {
+        Self::Prismatic
+    }
+
+    pub const fn wheel() -> Self {
+        Self::Wheel
+    }
+
+    pub fn validate(self) -> boxddd::Result<()> {
+        match self {
+            Self::Distance { length } => validate_nonnegative_scalar(length),
+            Self::Revolute | Self::Spherical | Self::Weld | Self::Prismatic | Self::Wheel => Ok(()),
+        }
+    }
+}
+
+impl Default for Joint {
+    fn default() -> Self {
+        Self::distance(1.0)
+    }
+}
+
+#[derive(Component, Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct BoxdddJoint(pub JointId);
+
+impl BoxdddJoint {
+    pub const fn id(self) -> JointId {
+        self.0
+    }
+}
+
 #[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum TransformSyncMode {
     #[default]
@@ -374,6 +444,14 @@ fn validate_vec3(value: Vec3) -> boxddd::Result<()> {
 
 fn validate_positive_scalar(value: f32) -> boxddd::Result<()> {
     if value.is_finite() && value > 0.0 {
+        Ok(())
+    } else {
+        Err(boxddd::Error::InvalidArgument)
+    }
+}
+
+fn validate_nonnegative_scalar(value: f32) -> boxddd::Result<()> {
+    if value.is_finite() && value >= 0.0 {
         Ok(())
     } else {
         Err(boxddd::Error::InvalidArgument)
