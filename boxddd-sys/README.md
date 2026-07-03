@@ -31,6 +31,7 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 - `BOXDDD_SYS_FORCE_BINDGEN=1`: regenerate bindings into Cargo's `OUT_DIR`; requires `--features bindgen`.
 - `BOXDDD_SYS_SKIP_CC=1`: skip native C compilation for check-only workflows.
 - `BOXDDD_SYS_WASM_MODE`: override wasm mode. Accepted values are `compile-only`, `source`, and `provider`.
+- `BOXDDD_SYS_SKIP_CC=1` is rejected with `BOXDDD_SYS_WASM_MODE=source` because source mode is the runtime-capable WASM path.
 - `BOXDDD_SYS_LINK_LIB`: external library name used when `build-from-source` is disabled. Defaults to `box3d`.
 - `BOXDDD_SYS_LINK_SEARCH`: optional native library search directory used when `build-from-source` is disabled.
 - `WASI_SYSROOT`: WASI libc sysroot used by `wasm32-wasip1` source builds.

@@ -117,6 +117,7 @@ fn main() {
     let config = BuildConfig::from_env();
     let pregenerated = config.pregenerated_bindings();
     let has_pregenerated = pregenerated.exists();
+    validate_build_config(&config);
     if config.force_bindgen {
         println!("cargo:rustc-cfg=force_bindgen");
     } else if has_pregenerated {
@@ -171,6 +172,15 @@ fn main() {
     }
 
     build_box3d_from_source(&config);
+}
+
+fn validate_build_config(config: &BuildConfig) {
+    if config.skip_cc && config.wasm_mode == Some(WasmMode::Source) {
+        panic!(
+            "BOXDDD_SYS_SKIP_CC=1 cannot be combined with BOXDDD_SYS_WASM_MODE=source; \
+             source mode is the runtime-capable WASM path and must compile Box3D C sources"
+        );
+    }
 }
 
 fn handle_wasm_build(config: &BuildConfig) -> bool {
