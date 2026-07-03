@@ -1,0 +1,78 @@
+name: Release Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the leading v, for example 0.1.0"
+        required: true
+        type: string
+      source_ref:
+        description: "Git ref to validate"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTFLAGS: "-Cdebuginfo=0"
+
+jobs:
+  crates:
+    name: crates
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Verify Cargo workspace version matches input
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_version="$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' | tr -d ' ')"
+          if [ "$cargo_version" != "${{ inputs.version }}" ]; then
+            echo "::error::Cargo workspace version '$cargo_version' does not match input version ${{ inputs.version }}"
+            exit 1
+          fi
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Build package archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo package -p boxddd-sys --locked
+          cargo package -p boxddd --locked --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+          cargo package -p bevy_boxddd --locked --config 'patch.crates-io.boxddd.path="boxddd"' --config 'patch.crates-io.boxddd-sys.path="boxddd-sys"'
+
+      - name: Dry-run registry-independent crate
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ inputs.version }}"
+          if cargo info "boxddd-sys@$version" --registry crates-io >/dev/null 2>&1; then
+            echo "Skipping boxddd-sys $version dry-run because it is already published"
+            exit 0
+          fi
+          cargo publish -p boxddd-sys --locked --dry-run --registry crates-io
+
+      - name: Explain downstream dry-run boundary
+        run: |
+          echo "boxddd and bevy_boxddd dry-runs are performed by release-crates.yml after their registry dependencies are visible."

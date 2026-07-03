@@ -39,6 +39,10 @@ than a single workspace smoke test:
 - C-backed `wasm32-wasip1` runtime smoke with WASI SDK and wasmtime
 - browser-style provider smoke with Emscripten, shared `WebAssembly.Memory`, and Node
 
+The workflow uses current Node-runtime action majors where they are available.
+For example, repository checkout uses `actions/checkout@v7` to avoid the Node 20
+deprecation warning emitted by older checkout releases.
+
 ## Local Workspace Checks
 
 ```bash
@@ -80,6 +84,23 @@ cargo package -p boxddd --allow-dirty
 # After boxddd is published or available in a local registry:
 cargo package -p bevy_boxddd --allow-dirty
 ```
+
+## Release Workflows
+
+Release automation is split into a validation workflow and a publishing workflow.
+
+- `Release Preflight`: manual `workflow_dispatch` check for a version and source
+  ref. It verifies the workspace version, formatting, package archives, and the
+  `boxddd-sys` crates.io dry-run.
+- `Release Crates (crates.io)`: runs on pushed `v*` tags or manual dispatch.
+  It verifies the tag matches the workspace version, then publishes
+  `boxddd-sys`, `boxddd`, and `bevy_boxddd` in dependency order.
+
+The publish workflow expects a repository or environment secret named
+`CARGO_REGISTRY_TOKEN` and uses the protected `crates.io` environment. Downstream
+crate dry-runs happen after their dependency crate is visible on crates.io,
+because `cargo publish --dry-run` resolves registry dependencies rather than
+workspace path dependencies.
 
 ## Cross-Target Compile-Only Checks
 

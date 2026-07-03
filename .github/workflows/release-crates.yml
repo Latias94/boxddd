@@ -1,0 +1,183 @@
+name: Release Crates (crates.io)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to publish, for example v0.1.0"
+        required: true
+        type: string
+      source_ref:
+        description: "Git ref to publish from"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-crates-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTFLAGS: "-Cdebuginfo=0"
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-24.04
+    environment: crates.io
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
+
+      - name: Read version from tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            release_tag="${{ inputs.release_tag }}"
+          else
+            release_tag="${GITHUB_REF_NAME}"
+          fi
+          if [[ "$release_tag" != v* ]]; then
+            echo "::error::Release tag '$release_tag' must start with v."
+            exit 1
+          fi
+          version="${release_tag#v}"
+          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Tag version: $version"
+
+      - name: Verify Cargo workspace version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_version="$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' | tr -d ' ')"
+          if [ "$cargo_version" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::Cargo workspace version '$cargo_version' does not match tag ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: "false"
+
+      - name: Publish crates in dependency order
+        shell: bash
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
+            echo "::error::CARGO_REGISTRY_TOKEN secret is required for crates.io publishing"
+            exit 1
+          fi
+
+          crate_version_available() {
+            local crate="$1"
+            local version="$2"
+            local tmpdir="${RUNNER_TEMP:-/tmp}"
+
+            (
+              cd "$tmpdir"
+              cargo info "$crate@$version" --registry crates-io >/dev/null 2>&1
+            )
+          }
+
+          wait_for_crate_version() {
+            local crate="$1"
+            local version="$2"
+
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if crate_version_available "$crate" "$version"; then
+                echo "$crate $version is visible in crates.io"
+                return 0
+              fi
+
+              if [ "$attempt" = 12 ]; then
+                echo "::error::$crate $version was published but did not become visible in crates.io in time."
+                return 1
+              fi
+
+              sleep 15
+            done
+          }
+
+          workspace_crate_version() {
+            local crate="$1"
+
+            cargo pkgid -p "$crate" | sed 's/.*@//'
+          }
+
+          dry_run_crate_version() {
+            local crate="$1"
+            local crate_version="$2"
+
+            if crate_version_available "$crate" "$crate_version"; then
+              echo "Skipping dry-run for $crate $crate_version because it is already published"
+              return 0
+            fi
+
+            echo "Dry-running $crate $crate_version"
+            cargo publish -p "$crate" --locked --dry-run --registry crates-io
+          }
+
+          publish_crate_version() {
+            local crate="$1"
+            local crate_version="$2"
+
+            if [ "$crate_version" != "${{ steps.version.outputs.version }}" ]; then
+              echo "::error::$crate version '$crate_version' does not match tag ${{ steps.version.outputs.version }}"
+              exit 1
+            fi
+
+            if crate_version_available "$crate" "$crate_version"; then
+              echo "Skipping $crate $crate_version because it is already published"
+              return 0
+            fi
+
+            dry_run_crate_version "$crate" "$crate_version"
+
+            echo "Publishing $crate $crate_version"
+            for attempt in 1 2 3; do
+              if cargo publish -p "$crate" --locked --registry crates-io --token "$CARGO_REGISTRY_TOKEN"; then
+                wait_for_crate_version "$crate" "$crate_version"
+                return 0
+              fi
+
+              if crate_version_available "$crate" "$crate_version"; then
+                echo "$crate $crate_version became visible after a failed publish attempt; continuing"
+                return 0
+              fi
+
+              if [ "$attempt" = 3 ]; then
+                return 1
+              fi
+              sleep $((attempt * 30))
+            done
+          }
+
+          crates=(
+            boxddd-sys
+            boxddd
+            bevy_boxddd
+          )
+
+          for crate in "${crates[@]}"; do
+            publish_crate_version "$crate" "$(workspace_crate_version "$crate")"
+          done
