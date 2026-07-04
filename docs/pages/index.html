@@ -18,6 +18,7 @@
       --teal: #7bd6c4;
       --amber: #f4c95d;
       --green: #8fd17c;
+      --red: #ff8a8a;
     }
 
     * {
@@ -169,6 +170,151 @@
       white-space: nowrap;
     }
 
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 20px 0;
+    }
+
+    .field {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0b1118;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .field.search {
+      flex: 1 1 260px;
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .sample-card {
+      display: flex;
+      min-height: 360px;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .sample-preview {
+      position: relative;
+      height: 128px;
+      overflow: hidden;
+      border: 1px solid #2f3f4c;
+      border-radius: 8px;
+      background: #0a1017;
+    }
+
+    .sample-preview::before {
+      content: "";
+      position: absolute;
+      inset: 64% -10% -10%;
+      background: #18232c;
+      transform: skewY(-8deg);
+    }
+
+    .glyph {
+      position: absolute;
+      display: block;
+      border-radius: 5px;
+      background: var(--blue);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .glyph.alt {
+      background: var(--teal);
+    }
+
+    .glyph.warn {
+      background: var(--amber);
+    }
+
+    .glyph.outline {
+      border: 2px solid var(--teal);
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .preview-stack .glyph:nth-child(1) { width: 38px; height: 38px; left: 35%; top: 62px; }
+    .preview-stack .glyph:nth-child(2) { width: 38px; height: 38px; left: 45%; top: 42px; }
+    .preview-stack .glyph:nth-child(3) { width: 38px; height: 38px; left: 55%; top: 22px; }
+    .preview-collider .glyph:nth-child(1) { width: 90px; height: 30px; left: 16%; top: 74px; transform: rotate(-10deg); }
+    .preview-collider .glyph:nth-child(2) { width: 48px; height: 48px; left: 58%; top: 42px; border-radius: 50%; }
+    .preview-terrain .glyph:nth-child(1) { width: 220px; height: 40px; left: 8%; top: 74px; clip-path: polygon(0 65%, 20% 25%, 42% 55%, 58% 18%, 78% 62%, 100% 35%, 100% 100%, 0 100%); }
+    .preview-control .glyph:nth-child(1) { width: 42px; height: 42px; left: 25%; top: 42px; }
+    .preview-control .glyph:nth-child(2) { width: 88px; height: 5px; left: 44%; top: 62px; background: var(--amber); }
+    .preview-collision .glyph:nth-child(1) { width: 34px; height: 34px; left: 20%; top: 52px; border-radius: 50%; }
+    .preview-collision .glyph:nth-child(2) { width: 10px; height: 76px; left: 68%; top: 30px; background: var(--red); }
+    .preview-character .glyph:nth-child(1) { width: 34px; height: 66px; left: 40%; top: 34px; border-radius: 18px; }
+    .preview-character .glyph:nth-child(2) { width: 56px; height: 56px; left: 63%; top: 52px; }
+    .preview-material .glyph:nth-child(1) { width: 34px; height: 34px; left: 22%; top: 62px; border-radius: 50%; background: var(--green); }
+    .preview-material .glyph:nth-child(2) { width: 34px; height: 34px; left: 47%; top: 62px; border-radius: 50%; background: var(--amber); }
+    .preview-material .glyph:nth-child(3) { width: 34px; height: 34px; left: 72%; top: 62px; border-radius: 50%; background: var(--red); }
+    .preview-joint .glyph:nth-child(1) { width: 36px; height: 36px; left: 24%; top: 52px; border-radius: 50%; }
+    .preview-joint .glyph:nth-child(2) { width: 36px; height: 36px; left: 64%; top: 52px; border-radius: 50%; }
+    .preview-joint .glyph:nth-child(3) { width: 120px; height: 5px; left: 33%; top: 68px; background: var(--teal); box-shadow: none; }
+    .preview-event .glyph:nth-child(1) { width: 48px; height: 48px; left: 24%; top: 50px; border-radius: 50%; }
+    .preview-event .glyph:nth-child(2) { width: 48px; height: 48px; left: 50%; top: 50px; border-radius: 50%; background: var(--red); mix-blend-mode: screen; }
+    .preview-query .glyph:nth-child(1) { width: 190px; height: 4px; left: 18%; top: 66px; background: var(--amber); transform: rotate(18deg); box-shadow: none; }
+    .preview-query .glyph:nth-child(2) { width: 18px; height: 18px; left: 70%; top: 70px; border-radius: 50%; background: var(--amber); }
+    .preview-debug .glyph:nth-child(1) { width: 92px; height: 52px; left: 26%; top: 42px; }
+    .preview-debug .glyph:nth-child(2) { width: 126px; height: 78px; left: 20%; top: 30px; border-radius: 4px; }
+    .preview-force .glyph:nth-child(1) { width: 34px; height: 34px; left: 58%; top: 56px; border-radius: 50%; }
+    .preview-force .glyph:nth-child(2) { width: 96px; height: 5px; left: 20%; top: 72px; background: var(--teal); }
+    .preview-record .glyph:nth-child(1) { width: 34px; height: 34px; left: 20%; top: 58px; border-radius: 50%; }
+    .preview-record .glyph:nth-child(2) { width: 34px; height: 34px; left: 45%; top: 58px; border-radius: 50%; opacity: 0.7; }
+    .preview-record .glyph:nth-child(3) { width: 34px; height: 34px; left: 70%; top: 58px; border-radius: 50%; opacity: 0.4; }
+    .preview-thread .glyph:nth-child(1) { width: 46px; height: 34px; left: 16%; top: 48px; }
+    .preview-thread .glyph:nth-child(2) { width: 46px; height: 34px; left: 42%; top: 48px; background: var(--teal); }
+    .preview-thread .glyph:nth-child(3) { width: 46px; height: 34px; left: 68%; top: 48px; background: var(--amber); }
+    .preview-interop .glyph:nth-child(1) { width: 46px; height: 46px; left: 24%; top: 46px; transform: rotate(45deg); }
+    .preview-interop .glyph:nth-child(2) { width: 46px; height: 46px; left: 58%; top: 46px; border-radius: 50%; background: var(--teal); }
+    .preview-wasm .glyph:nth-child(1) { width: 90px; height: 52px; left: 22%; top: 42px; background: #2a5c95; }
+    .preview-wasm .glyph:nth-child(2) { width: 72px; height: 42px; left: 55%; top: 54px; background: var(--teal); }
+    .preview-testbed .glyph:nth-child(1) { width: 52px; height: 52px; left: 19%; top: 50px; }
+    .preview-testbed .glyph:nth-child(2) { width: 52px; height: 52px; left: 43%; top: 32px; background: var(--amber); }
+    .preview-testbed .glyph:nth-child(3) { width: 70px; height: 5px; left: 62%; top: 70px; background: var(--teal); }
+    .preview-error .glyph:nth-child(1) { width: 70px; height: 70px; left: 38%; top: 34px; background: var(--red); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+    .preview-tree .glyph:nth-child(1) { width: 160px; height: 86px; left: 21%; top: 28px; border-radius: 4px; }
+    .preview-tree .glyph:nth-child(2) { width: 70px; height: 38px; left: 30%; top: 52px; border-radius: 3px; }
+    .preview-tree .glyph:nth-child(3) { width: 48px; height: 28px; left: 58%; top: 62px; border-radius: 3px; }
+
+    .sample-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 2px 8px;
+      border: 1px solid #354858;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .sample-card .command {
+      margin-top: auto;
+      padding: 10px;
+      font-size: 12px;
+    }
+
     .status {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -214,8 +360,8 @@
     </header>
 
     <section>
-      <h2>Run The Native Testbed</h2>
-      <p class="muted">The supported visual entry point is a native Bevy window. Browser live demos are future work while WASM provider packaging matures.</p>
+      <h2>Examples On The Web</h2>
+      <p class="muted">Every maintained example is visible in the gallery below. Native Bevy examples are represented with web previews and exact run commands; the current WASM entries are headless runtime proofs while live browser rendering is being promoted incrementally.</p>
       <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
     </section>
 
@@ -242,8 +388,19 @@
 
     <section>
       <h2>Sample Gallery</h2>
-      <p class="muted">This catalog mirrors the Bevy testbed scene registry and is validated in CI.</p>
-      <div id="sample-grid" class="grid" aria-live="polite"></div>
+      <p class="muted">This catalog covers core examples, Bevy examples, Bevy testbed scenes, and WASM smoke entries. Testbed scene entries are validated against the Rust scene registry in CI.</p>
+      <div class="toolbar">
+        <select id="source-filter" class="field" aria-label="Filter by source">
+          <option value="all">All examples</option>
+          <option value="core-example">Core examples</option>
+          <option value="bevy-example">Bevy examples</option>
+          <option value="testbed-scene">Testbed scenes</option>
+          <option value="wasm-example">WASM entries</option>
+        </select>
+        <input id="sample-search" class="field search" type="search" placeholder="Search examples" aria-label="Search examples">
+        <span id="sample-count" class="muted"></span>
+      </div>
+      <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
     </section>
 
     <section>
@@ -251,7 +408,7 @@
       <div class="status">
         <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
         <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
-        <div><strong>WASM</strong><br><span class="muted">Core compile/provider paths exist; live browser apps are not supported yet.</span></div>
+        <div><strong>WASM</strong><br><span class="muted">Headless core smoke exists today; visible browser demos are next.</span></div>
         <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
       </div>
     </section>
@@ -263,32 +420,82 @@
 
   <script>
     const grid = document.querySelector("#sample-grid");
+    const sourceFilter = document.querySelector("#source-filter");
+    const search = document.querySelector("#sample-search");
+    const count = document.querySelector("#sample-count");
+    let catalog = [];
+
+    function previewMarkup() {
+      return "<span class=\"glyph\"></span><span class=\"glyph alt\"></span><span class=\"glyph warn\"></span><span class=\"glyph outline\"></span>";
+    }
+
+    function render(samples) {
+      count.textContent = `${samples.length} shown`;
+      grid.replaceChildren(...samples.map((sample) => {
+        const card = document.createElement("article");
+        card.className = "sample-card";
+
+        const visual = document.createElement("div");
+        visual.className = `sample-preview preview-${sample.preview}`;
+        visual.setAttribute("aria-hidden", "true");
+        visual.innerHTML = previewMarkup();
+
+        const meta = document.createElement("div");
+        meta.className = "sample-meta";
+
+        const source = document.createElement("span");
+        source.className = "tag";
+        source.textContent = sample.source.replaceAll("-", " ");
+
+        const display = document.createElement("span");
+        display.className = "pill";
+        display.textContent = sample.display;
+
+        meta.append(source, display);
+
+        const title = document.createElement("h3");
+        title.textContent = sample.name;
+
+        const description = document.createElement("p");
+        description.className = "muted";
+        description.textContent = sample.description;
+
+        const status = document.createElement("p");
+        status.className = "muted";
+        status.textContent = sample.status;
+
+        const command = document.createElement("div");
+        command.className = "command";
+        command.textContent = sample.command;
+
+        card.append(visual, meta, title, description, status, command);
+        return card;
+      }));
+    }
+
+    function applyFilters() {
+      const selectedSource = sourceFilter.value;
+      const query = search.value.trim().toLowerCase();
+      const samples = catalog.filter((sample) => {
+        const sourceMatches = selectedSource === "all" || sample.source === selectedSource;
+        const haystack = `${sample.category} ${sample.name} ${sample.description} ${sample.command}`.toLowerCase();
+        return sourceMatches && (!query || haystack.includes(query));
+      });
+      render(samples);
+    }
 
     fetch("sample-catalog.json")
       .then((response) => response.json())
       .then((samples) => {
-        grid.replaceChildren(...samples.map((sample) => {
-          const card = document.createElement("article");
-          card.className = "card";
-
-          const tag = document.createElement("span");
-          tag.className = "tag";
-          tag.textContent = sample.category;
-
-          const title = document.createElement("h3");
-          title.textContent = sample.name;
-
-          const description = document.createElement("p");
-          description.className = "muted";
-          description.textContent = sample.description;
-
-          card.append(tag, title, description);
-          return card;
-        }));
+        catalog = samples;
+        applyFilters();
       })
       .catch(() => {
         grid.textContent = "Sample catalog failed to load.";
       });
+
+    sourceFilter.addEventListener("change", applyFilters);
+    search.addEventListener("input", applyFilters);
   </script>
 </body>
 </html>

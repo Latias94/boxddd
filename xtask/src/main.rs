@@ -15,8 +15,21 @@ const TARGET: &str = "wasm32-unknown-unknown";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
 
-#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 struct PageSample {
+    id: String,
+    source: String,
+    category: String,
+    name: String,
+    description: String,
+    command: String,
+    display: String,
+    status: String,
+    preview: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RegistrySample {
     id: String,
     category: String,
     name: String,
@@ -93,11 +106,16 @@ fn validate_pages() -> Result<()> {
     let catalog_samples: Vec<PageSample> = serde_json::from_str(&catalog_json)?;
     validate_sample_catalog(&catalog_samples)?;
 
+    let catalog_registry_samples = catalog_samples
+        .iter()
+        .filter(|sample| sample.source == "testbed-scene")
+        .map(PageSample::registry_projection)
+        .collect::<Vec<_>>();
     let registry_samples = read_testbed_registry(&root)?;
-    if catalog_samples != registry_samples {
+    if catalog_registry_samples != registry_samples {
         return Err(format!(
-            "docs/pages/sample-catalog.json is out of sync with bevy_boxddd/examples/testbed_3d/scenes.rs ({} catalog entries, {} registry entries)",
-            catalog_samples.len(),
+            "docs/pages/sample-catalog.json testbed-scene entries are out of sync with bevy_boxddd/examples/testbed_3d/scenes.rs ({} catalog entries, {} registry entries)",
+            catalog_registry_samples.len(),
             registry_samples.len()
         )
         .into());
@@ -130,15 +148,61 @@ fn validate_sample_catalog(samples: &[PageSample]) -> Result<()> {
     let mut seen = BTreeSet::new();
     for sample in samples {
         validate_sample_field(sample, "id", &sample.id)?;
+        validate_sample_field(sample, "source", &sample.source)?;
         validate_sample_field(sample, "category", &sample.category)?;
         validate_sample_field(sample, "name", &sample.name)?;
         validate_sample_field(sample, "description", &sample.description)?;
+        validate_sample_field(sample, "command", &sample.command)?;
+        validate_sample_field(sample, "display", &sample.display)?;
+        validate_sample_field(sample, "status", &sample.status)?;
+        validate_sample_field(sample, "preview", &sample.preview)?;
 
         if !is_slug(&sample.id) {
             return Err(format!("sample id `{}` must be a lowercase ASCII slug", sample.id).into());
         }
+        if !is_slug(&sample.source) {
+            return Err(format!(
+                "sample `{}` source must be a lowercase ASCII slug",
+                sample.id
+            )
+            .into());
+        }
+        if !is_slug(&sample.preview) {
+            return Err(format!(
+                "sample `{}` preview must be a lowercase ASCII slug",
+                sample.id
+            )
+            .into());
+        }
         if !seen.insert(sample.id.as_str()) {
             return Err(format!("duplicate sample id `{}`", sample.id).into());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
+    if samples.is_empty() {
+        return Err("testbed registry must contain at least one entry".into());
+    }
+
+    let mut seen = BTreeSet::new();
+    for sample in samples {
+        validate_registry_field(sample, "id", &sample.id)?;
+        validate_registry_field(sample, "category", &sample.category)?;
+        validate_registry_field(sample, "name", &sample.name)?;
+        validate_registry_field(sample, "description", &sample.description)?;
+
+        if !is_slug(&sample.id) {
+            return Err(format!(
+                "testbed registry id `{}` must be a lowercase ASCII slug",
+                sample.id
+            )
+            .into());
+        }
+        if !seen.insert(sample.id.as_str()) {
+            return Err(format!("duplicate testbed registry id `{}`", sample.id).into());
         }
     }
 
@@ -153,6 +217,18 @@ fn validate_sample_field(sample: &PageSample, field: &str, value: &str) -> Resul
     }
 }
 
+fn validate_registry_field(sample: &RegistrySample, field: &str, value: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        Err(format!(
+            "testbed registry sample `{}` has an empty `{field}` field",
+            sample.id
+        )
+        .into())
+    } else {
+        Ok(())
+    }
+}
+
 fn is_slug(value: &str) -> bool {
     !value.is_empty()
         && !value.starts_with('-')
@@ -162,7 +238,18 @@ fn is_slug(value: &str) -> bool {
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
-fn read_testbed_registry(root: &Path) -> Result<Vec<PageSample>> {
+impl PageSample {
+    fn registry_projection(&self) -> RegistrySample {
+        RegistrySample {
+            id: self.id.clone(),
+            category: self.category.clone(),
+            name: self.name.clone(),
+            description: self.description.clone(),
+        }
+    }
+}
+
+fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
     let scenes = root
         .join("bevy_boxddd")
         .join("examples")
@@ -215,13 +302,13 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<PageSample>> {
         }
     }
 
-    validate_sample_catalog(&samples)?;
+    validate_registry_catalog(&samples)?;
     Ok(samples)
 }
 
 impl PageSampleBuilder {
-    fn build(self) -> Result<PageSample> {
-        Ok(PageSample {
+    fn build(self) -> Result<RegistrySample> {
+        Ok(RegistrySample {
             id: required_registry_field(self.id, "id")?,
             category: required_registry_field(self.category, "category")?,
             name: required_registry_field(self.name, "name")?,

@@ -1,86 +1,497 @@
 [
   {
+    "id": "core-hello-world",
+    "source": "core-example",
+    "category": "Basics",
+    "name": "Core Hello World",
+    "description": "Minimal world creation, static ground, a dynamic box, stepping, and body position reads.",
+    "command": "cargo run -p boxddd --example hello_world",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "stack"
+  },
+  {
+    "id": "core-error-handling",
+    "source": "core-example",
+    "category": "Errors",
+    "name": "Error Handling",
+    "description": "Recoverable try APIs and application boundary context for invalid input.",
+    "command": "cargo run -p boxddd --example error_handling",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "error"
+  },
+  {
+    "id": "core-events",
+    "source": "core-example",
+    "category": "Events",
+    "name": "Events",
+    "description": "Sensor, contact, hit, and body-move event snapshots.",
+    "command": "cargo run -p boxddd --example events",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "event"
+  },
+  {
+    "id": "core-body-controls",
+    "source": "core-example",
+    "category": "Bodies",
+    "name": "Body Controls",
+    "description": "Dynamic, kinematic, disabled, force, impulse, motion-lock, and transform-sync body APIs.",
+    "command": "cargo run -p boxddd --example body_controls",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "control"
+  },
+  {
+    "id": "core-shape-queries",
+    "source": "core-example",
+    "category": "Queries",
+    "name": "Shape Queries",
+    "description": "World, body, and shape-scoped query APIs for editor tools, picking, and gameplay probes.",
+    "command": "cargo run -p boxddd --example shape_queries",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "query"
+  },
+  {
+    "id": "core-compound-query",
+    "source": "core-example",
+    "category": "Colliders",
+    "name": "Compound Query",
+    "description": "Compound child AABB queries, reusable buffers, visitor early-stop, and owned byte transfer.",
+    "command": "cargo run -p boxddd --example compound_query",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "collider"
+  },
+  {
+    "id": "core-mesh-height-field-query",
+    "source": "core-example",
+    "category": "Colliders",
+    "name": "Mesh Height Field Query",
+    "description": "Standalone mesh and height-field triangle queries with owned results and visitor callbacks.",
+    "command": "cargo run -p boxddd --example mesh_height_field_query",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "terrain"
+  },
+  {
+    "id": "core-advanced-collision",
+    "source": "core-example",
+    "category": "Collision",
+    "name": "Advanced Collision",
+    "description": "Standalone distance, shape-cast, local manifold, and plane solver helpers.",
+    "command": "cargo run -p boxddd --example advanced_collision",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "collision"
+  },
+  {
+    "id": "core-continuous-collision",
+    "source": "core-example",
+    "category": "Collision",
+    "name": "Continuous Collision",
+    "description": "Shape-cast, time-of-impact, and bullet-body settings for fast-moving-shape diagnostics.",
+    "command": "cargo run -p boxddd --example continuous_collision",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "collision"
+  },
+  {
+    "id": "core-character-mover",
+    "source": "core-example",
+    "category": "Character",
+    "name": "Character Mover",
+    "description": "Capsule mover casts, contact planes, correction, and clipped velocity.",
+    "command": "cargo run -p boxddd --example character_mover",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "character"
+  },
+  {
+    "id": "core-dynamic-tree",
+    "source": "core-example",
+    "category": "Broad Phase",
+    "name": "Dynamic Tree",
+    "description": "Standalone broad-phase tree lifecycle, filters, overlap, closest, ray, and box-cast visitors.",
+    "command": "cargo run -p boxddd --example dynamic_tree",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "tree"
+  },
+  {
+    "id": "core-joints",
+    "source": "core-example",
+    "category": "Joints",
+    "name": "Joints",
+    "description": "Distance joint creation and runtime reads after simulation.",
+    "command": "cargo run -p boxddd --example joints",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "joint"
+  },
+  {
+    "id": "core-recording-replay",
+    "source": "core-example",
+    "category": "Recording",
+    "name": "Recording Replay",
+    "description": "Recording, replay player controls, and divergence validation.",
+    "command": "cargo run -p boxddd --example recording_replay",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "record"
+  },
+  {
+    "id": "core-determinism",
+    "source": "core-example",
+    "category": "Recording",
+    "name": "Determinism",
+    "description": "Simulation recording and explicit replay determinism validation with one worker.",
+    "command": "cargo run -p boxddd --example determinism",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "record"
+  },
+  {
+    "id": "core-physics-thread",
+    "source": "core-example",
+    "category": "Integration",
+    "name": "Physics Thread",
+    "description": "Dedicated physics thread ownership with plain snapshots sent over channels.",
+    "command": "cargo run -p boxddd --example physics_thread",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "thread"
+  },
+  {
+    "id": "core-task-system",
+    "source": "core-example",
+    "category": "Integration",
+    "name": "Task System",
+    "description": "Rust-owned Box3D task callbacks with blocking worker threads and scheduler counters.",
+    "command": "cargo run -p boxddd --example task_system",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "thread"
+  },
+  {
+    "id": "core-tokio-async-bridge",
+    "source": "core-example",
+    "category": "Integration",
+    "name": "Tokio Async Bridge",
+    "description": "spawn_blocking and async channels so async apps do not hold World across async tasks.",
+    "command": "cargo run -p boxddd --example tokio_async_bridge --features tokio-example",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "thread"
+  },
+  {
+    "id": "core-egui-debug-draw",
+    "source": "core-example",
+    "category": "Debug",
+    "name": "Egui Debug Draw",
+    "description": "Native egui and wgpu viewer consuming plain Box3D debug draw snapshots.",
+    "command": "cargo run -p boxddd --example egui_debug_draw --features egui-example",
+    "display": "Native visual example",
+    "status": "Shown in the web catalog; runs as a native desktop viewer today.",
+    "preview": "debug"
+  },
+  {
+    "id": "core-mint-interop",
+    "source": "core-example",
+    "category": "Math",
+    "name": "Mint Interop",
+    "description": "mint Vector3, Point3, and Quaternion conversions in a normal world setup.",
+    "command": "cargo run -p boxddd --example mint_interop --features mint",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "interop"
+  },
+  {
+    "id": "core-glam-interop",
+    "source": "core-example",
+    "category": "Math",
+    "name": "Glam Interop",
+    "description": "glam Vec3, Quat, and velocity snapshot conversions in a normal world setup.",
+    "command": "cargo run -p boxddd --example glam_interop --features glam",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "interop"
+  },
+  {
+    "id": "core-nalgebra-interop",
+    "source": "core-example",
+    "category": "Math",
+    "name": "Nalgebra Interop",
+    "description": "nalgebra Vector3, Point3, UnitQuaternion, and Isometry3 conversions.",
+    "command": "cargo run -p boxddd --example nalgebra_interop --features nalgebra",
+    "display": "Headless core example",
+    "status": "Shown in the web catalog; runs as a native terminal example today.",
+    "preview": "interop"
+  },
+  {
+    "id": "wasm-smoke",
+    "source": "wasm-example",
+    "category": "WASM",
+    "name": "WASM Smoke",
+    "description": "Single-thread world, falling body, AABB query, and runtime check under WASI.",
+    "command": "cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1",
+    "display": "WASI runtime smoke",
+    "status": "Headless WASM is tested; browser canvas live mode is planned next.",
+    "preview": "wasm"
+  },
+  {
+    "id": "wasm-provider-smoke",
+    "source": "wasm-example",
+    "category": "WASM",
+    "name": "Provider Smoke",
+    "description": "Browser-style provider mode with shared WebAssembly memory and Box3D C imports.",
+    "command": "cargo run -p xtask -- provider-smoke",
+    "display": "Headless browser-style proof",
+    "status": "CI verifies the provider architecture; a visible browser page is planned next.",
+    "preview": "wasm"
+  },
+  {
+    "id": "bevy-falling-stack",
+    "source": "bevy-example",
+    "category": "Basics",
+    "name": "Bevy Falling Stack",
+    "description": "Dynamic rigid bodies, static floor, Bevy camera, lights, meshes, and transform sync.",
+    "command": "cargo run -p bevy_boxddd --example falling_stack_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "stack"
+  },
+  {
+    "id": "bevy-advanced-colliders",
+    "source": "bevy-example",
+    "category": "Colliders",
+    "name": "Bevy Advanced Colliders",
+    "description": "Static mesh, height-field, compound, sphere, and hull-backed colliders.",
+    "command": "cargo run -p bevy_boxddd --example advanced_colliders_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "collider"
+  },
+  {
+    "id": "bevy-joint-gallery",
+    "source": "bevy-example",
+    "category": "Joints",
+    "name": "Bevy Joint Gallery",
+    "description": "Every public declarative joint variant displayed with connected bodies.",
+    "command": "cargo run -p bevy_boxddd --example joint_gallery_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "joint"
+  },
+  {
+    "id": "bevy-contact-messages",
+    "source": "bevy-example",
+    "category": "Events",
+    "name": "Bevy Contact Messages",
+    "description": "Bevy messages for contact begin, contact end, hit, and sensor events.",
+    "command": "cargo run -p bevy_boxddd --example contact_messages_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "event"
+  },
+  {
+    "id": "bevy-debug-gizmos",
+    "source": "bevy-example",
+    "category": "Debug",
+    "name": "Bevy Debug Gizmos",
+    "description": "App-authored collider gizmos without Box3D debug draw collection.",
+    "command": "cargo run -p bevy_boxddd --example debug_gizmos_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "debug"
+  },
+  {
+    "id": "bevy-debug-draw-overlay",
+    "source": "bevy-example",
+    "category": "Debug",
+    "name": "Bevy Debug Draw Overlay",
+    "description": "Box3D debug draw commands rendered through Bevy Gizmos.",
+    "command": "cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "debug"
+  },
+  {
+    "id": "bevy-physics-picking",
+    "source": "bevy-example",
+    "category": "Queries",
+    "name": "Bevy Physics Picking",
+    "description": "Camera cursor rays resolved through Box3D queries instead of mesh picking.",
+    "command": "cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as a native 3D app today.",
+    "preview": "query"
+  },
+  {
+    "id": "bevy-testbed",
+    "source": "bevy-example",
+    "category": "Testbed",
+    "name": "Bevy Testbed",
+    "description": "Egui-driven scene browser with picking, debug draw, and representative Box3D concepts.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy window",
+    "status": "Shown in the web catalog; runs as the primary native 3D teaching app today.",
+    "preview": "testbed"
+  },
+  {
     "id": "falling-stack",
+    "source": "testbed-scene",
     "category": "Basics",
     "name": "Falling Stack",
-    "description": "Dynamic boxes falling onto a static floor."
+    "description": "Dynamic boxes falling onto a static floor.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "stack"
   },
   {
     "id": "advanced-colliders",
+    "source": "testbed-scene",
     "category": "Colliders",
     "name": "Advanced Colliders",
-    "description": "Mesh, height-field, compound, sphere, and hull colliders."
+    "description": "Mesh, height-field, compound, sphere, and hull colliders.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "collider"
   },
   {
     "id": "body-controls",
+    "source": "testbed-scene",
     "category": "Bodies",
     "name": "Body Controls",
-    "description": "Body settings, force, impulse, kinematic motion, and gravity scale."
+    "description": "Body settings, force, impulse, kinematic motion, and gravity scale.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "control"
   },
   {
     "id": "continuous-collision",
+    "source": "testbed-scene",
     "category": "Collision",
     "name": "Continuous Collision",
-    "description": "Bullet-style fast bodies colliding with thin obstacles."
+    "description": "Bullet-style fast bodies colliding with thin obstacles.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "collision"
   },
   {
     "id": "character-mover",
+    "source": "testbed-scene",
     "category": "Character",
     "name": "Character Mover",
-    "description": "Capsule mover casts and obstacle probes."
+    "description": "Capsule mover casts and obstacle probes.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "character"
   },
   {
     "id": "materials",
+    "source": "testbed-scene",
     "category": "Materials",
     "name": "Materials",
-    "description": "Friction and restitution variants shown with dynamic shapes."
+    "description": "Friction and restitution variants shown with dynamic shapes.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "material"
   },
   {
     "id": "joints",
+    "source": "testbed-scene",
     "category": "Joints",
     "name": "Joints",
-    "description": "Public joint variants authored as Bevy entities."
+    "description": "Public joint variants authored as Bevy entities.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "joint"
   },
   {
     "id": "contacts",
+    "source": "testbed-scene",
     "category": "Events",
     "name": "Contacts And Sensors",
-    "description": "Contact and sensor messages emitted from the physics step."
+    "description": "Contact and sensor messages emitted from the physics step.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "event"
   },
   {
     "id": "ray-picking",
+    "source": "testbed-scene",
     "category": "Queries",
     "name": "Ray Picking",
-    "description": "Camera rays resolved through Box3D world queries."
+    "description": "Camera rays resolved through Box3D world queries.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "query"
   },
   {
     "id": "debug-draw",
+    "source": "testbed-scene",
     "category": "Debug",
     "name": "Debug Draw",
-    "description": "Native Box3D debug draw commands rendered through Bevy gizmos."
+    "description": "Native Box3D debug draw commands rendered through Bevy gizmos.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "debug"
   },
   {
     "id": "domino-run",
+    "source": "testbed-scene",
     "category": "Stacking",
     "name": "Domino Run",
-    "description": "A curved line of dynamic dominoes started by a moving sphere."
+    "description": "A curved line of dynamic dominoes started by a moving sphere.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "stack"
   },
   {
     "id": "arch-stack",
+    "source": "testbed-scene",
     "category": "Stacking",
     "name": "Arch Stack",
-    "description": "Dynamic blocks arranged as a simple arch over static pillars."
+    "description": "Dynamic blocks arranged as a simple arch over static pillars.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "stack"
   },
   {
     "id": "wind-field",
+    "source": "testbed-scene",
     "category": "Forces",
     "name": "Wind Field",
-    "description": "Continuous external forces push light bodies through obstacles."
+    "description": "Continuous external forces push light bodies through obstacles.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "force"
   },
   {
     "id": "ragdoll-chain",
+    "source": "testbed-scene",
     "category": "Joints",
     "name": "Ragdoll Chain",
-    "description": "A lightweight joint chain made from capsule bodies."
+    "description": "A lightweight joint chain made from capsule bodies.",
+    "command": "cargo run -p bevy_boxddd --features \"debug-gizmos physics-picking\" --example testbed_3d",
+    "display": "Native Bevy testbed scene",
+    "status": "Shown in the web catalog; select this scene inside the native testbed today.",
+    "preview": "joint"
   }
 ]
