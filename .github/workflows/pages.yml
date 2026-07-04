@@ -22,6 +22,8 @@ jobs:
   build:
     name: Validate and upload static site
     runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.pages.outputs.enabled }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -37,19 +39,40 @@ jobs:
       - name: Validate Pages content
         run: cargo run -p xtask -- validate-pages
 
+      - name: Check GitHub Pages configuration
+        id: pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          status="$(curl -sS -o pages-response.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages")"
+
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::GitHub Pages is not enabled for this repository or the workflow token cannot read it. Static validation passed; enable Pages with GitHub Actions as the source to deploy docs/pages."
+
       - name: Configure GitHub Pages
+        if: steps.pages.outputs.enabled == 'true'
         uses: actions/configure-pages@v6
-        with:
-          enablement: true
 
       - name: Upload GitHub Pages artifact
+        if: steps.pages.outputs.enabled == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/pages
 
   deploy:
     name: Deploy
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.pages_enabled == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment:
