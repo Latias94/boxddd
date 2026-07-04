@@ -1,3 +1,6 @@
+#[path = "../examples/testbed_3d/control.rs"]
+#[allow(dead_code)]
+mod control;
 #[path = "../examples/testbed_3d/scenes.rs"]
 mod scenes;
 
@@ -6,6 +9,10 @@ use bevy_boxddd::prelude::*;
 use bevy_ecs::message::Messages;
 use bevy_ecs::system::RunSystemOnce;
 use bevy_time::{TimePlugin, TimeUpdateStrategy};
+use control::{
+    DEFAULT_HERTZ, DEFAULT_SUB_STEPS, DebugDrawPreset, MAX_HERTZ, MAX_SUB_STEPS, MIN_HERTZ,
+    MIN_SUB_STEPS, TestbedState,
+};
 use scenes::{ALL_SCENES, MoverProbe, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene};
 
 #[derive(Resource)]
@@ -139,6 +146,54 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
             assert_ne!(left.scene, right.scene, "duplicate scene {:?}", left.scene);
         }
     }
+}
+
+#[test]
+fn debug_draw_presets_map_to_explicit_box3d_options() {
+    assert!(!DebugDrawPreset::Off.is_enabled());
+    assert!(!DebugDrawPreset::Off.options().draw_shapes);
+
+    let shapes = DebugDrawPreset::Shapes.options();
+    assert!(shapes.draw_shapes);
+    assert!(!shapes.draw_joints);
+    assert!(!shapes.draw_contacts);
+
+    let joints = DebugDrawPreset::ShapesAndJoints.options();
+    assert!(joints.draw_shapes);
+    assert!(joints.draw_joints);
+    assert!(joints.draw_joint_extras);
+
+    let contacts = DebugDrawPreset::Contacts.options();
+    assert!(contacts.draw_contacts);
+    assert!(contacts.draw_contact_normals);
+    assert!(contacts.draw_contact_forces);
+
+    let bounds = DebugDrawPreset::Bounds.options();
+    assert!(bounds.draw_shapes);
+    assert!(bounds.draw_bounds);
+}
+
+#[test]
+fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
+    let mut state = TestbedState {
+        hertz: 1.0,
+        sub_step_count: 0,
+        ..Default::default()
+    };
+    state.clamp_controls();
+    assert_eq!(state.hertz, MIN_HERTZ);
+    assert_eq!(state.sub_step_count, MIN_SUB_STEPS);
+
+    state.hertz = 10_000.0;
+    state.sub_step_count = 10_000;
+    state.clamp_controls();
+    assert_eq!(state.hertz, MAX_HERTZ);
+    assert_eq!(state.sub_step_count, MAX_SUB_STEPS);
+
+    let default_state = TestbedState::default();
+    assert_eq!(default_state.hertz, DEFAULT_HERTZ);
+    assert_eq!(default_state.sub_step_count, DEFAULT_SUB_STEPS);
+    assert!((default_state.fixed_timestep_seconds() - 1.0 / DEFAULT_HERTZ).abs() < f64::EPSILON);
 }
 
 #[test]

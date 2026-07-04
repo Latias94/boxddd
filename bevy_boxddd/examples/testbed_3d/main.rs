@@ -1,32 +1,18 @@
+mod control;
 mod scenes;
 #[path = "../support/mod.rs"]
 mod support;
+mod ui;
 
 use bevy::prelude::*;
+use bevy::time::Fixed;
 use bevy_boxddd::prelude::*;
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use control::TestbedState;
 use scenes::{ALL_SCENES, MoverProbe, TestbedEntity, TestbedScene, spawn_scene};
 
 #[derive(Component, Debug)]
-struct TestbedCamera;
-
-#[derive(Resource, Debug)]
-struct TestbedState {
-    scene_index: usize,
-    paused: bool,
-    debug_draw: bool,
-    gravity_enabled: bool,
-}
-
-impl Default for TestbedState {
-    fn default() -> Self {
-        Self {
-            scene_index: 0,
-            paused: false,
-            debug_draw: false,
-            gravity_enabled: true,
-        }
-    }
-}
+pub(crate) struct TestbedCamera;
 
 impl TestbedState {
     fn scene(&self) -> TestbedScene {
@@ -42,19 +28,22 @@ fn main() {
             options: boxddd::DebugDrawOptions::default(),
         })
         .add_plugins(support::teaching_default_plugins("boxddd Bevy Testbed"))
+        .add_plugins(EguiPlugin::default())
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
+        .add_systems(First, prepare_time_control)
         .add_systems(Startup, (setup_view, spawn_initial_scene).chain())
+        .add_systems(EguiPrimaryContextPass, ui::draw_testbed_ui)
         .add_systems(
             Update,
             (
                 handle_input,
-                apply_debug_draw_toggle,
-                apply_gravity_to_world,
+                apply_testbed_settings,
                 draw_debug_gizmos,
                 draw_mover_probe,
                 draw_physics_pick,
             ),
         )
+        .add_systems(PostUpdate, finish_single_step)
         .run();
 }
 
@@ -89,8 +78,6 @@ fn spawn_initial_scene(
 fn handle_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<TestbedState>,
-    mut physics_settings: ResMut<BoxdddPhysicsSettings>,
-    mut time: ResMut<Time<Virtual>>,
     mut commands: Commands,
     entities: Query<Entity, With<TestbedEntity>>,
     mut camera: Query<&mut Transform, With<TestbedCamera>>,
@@ -122,30 +109,46 @@ fn handle_input(
         requested_scene = Some(state.scene_index);
     }
     if keys.just_pressed(KeyCode::KeyD) {
-        state.debug_draw = !state.debug_draw;
+        state.debug_preset = state.debug_preset.toggled();
     }
     if keys.just_pressed(KeyCode::KeyG) {
         state.gravity_enabled = !state.gravity_enabled;
-        physics_settings.gravity = if state.gravity_enabled {
-            Vec3::new(0.0, -10.0, 0.0)
-        } else {
-            Vec3::ZERO
-        };
     }
     if keys.just_pressed(KeyCode::Space) {
         state.paused = !state.paused;
-        if state.paused {
-            time.pause();
-        } else {
-            time.unpause();
+        if !state.paused {
+            state.cancel_single_step();
         }
+    }
+    if keys.just_pressed(KeyCode::Enter) {
+        state.request_single_step();
     }
 
     let Some(scene_index) = requested_scene else {
         return;
     };
 
-    for entity in &entities {
+    switch_scene(
+        scene_index,
+        &mut state,
+        &mut commands,
+        &entities,
+        &mut camera,
+        &mut meshes,
+        &mut materials,
+    );
+}
+
+pub(crate) fn switch_scene(
+    scene_index: usize,
+    state: &mut TestbedState,
+    commands: &mut Commands,
+    entities: &Query<Entity, With<TestbedEntity>>,
+    camera: &mut Query<&mut Transform, With<TestbedCamera>>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    for entity in entities {
         commands.entity(entity).despawn();
     }
     state.scene_index = scene_index.min(ALL_SCENES.len() - 1);
@@ -153,7 +156,7 @@ fn handle_input(
         *transform = state.scene().metadata().camera.transform();
     }
     log_scene_selection(state.scene());
-    spawn_scene(&mut commands, &mut meshes, &mut materials, state.scene());
+    spawn_scene(commands, meshes, materials, state.scene());
 }
 
 fn log_scene_selection(scene: TestbedScene) {
@@ -167,27 +170,57 @@ fn log_scene_selection(scene: TestbedScene) {
     );
 }
 
-fn apply_debug_draw_toggle(
-    state: Res<TestbedState>,
-    mut debug_settings: ResMut<BoxdddDebugDrawSettings>,
-) {
-    debug_settings.enabled = state.debug_draw;
-    debug_settings.options.draw_joints = true;
-    debug_settings.options.draw_bounds = state.debug_draw;
-}
-
-fn apply_gravity_to_world(state: Res<TestbedState>, mut context: NonSendMut<BoxdddPhysicsContext>) {
-    if !state.is_changed() {
+fn prepare_time_control(mut state: ResMut<TestbedState>, mut time: ResMut<Time<Virtual>>) {
+    state.clamp_controls();
+    if !state.paused {
+        state.cancel_single_step();
+        time.unpause();
         return;
     }
 
-    let gravity = if state.gravity_enabled {
-        boxddd::Vec3::new(0.0, -10.0, 0.0)
+    if state.single_step_pending {
+        state.single_step_pending = false;
+        state.single_step_active = true;
+        time.unpause();
     } else {
-        boxddd::Vec3::ZERO
+        time.pause();
+    }
+}
+
+fn finish_single_step(mut state: ResMut<TestbedState>, mut time: ResMut<Time<Virtual>>) {
+    if state.single_step_active {
+        state.single_step_active = false;
+        time.pause();
+    }
+}
+
+fn apply_testbed_settings(
+    mut state: ResMut<TestbedState>,
+    mut physics_settings: ResMut<BoxdddPhysicsSettings>,
+    mut fixed_time: ResMut<Time<Fixed>>,
+    mut debug_settings: ResMut<BoxdddDebugDrawSettings>,
+    mut context: NonSendMut<BoxdddPhysicsContext>,
+) {
+    state.clamp_controls();
+
+    let gravity = if state.gravity_enabled {
+        Vec3::new(0.0, -10.0, 0.0)
+    } else {
+        Vec3::ZERO
     };
+    physics_settings.gravity = gravity;
+    physics_settings.sub_step_count = state.sub_step_count;
+    physics_settings.fixed_timestep_seconds = Some(state.fixed_timestep_seconds());
+    fixed_time.set_timestep_hz(state.hertz);
+
+    debug_settings.enabled = state.debug_preset.is_enabled();
+    debug_settings.options = state.debug_preset.options();
+
     if let Some(world) = context.world_mut() {
-        let _ = world.try_set_gravity(gravity);
+        let _ = world.try_set_gravity(boxddd::Vec3::new(gravity.x, gravity.y, gravity.z));
+        let _ = world.try_enable_sleeping(state.sleeping_enabled);
+        let _ = world.try_enable_warm_starting(state.warm_starting_enabled);
+        let _ = world.try_enable_continuous(state.continuous_enabled);
     }
 }
 
