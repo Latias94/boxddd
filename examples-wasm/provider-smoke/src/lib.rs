@@ -1,4 +1,8 @@
-use boxddd::{BodyDef, BodyType, BoxHull, QueryFilter, ShapeDef, Vec3, World, WorldDef};
+use boxddd::{
+    BodyDef, BodyType, BoxHull, DistanceInput, DistanceJointDef, Quat, QueryFilter,
+    ShapeCastPairInput, ShapeDef, ShapeProxy, Sphere, Transform, Vec3, World, WorldDef,
+    shape_cast_pair, shape_distance,
+};
 
 #[cfg(target_arch = "wasm32")]
 use boxddd::{
@@ -16,6 +20,8 @@ const ERR_MOTION: i32 = -6;
 const ERR_QUERY: i32 = -7;
 #[cfg(target_arch = "wasm32")]
 const ERR_CALLBACK_GUARDRAIL: i32 = -8;
+const ERR_COLLISION: i32 = -9;
+const ERR_JOINT: i32 = -10;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn boxddd_provider_smoke() -> i32 {
@@ -28,6 +34,21 @@ pub extern "C" fn boxddd_provider_smoke() -> i32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn boxddd_provider_drop_millimeters() -> i32 {
     run_drop_millimeters().unwrap_or_else(|code| code)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn boxddd_provider_ray_hit_millimeters() -> i32 {
+    run_ray_hit_millimeters().unwrap_or_else(|code| code)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn boxddd_provider_shape_cast_permyriad() -> i32 {
+    run_shape_cast_permyriad().unwrap_or_else(|code| code)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn boxddd_provider_joint_error_millimeters() -> i32 {
+    run_joint_error_millimeters().unwrap_or_else(|code| code)
 }
 
 fn run_smoke() -> Result<(), i32> {
@@ -74,6 +95,10 @@ fn run_smoke() -> Result<(), i32> {
     if closest.is_none() {
         return Err(ERR_QUERY);
     }
+
+    run_ray_hit_millimeters()?;
+    run_shape_cast_permyriad()?;
+    run_joint_error_millimeters()?;
 
     assert_provider_callback_guardrails(&mut world)?;
 
@@ -124,6 +149,114 @@ fn run_drop_millimeters() -> Result<i32, i32> {
     }
 
     Ok(((start_y - end_y).max(0.0) * 1000.0) as i32)
+}
+
+fn run_ray_hit_millimeters() -> Result<i32, i32> {
+    let mut world =
+        World::new(WorldDef::builder().worker_count(1).build()).map_err(|_| ERR_WORLD)?;
+    let body = world.create_body(BodyDef::builder().position(Vec3::ZERO).build());
+    let sphere = world.create_sphere_shape(
+        body,
+        &ShapeDef::builder().density(1.0).build(),
+        &Sphere::new([-1.0, 0.0, 0.0], 0.5),
+    );
+    if !sphere.is_valid() {
+        return Err(ERR_SHAPE);
+    }
+    let cube = world.create_hull_shape(
+        body,
+        &ShapeDef::builder().density(1.0).build(),
+        &BoxHull::cube(0.4),
+    );
+    if !cube.is_valid() {
+        return Err(ERR_SHAPE);
+    }
+
+    let hit = world
+        .cast_ray_closest([-3.0, 0.0, 0.0], [5.0, 0.0, 0.0], QueryFilter::default())
+        .map_err(|_| ERR_QUERY)?
+        .ok_or(ERR_QUERY)?;
+    if !hit.fraction.is_finite() || !(0.0..=1.0).contains(&hit.fraction) {
+        return Err(ERR_QUERY);
+    }
+
+    Ok((hit.fraction * 5000.0).round() as i32)
+}
+
+fn run_shape_cast_permyriad() -> Result<i32, i32> {
+    let sphere_a = ShapeProxy::sphere(0.5).map_err(|_| ERR_COLLISION)?;
+    let sphere_b = ShapeProxy::sphere(0.5).map_err(|_| ERR_COLLISION)?;
+
+    let distance = shape_distance(
+        DistanceInput::new(
+            sphere_a.clone(),
+            sphere_b.clone(),
+            Transform::new(Vec3::new(1.4, 0.0, 0.0), Quat::IDENTITY),
+        )
+        .map_err(|_| ERR_COLLISION)?,
+    )
+    .map_err(|_| ERR_COLLISION)?;
+    if !distance.distance.is_finite() || !(0.35..=0.45).contains(&distance.distance) {
+        return Err(ERR_COLLISION);
+    }
+
+    let cast = shape_cast_pair(
+        ShapeCastPairInput::new(
+            sphere_a,
+            sphere_b,
+            Transform::new(Vec3::new(3.0, 0.0, 0.0), Quat::IDENTITY),
+            Vec3::new(-4.0, 0.0, 0.0),
+        )
+        .map_err(|_| ERR_COLLISION)?,
+    )
+    .map_err(|_| ERR_COLLISION)?;
+    if !cast.hit || !cast.fraction.is_finite() || !(0.0..=1.0).contains(&cast.fraction) {
+        return Err(ERR_COLLISION);
+    }
+
+    Ok((cast.fraction * 10_000.0).round() as i32)
+}
+
+fn run_joint_error_millimeters() -> Result<i32, i32> {
+    let mut world = World::new(
+        WorldDef::builder()
+            .gravity(Vec3::ZERO)
+            .worker_count(1)
+            .build(),
+    )
+    .map_err(|_| ERR_WORLD)?;
+    let anchor = world.create_body(BodyDef::builder().position([0.0, 0.0, 0.0]).build());
+    let body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Dynamic)
+            .position([1.0, 0.0, 0.0])
+            .build(),
+    );
+    let shape = world.create_sphere_shape(
+        body,
+        &ShapeDef::builder().density(1.0).build(),
+        &Sphere::new([0.0, 0.0, 0.0], 0.25),
+    );
+    if !shape.is_valid() {
+        return Err(ERR_SHAPE);
+    }
+
+    let joint = world.create_distance_joint(DistanceJointDef::new(anchor, body).length(1.0));
+    world
+        .try_apply_force_to_center(body, [25.0, 0.0, 0.0], true)
+        .map_err(|_| ERR_JOINT)?;
+    for _ in 0..60 {
+        world.try_step(1.0 / 60.0, 4).map_err(|_| ERR_STEP)?;
+    }
+
+    let length = world
+        .try_distance_joint_current_length(joint)
+        .map_err(|_| ERR_JOINT)?;
+    if !length.is_finite() || !(0.5..=1.5).contains(&length) {
+        return Err(ERR_JOINT);
+    }
+
+    Ok(((length - 1.0).abs() * 1000.0).round() as i32)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -217,4 +350,19 @@ fn assert_provider_callback_guardrails(_world: &mut World) -> Result<(), i32> {
 #[cfg(target_arch = "wasm32")]
 fn is_unsupported_on_wasm<T>(result: boxddd::Result<T>) -> bool {
     matches!(result, Err(Error::UnsupportedOnWasm))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exported_metrics_cover_core_examples() {
+        assert!(run_drop_millimeters().expect("drop metric") > 100);
+        assert_eq!(run_ray_hit_millimeters().expect("ray metric"), 1500);
+        let shape_cast = run_shape_cast_permyriad().expect("shape-cast metric");
+        assert!((4000..=6000).contains(&shape_cast));
+        let joint_error = run_joint_error_millimeters().expect("joint metric");
+        assert!((0..=500).contains(&joint_error));
+    }
 }

@@ -452,7 +452,12 @@ fn provider_rustflags() -> OsString {
         flags.push(" ");
     }
     flags.push(
-        "-C link-arg=--import-memory -C link-arg=--export=boxddd_provider_smoke -C link-arg=--export=boxddd_provider_drop_millimeters",
+        "-C link-arg=--import-memory \
+         -C link-arg=--export=boxddd_provider_smoke \
+         -C link-arg=--export=boxddd_provider_drop_millimeters \
+         -C link-arg=--export=boxddd_provider_ray_hit_millimeters \
+         -C link-arg=--export=boxddd_provider_shape_cast_permyriad \
+         -C link-arg=--export=boxddd_provider_joint_error_millimeters",
     );
     flags
 }
@@ -713,7 +718,31 @@ if (code !== 0) {{
   throw new Error(`boxddd provider smoke failed with code ${{code}}`);
 }}
 
-console.log('boxddd provider smoke passed');
+const metricExports = {{
+  dropMillimeters: 'boxddd_provider_drop_millimeters',
+  rayHitMillimeters: 'boxddd_provider_ray_hit_millimeters',
+  shapeCastPermyriad: 'boxddd_provider_shape_cast_permyriad',
+  jointErrorMillimeters: 'boxddd_provider_joint_error_millimeters',
+}};
+const metrics = {{}};
+for (const [label, exportName] of Object.entries(metricExports)) {{
+  const exported = instance.exports[exportName];
+  if (typeof exported !== 'function') {{
+    throw new Error(`${{exportName}} export is missing from Rust wasm`);
+  }}
+  const value = exported();
+  if (value < 0) {{
+    throw new Error(`${{exportName}} failed with code ${{value}}`);
+  }}
+  metrics[label] = value;
+}}
+
+console.log(
+  `boxddd provider smoke passed: drop_mm=${{metrics.dropMillimeters}}, ` +
+    `ray_hit_mm=${{metrics.rayHitMillimeters}}, ` +
+    `shape_cast_permyriad=${{metrics.shapeCastPermyriad}}, ` +
+    `joint_error_mm=${{metrics.jointErrorMillimeters}}`
+);
 "#
     );
     fs::write(out_dir.join("run-provider-smoke.mjs"), runner)?;

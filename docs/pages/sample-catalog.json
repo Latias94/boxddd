@@ -245,11 +245,11 @@
     "id": "wasm-provider-smoke",
     "source": "wasm-example",
     "category": "WASM",
-    "name": "Provider Smoke",
-    "description": "Browser-style provider mode with shared WebAssembly memory and Box3D C imports.",
+    "name": "Provider Examples",
+    "description": "Browser-style provider mode with shared WebAssembly memory, Box3D C imports, and core probes.",
     "command": "cargo run -p xtask -- provider-smoke",
-    "display": "Headless browser-style proof",
-    "status": "CI verifies the provider architecture; the live browser smoke can run below.",
+    "display": "Headless browser-style examples",
+    "status": "CI verifies the provider architecture; live core examples can run below.",
     "preview": "wasm"
   },
   {

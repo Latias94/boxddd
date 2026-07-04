@@ -46,7 +46,7 @@ cargo run -p xtask -- build-pages-wasm
 Expected output:
 
 ```text
-boxddd provider smoke passed
+boxddd provider smoke passed: drop_mm=4002, ray_hit_mm=1500, shape_cast_permyriad=5000, joint_error_mm=0
 ```
 
 `provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
@@ -55,6 +55,7 @@ Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
 checks non-callback APIs and asserts that callback-heavy APIs return
 `Error::UnsupportedOnWasm` instead of trapping across wasm module tables.
 
-The Pages smoke is intentionally small: it runs a real falling-body Box3D step
-and displays the result on a canvas. Bevy Web and renderer-specific examples are
-still deferred until callback/table ownership and browser packaging mature.
+The Pages examples are intentionally core-only: they run falling-body, closest-ray,
+shape-cast, and distance-joint probes and display the result on a canvas. Bevy Web
+and renderer-specific examples are still deferred until callback/table ownership
+and browser packaging mature.

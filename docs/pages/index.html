@@ -346,6 +346,17 @@
       background: var(--band);
     }
 
+    .wasm-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .wasm-actions .button {
+      flex: 1 1 145px;
+    }
+
     .button:disabled {
       cursor: wait;
       opacity: 0.62;
@@ -401,7 +412,7 @@
 
     <section>
       <h2>Examples On The Web</h2>
-      <p class="muted">Every maintained example is visible in the gallery below. Native Bevy examples are represented with web previews and exact run commands; the current WASM entries are headless runtime proofs while live browser rendering is being promoted incrementally.</p>
+      <p class="muted">Every maintained example is visible in the gallery below. Native Bevy examples are represented with web previews and exact run commands; core WASM entries include live browser probes while Bevy Web rendering is being promoted incrementally.</p>
       <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
     </section>
 
@@ -443,17 +454,22 @@
       <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
     </section>
 
-    <section>
-      <h2>Live WASM Smoke</h2>
+    <section id="live-wasm">
+      <h2>Live WASM Examples</h2>
       <div class="wasm-panel">
         <div class="wasm-stage">
-          <canvas id="wasm-canvas" width="640" height="360" aria-label="Live WASM falling body visualization"></canvas>
+          <canvas id="wasm-canvas" width="640" height="360" aria-label="Live WASM core example visualization"></canvas>
         </div>
         <div class="wasm-copy">
           <span class="tag">wasm example</span>
           <h3 id="wasm-status">Ready to run</h3>
-          <p id="wasm-detail" class="muted">This loads the Rust wasm smoke app and an Emscripten-built Box3D provider, then runs a real Box3D falling-body step in the browser.</p>
-          <button id="wasm-run" class="button primary" type="button">Run WASM Smoke</button>
+          <p id="wasm-detail" class="muted">This loads the Rust wasm app and an Emscripten-built Box3D provider, then runs real Box3D core examples in the browser.</p>
+          <div class="wasm-actions" aria-label="Live WASM example selector">
+            <button class="button primary" type="button" data-wasm-demo="drop" aria-pressed="true">Falling body</button>
+            <button class="button" type="button" data-wasm-demo="ray" aria-pressed="false">Ray query</button>
+            <button class="button" type="button" data-wasm-demo="cast" aria-pressed="false">Shape cast</button>
+            <button class="button" type="button" data-wasm-demo="joint" aria-pressed="false">Distance joint</button>
+          </div>
         </div>
       </div>
     </section>
@@ -463,7 +479,7 @@
       <div class="status">
         <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
         <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
-        <div><strong>WASM</strong><br><span class="muted">The page runs a live provider-mode smoke in the browser.</span></div>
+        <div><strong>WASM</strong><br><span class="muted">The page runs live provider-mode core examples in the browser.</span></div>
         <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
       </div>
     </section>
