@@ -6,6 +6,9 @@ use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 use scenes::{ALL_SCENES, MoverProbe, TestbedEntity, TestbedScene, spawn_scene};
 
+#[derive(Component, Debug)]
+struct TestbedCamera;
+
 #[derive(Resource, Debug)]
 struct TestbedState {
     scene_index: usize,
@@ -55,10 +58,11 @@ fn main() {
         .run();
 }
 
-fn setup_view(mut commands: Commands) {
+fn setup_view(mut commands: Commands, state: Res<TestbedState>) {
     commands.spawn((
+        TestbedCamera,
         Camera3d::default(),
-        Transform::from_xyz(-7.0, 5.0, 9.0).looking_at(Vec3::new(0.0, 1.2, 0.0), Vec3::Y),
+        state.scene().metadata().camera.transform(),
     ));
 
     commands.spawn((
@@ -78,6 +82,7 @@ fn spawn_initial_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     state: Res<TestbedState>,
 ) {
+    log_scene_selection(state.scene());
     spawn_scene(&mut commands, &mut meshes, &mut materials, state.scene());
 }
 
@@ -88,6 +93,7 @@ fn handle_input(
     mut time: ResMut<Time<Virtual>>,
     mut commands: Commands,
     entities: Query<Entity, With<TestbedEntity>>,
+    mut camera: Query<&mut Transform, With<TestbedCamera>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -143,7 +149,22 @@ fn handle_input(
         commands.entity(entity).despawn();
     }
     state.scene_index = scene_index.min(ALL_SCENES.len() - 1);
+    if let Ok(mut transform) = camera.single_mut() {
+        *transform = state.scene().metadata().camera.transform();
+    }
+    log_scene_selection(state.scene());
     spawn_scene(&mut commands, &mut meshes, &mut materials, state.scene());
+}
+
+fn log_scene_selection(scene: TestbedScene) {
+    let metadata = scene.metadata();
+    bevy::log::info!(
+        "Testbed scene [{}] {} ({}) - {}",
+        metadata.category,
+        metadata.name,
+        metadata.id,
+        metadata.description
+    );
 }
 
 fn apply_debug_draw_toggle(

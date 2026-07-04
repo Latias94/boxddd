@@ -6,7 +6,7 @@ use bevy_boxddd::prelude::*;
 use bevy_ecs::message::Messages;
 use bevy_ecs::system::RunSystemOnce;
 use bevy_time::{TimePlugin, TimeUpdateStrategy};
-use scenes::{ALL_SCENES, MoverProbe, TestbedEntity, TestbedScene, spawn_scene};
+use scenes::{ALL_SCENES, MoverProbe, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene};
 
 #[derive(Resource)]
 struct SelectedScene(TestbedScene);
@@ -93,6 +93,52 @@ fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
 
 fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
     boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
+}
+
+#[test]
+fn testbed_scene_registry_has_complete_unique_metadata() {
+    assert_eq!(SCENE_REGISTRY.len(), ALL_SCENES.len());
+
+    for (index, metadata) in SCENE_REGISTRY.iter().enumerate() {
+        assert_eq!(metadata.scene, ALL_SCENES[index]);
+        assert_eq!(metadata.scene.metadata().id, metadata.id);
+        assert!(!metadata.id.is_empty());
+        assert!(!metadata.category.is_empty());
+        assert!(!metadata.name.is_empty());
+        assert!(!metadata.description.is_empty());
+        assert!(
+            metadata.id.is_ascii() && !metadata.id.contains(' '),
+            "scene id should be an ASCII slug: {}",
+            metadata.id
+        );
+        assert_ne!(
+            metadata.camera.position, metadata.camera.target,
+            "camera position and target should differ for {}",
+            metadata.id
+        );
+        assert!(
+            metadata
+                .camera
+                .position
+                .iter()
+                .chain(metadata.camera.target.iter())
+                .all(|value| value.is_finite()),
+            "camera values should be finite for {}",
+            metadata.id
+        );
+        assert!(
+            metadata.camera.transform().translation.is_finite(),
+            "camera transform should be finite for {}",
+            metadata.id
+        );
+    }
+
+    for (left_index, left) in SCENE_REGISTRY.iter().enumerate() {
+        for right in SCENE_REGISTRY.iter().skip(left_index + 1) {
+            assert_ne!(left.id, right.id, "duplicate scene id {}", left.id);
+            assert_ne!(left.scene, right.scene, "duplicate scene {:?}", left.scene);
+        }
+    }
 }
 
 #[test]

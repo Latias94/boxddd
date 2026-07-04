@@ -27,6 +27,43 @@ pub enum TestbedScene {
     DebugDraw,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TestbedCamera {
+    pub position: [f32; 3],
+    pub target: [f32; 3],
+}
+
+impl TestbedCamera {
+    pub const fn new(position: [f32; 3], target: [f32; 3]) -> Self {
+        Self { position, target }
+    }
+
+    pub fn transform(self) -> Transform {
+        Transform::from_translation(vec3_from_array(self.position))
+            .looking_at(vec3_from_array(self.target), Vec3::Y)
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct TestbedSceneMetadata {
+    pub scene: TestbedScene,
+    pub id: &'static str,
+    pub category: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub camera: TestbedCamera,
+    spawn: fn(&mut Commands, &mut Assets<Mesh>, &mut Assets<StandardMaterial>),
+}
+
+impl TestbedScene {
+    pub fn metadata(self) -> &'static TestbedSceneMetadata {
+        SCENE_REGISTRY
+            .iter()
+            .find(|metadata| metadata.scene == self)
+            .expect("testbed scene metadata missing")
+    }
+}
+
 pub const ALL_SCENES: [TestbedScene; 10] = [
     TestbedScene::FallingStack,
     TestbedScene::AdvancedColliders,
@@ -40,6 +77,99 @@ pub const ALL_SCENES: [TestbedScene; 10] = [
     TestbedScene::DebugDraw,
 ];
 
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 10] = [
+    TestbedSceneMetadata {
+        scene: TestbedScene::FallingStack,
+        id: "falling-stack",
+        category: "Basics",
+        name: "Falling Stack",
+        description: "Dynamic boxes falling onto a static floor.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_falling_stack,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::AdvancedColliders,
+        id: "advanced-colliders",
+        category: "Colliders",
+        name: "Advanced Colliders",
+        description: "Mesh, height-field, compound, sphere, and hull colliders.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [1.0, 1.2, 0.0]),
+        spawn: spawn_advanced_colliders,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::BodyControls,
+        id: "body-controls",
+        category: "Bodies",
+        name: "Body Controls",
+        description: "Body settings, force, impulse, kinematic motion, and gravity scale.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_body_controls,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::ContinuousCollision,
+        id: "continuous-collision",
+        category: "Collision",
+        name: "Continuous Collision",
+        description: "Bullet-style fast bodies colliding with thin obstacles.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_continuous_collision,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::CharacterMover,
+        id: "character-mover",
+        category: "Character",
+        name: "Character Mover",
+        description: "Capsule mover casts and obstacle probes.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_character_mover,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::Materials,
+        id: "materials",
+        category: "Materials",
+        name: "Materials",
+        description: "Friction and restitution variants shown with dynamic shapes.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_materials,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::Joints,
+        id: "joints",
+        category: "Joints",
+        name: "Joints",
+        description: "Public joint variants authored as Bevy entities.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_joints,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::Contacts,
+        id: "contacts",
+        category: "Events",
+        name: "Contacts And Sensors",
+        description: "Contact and sensor messages emitted from the physics step.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_contacts,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::RayPicking,
+        id: "ray-picking",
+        category: "Queries",
+        name: "Ray Picking",
+        description: "Camera rays resolved through Box3D world queries.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_ray_picking,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::DebugDraw,
+        id: "debug-draw",
+        category: "Debug",
+        name: "Debug Draw",
+        description: "Native Box3D debug draw commands rendered through Bevy gizmos.",
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_debug_draw,
+    },
+];
+
 pub fn spawn_scene(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -48,20 +178,11 @@ pub fn spawn_scene(
 ) {
     spawn_ground(commands, meshes, materials);
 
-    match scene {
-        TestbedScene::FallingStack => spawn_falling_stack(commands, meshes, materials),
-        TestbedScene::AdvancedColliders => spawn_advanced_colliders(commands, meshes, materials),
-        TestbedScene::BodyControls => spawn_body_controls(commands, meshes, materials),
-        TestbedScene::ContinuousCollision => {
-            spawn_continuous_collision(commands, meshes, materials)
-        }
-        TestbedScene::CharacterMover => spawn_character_mover(commands, meshes, materials),
-        TestbedScene::Materials => spawn_materials(commands, meshes, materials),
-        TestbedScene::Joints => spawn_joints(commands, meshes, materials),
-        TestbedScene::Contacts => spawn_contacts(commands, meshes, materials),
-        TestbedScene::RayPicking => spawn_ray_picking(commands, meshes, materials),
-        TestbedScene::DebugDraw => spawn_debug_draw(commands, meshes, materials),
-    }
+    (scene.metadata().spawn)(commands, meshes, materials);
+}
+
+fn vec3_from_array(value: [f32; 3]) -> Vec3 {
+    Vec3::new(value[0], value[1], value[2])
 }
 
 fn spawn_ground(
