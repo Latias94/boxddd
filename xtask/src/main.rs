@@ -14,6 +14,7 @@ const PROVIDER_MODULE: &str = "box3d-sys-v0";
 const TARGET: &str = "wasm32-unknown-unknown";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
+const PAGES_WASM_DIR: &str = "wasm/generated";
 
 #[derive(Clone, Debug, serde::Deserialize)]
 struct PageSample {
@@ -67,6 +68,7 @@ fn run() -> Result<()> {
             Ok(())
         }
         "provider-smoke" => run_provider_smoke(),
+        "build-pages-wasm" => build_pages_wasm(),
         "validate-pages" => validate_pages(),
         "help" | "-h" | "--help" => {
             print_help();
@@ -78,7 +80,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
     );
 }
 
@@ -91,6 +93,13 @@ fn project_root() -> PathBuf {
 
 fn provider_smoke_dir() -> PathBuf {
     project_root().join("target").join("boxddd-provider-smoke")
+}
+
+fn pages_wasm_generated_dir() -> PathBuf {
+    project_root()
+        .join("docs")
+        .join("pages")
+        .join(PAGES_WASM_DIR)
 }
 
 fn validate_pages() -> Result<()> {
@@ -442,7 +451,9 @@ fn provider_rustflags() -> OsString {
     if !flags.is_empty() {
         flags.push(" ");
     }
-    flags.push("-C link-arg=--import-memory -C link-arg=--export=boxddd_provider_smoke");
+    flags.push(
+        "-C link-arg=--import-memory -C link-arg=--export=boxddd_provider_smoke -C link-arg=--export=boxddd_provider_drop_millimeters",
+    );
     flags
 }
 
@@ -517,6 +528,48 @@ fn run_provider_smoke() -> Result<()> {
     let mut command = Command::new("node");
     command.arg(runner);
     run_command(&mut command, "run provider shared-memory smoke")?;
+    Ok(())
+}
+
+fn build_pages_wasm() -> Result<()> {
+    let app_wasm = build_provider_smoke_app()?;
+    let imports = collect_provider_imports(&app_wasm)?;
+    let out_dir = provider_smoke_dir();
+    let exports = write_exports_json(&out_dir, &imports)?;
+    let provider = build_box3d_provider(&out_dir, &exports)?;
+    let provider_wasm = provider.with_extension("wasm");
+    ensure_file(&provider, "Box3D provider module")?;
+    ensure_file(&provider_wasm, "Box3D provider wasm")?;
+
+    let generated = pages_wasm_generated_dir();
+    let pages_root = project_root().join("docs").join("pages");
+    let generated_parent = generated
+        .parent()
+        .ok_or("generated WASM directory has no parent")?;
+    fs::create_dir_all(generated_parent)?;
+    if generated.exists() {
+        let canonical_generated = fs::canonicalize(&generated)?;
+        let canonical_pages = fs::canonicalize(&pages_root)?;
+        if !canonical_generated.starts_with(&canonical_pages) {
+            return Err(format!(
+                "refusing to remove generated WASM directory outside docs/pages: {}",
+                generated.display()
+            )
+            .into());
+        }
+        fs::remove_dir_all(&generated)?;
+    }
+    fs::create_dir_all(&generated)?;
+
+    fs::copy(&app_wasm, generated.join(SMOKE_WASM))?;
+    fs::copy(&provider, generated.join("box3d-sys-v0.mjs"))?;
+    fs::copy(&provider_wasm, generated.join("box3d-sys-v0.wasm"))?;
+
+    eprintln!(
+        "Pages WASM assets ready: {} ({} provider imports)",
+        generated.display(),
+        imports.len()
+    );
     Ok(())
 }
 

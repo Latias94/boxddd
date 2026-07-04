@@ -25,6 +25,11 @@ pub extern "C" fn boxddd_provider_smoke() -> i32 {
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn boxddd_provider_drop_millimeters() -> i32 {
+    run_drop_millimeters().unwrap_or_else(|code| code)
+}
+
 fn run_smoke() -> Result<(), i32> {
     assert_wasm_guardrails()?;
 
@@ -73,6 +78,52 @@ fn run_smoke() -> Result<(), i32> {
     assert_provider_callback_guardrails(&mut world)?;
 
     Ok(())
+}
+
+fn run_drop_millimeters() -> Result<i32, i32> {
+    let mut world = World::new(
+        WorldDef::builder()
+            .gravity(Vec3::new(0.0, -10.0, 0.0))
+            .worker_count(1)
+            .build(),
+    )
+    .map_err(|_| ERR_WORLD)?;
+
+    let ground = world.create_body(BodyDef::builder().position([0.0, -1.0, 0.0]).build());
+    world.create_hull_shape(ground, &ShapeDef::default(), &BoxHull::new(8.0, 0.5, 8.0));
+
+    let body = world.create_body(
+        BodyDef::builder()
+            .body_type(BodyType::Dynamic)
+            .position([0.0, 4.0, 0.0])
+            .build(),
+    );
+    let shape = world.create_hull_shape(
+        body,
+        &ShapeDef::builder().density(1.0).friction(0.3).build(),
+        &BoxHull::cube(0.5),
+    );
+    if !shape.is_valid() {
+        return Err(ERR_SHAPE);
+    }
+
+    let start_y = world.body_position(body).y;
+    for _ in 0..60 {
+        world.try_step(1.0 / 60.0, 4).map_err(|_| ERR_STEP)?;
+    }
+    let end_y = world.body_position(body).y;
+    if end_y >= start_y - 0.1 {
+        return Err(ERR_MOTION);
+    }
+
+    let closest = world
+        .cast_ray_closest([0.0, 8.0, 0.0], [0.0, -16.0, 0.0], QueryFilter::default())
+        .map_err(|_| ERR_QUERY)?;
+    if closest.is_none() {
+        return Err(ERR_QUERY);
+    }
+
+    Ok(((start_y - end_y).max(0.0) * 1000.0) as i32)
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -1,5 +1,6 @@
 /target
 /repo-ref
+/docs/pages/wasm/generated
 /.idea
 *.pdb
 *.ilk

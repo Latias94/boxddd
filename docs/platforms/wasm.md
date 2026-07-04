@@ -4,8 +4,8 @@
 
 - `wasm32-unknown-unknown` is a browser-oriented compile/import target.
 - `wasm32-wasip1` is the first C-backed runtime smoke target.
-- provider mode is a headless browser-style runtime smoke that shares memory
-  between a Rust wasm module and an Emscripten-built Box3D C provider.
+- provider mode can run as a Node smoke and as a small live browser smoke that
+  shares memory between a Rust wasm module and an Emscripten-built Box3D C provider.
 
 The supported runtime tier is intentionally core-only. It proves Box3D C code,
 world creation, shape creation, stepping, queries, and teardown in WebAssembly.
@@ -19,7 +19,7 @@ threaded Box3D scheduling yet.
 | `boxddd-sys` | `wasm32-unknown-unknown` | compile-only | Uses pregenerated bindings and skips Box3D C compilation. Do not treat the artifact as standalone runnable. |
 | `boxddd-sys` | `wasm32-unknown-unknown` with `BOXDDD_SYS_WASM_MODE=provider` | provider import bindings | Generates WASM import bindings for module `box3d-sys-v0`. |
 | `boxddd-sys` | `wasm32-wasip1` | C-backed runtime | Compiles vendored Box3D C sources with WASI SDK and links them into the Rust WASI module. |
-| `boxddd` | `wasm32-unknown-unknown` | compile-only/provider smoke | Safe APIs type-check. `xtask provider-smoke` runs a Rust wasm app against an Emscripten Box3D provider with shared memory. |
+| `boxddd` | `wasm32-unknown-unknown` | compile-only/provider smoke | Safe APIs type-check. `xtask provider-smoke` runs a Rust wasm app against an Emscripten Box3D provider with shared memory, and Pages publishes the same provider shape as a live browser smoke. |
 | `boxddd` | `wasm32-wasip1` | runtime smoke | `wasm_smoke` creates a world, steps a body, runs a query, and exits successfully. |
 | `bevy_boxddd` minimal library | `wasm32-unknown-unknown` | compile-only | `--no-default-features` type-checks the library surface. |
 | Bevy examples and renderer integrations | browser WASM | deferred | Native examples use windowing/rendering assumptions. Bevy Web needs a separate renderer/input/testbed plan. |
@@ -43,13 +43,14 @@ BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unkn
 Provider mode does not compile Box3D C. It rewrites pregenerated bindings so
 extern functions import from the stable module name `box3d-sys-v0`.
 
-## Browser-Style Provider Smoke
+## Browser Provider Smoke
 
-The provider smoke is intentionally headless. It proves the import-provider
-architecture before adding Bevy Web, canvas setup, renderer state, input, or
-cross-module callback APIs.
-The GitHub Pages site is only a static demo hub for native example discovery;
-it is not a browser runtime smoke or a supported live WASM demo.
+The provider smoke proves the import-provider architecture before adding Bevy Web,
+renderer state, input, or cross-module callback APIs. It has two forms:
+
+- `cargo run -p xtask -- provider-smoke` runs the shared-memory smoke under Node.
+- GitHub Pages runs `cargo run -p xtask -- build-pages-wasm` and publishes a
+  small browser canvas smoke that calls the same Rust wasm app and Box3D provider.
 
 Prerequisites:
 
@@ -69,6 +70,12 @@ Full provider smoke:
 
 ```bash
 cargo run -p xtask -- provider-smoke
+```
+
+Pages browser artifacts:
+
+```bash
+cargo run -p xtask -- build-pages-wasm
 ```
 
 `provider-smoke` builds `examples-wasm/provider-smoke` with
@@ -151,8 +158,7 @@ CI separates WASM support into visible jobs:
 
 The browser route follows the same shape as `dear-imgui-rs`: a Rust app WASM
 module imports C symbols from a provider module, and both modules share the same
-`WebAssembly.Memory`. The current provider smoke proves the memory/import part
-of this runtime contract without a UI and enforces typed errors for callback
-APIs. A future browser plan should add cross-module callback support, packaged
-browser artifacts, visual examples, and then Bevy Web or other renderer
-integrations.
+`WebAssembly.Memory`. The current browser smoke proves the memory/import part
+of this runtime contract with a minimal canvas UI and enforces typed errors for
+callback APIs. Future work should add cross-module callback support, richer
+visual examples, and then Bevy Web or other renderer integrations.

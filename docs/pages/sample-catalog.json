@@ -238,7 +238,7 @@
     "description": "Single-thread world, falling body, AABB query, and runtime check under WASI.",
     "command": "cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1",
     "display": "WASI runtime smoke",
-    "status": "Headless WASM is tested; browser canvas live mode is planned next.",
+    "status": "Headless WASI is tested; the live browser provider smoke is available below.",
     "preview": "wasm"
   },
   {
@@ -249,7 +249,7 @@
     "description": "Browser-style provider mode with shared WebAssembly memory and Box3D C imports.",
     "command": "cargo run -p xtask -- provider-smoke",
     "display": "Headless browser-style proof",
-    "status": "CI verifies the provider architecture; a visible browser page is planned next.",
+    "status": "CI verifies the provider architecture; the live browser smoke can run below.",
     "preview": "wasm"
   },
   {

@@ -315,6 +315,42 @@
       font-size: 12px;
     }
 
+    .wasm-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .wasm-stage {
+      min-height: 280px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .wasm-stage canvas {
+      display: block;
+      width: 100%;
+      height: 240px;
+      border: 1px solid #2f3f4c;
+      border-radius: 8px;
+      background: #0a1017;
+    }
+
+    .wasm-copy {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--band);
+    }
+
+    .button:disabled {
+      cursor: wait;
+      opacity: 0.62;
+    }
+
     .status {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -338,6 +374,10 @@
       header {
         grid-template-columns: 1fr;
         min-height: 0;
+      }
+
+      .wasm-panel {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -404,11 +444,26 @@
     </section>
 
     <section>
+      <h2>Live WASM Smoke</h2>
+      <div class="wasm-panel">
+        <div class="wasm-stage">
+          <canvas id="wasm-canvas" width="640" height="360" aria-label="Live WASM falling body visualization"></canvas>
+        </div>
+        <div class="wasm-copy">
+          <span class="tag">wasm example</span>
+          <h3 id="wasm-status">Ready to run</h3>
+          <p id="wasm-detail" class="muted">This loads the Rust wasm smoke app and an Emscripten-built Box3D provider, then runs a real Box3D falling-body step in the browser.</p>
+          <button id="wasm-run" class="button primary" type="button">Run WASM Smoke</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
       <h2>Support Snapshot</h2>
       <div class="status">
         <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
         <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
-        <div><strong>WASM</strong><br><span class="muted">Headless core smoke exists today; visible browser demos are next.</span></div>
+        <div><strong>WASM</strong><br><span class="muted">The page runs a live provider-mode smoke in the browser.</span></div>
         <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
       </div>
     </section>
@@ -497,5 +552,6 @@
     sourceFilter.addEventListener("change", applyFilters);
     search.addEventListener("input", applyFilters);
   </script>
+  <script type="module" src="wasm/live-smoke.js"></script>
 </body>
 </html>

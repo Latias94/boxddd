@@ -31,8 +31,8 @@ Box3D C provider module:
 BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unknown
 ```
 
-The headless provider smoke verifies the same shared-memory import shape used by
-browser apps:
+The provider smoke verifies the same shared-memory import shape used by browser
+apps. It can run headlessly under Node or be packaged into the GitHub Pages demo:
 
 ```bash
 rustup target add wasm32-unknown-unknown
@@ -40,6 +40,7 @@ cargo run -p xtask -- provider-smoke-app
 
 # Requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
 cargo run -p xtask -- provider-smoke
+cargo run -p xtask -- build-pages-wasm
 ```
 
 Expected output:
@@ -54,5 +55,6 @@ Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
 checks non-callback APIs and asserts that callback-heavy APIs return
 `Error::UnsupportedOnWasm` instead of trapping across wasm module tables.
 
-A visual Bevy Web or renderer-specific example is still deferred until this
-runtime layer is packaged for browser use.
+The Pages smoke is intentionally small: it runs a real falling-body Box3D step
+and displays the result on a canvas. Bevy Web and renderer-specific examples are
+still deferred until callback/table ownership and browser packaging mature.

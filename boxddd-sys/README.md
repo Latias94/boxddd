@@ -50,7 +50,7 @@ WASM support is early and core-only.
 |---|---|
 | `wasm32-unknown-unknown` | Compile-only by default. Provider mode imports Box3D symbols from module `box3d-sys-v0`. |
 | `wasm32-wasip1` | Runtime-capable source build when a WASI SDK sysroot is configured. |
-| Browser visual demos | Not supported yet. |
+| Browser visual demos | Only the workspace Pages provider smoke is supported; full visual examples are not a `boxddd-sys` contract. |
 
 Useful environment variables:
 
