@@ -463,6 +463,7 @@ fn is_external_or_fragment(value: &str) -> bool {
     value.starts_with("http://")
         || value.starts_with("https://")
         || value.starts_with("mailto:")
+        || value.starts_with("data:")
         || value.starts_with('#')
         || value.starts_with("javascript:")
 }
