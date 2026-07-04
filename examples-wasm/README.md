@@ -46,7 +46,7 @@ cargo run -p xtask -- build-pages-wasm
 Expected output:
 
 ```text
-boxddd provider smoke passed: drop_mm=4002, ray_hit_mm=1500, shape_cast_permyriad=5000, joint_error_mm=0
+boxddd provider smoke passed: drop_mm=4002, ray_hit_mm=1500, shape_cast_permyriad=5013, joint_error_mm=0
 ```
 
 `provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
