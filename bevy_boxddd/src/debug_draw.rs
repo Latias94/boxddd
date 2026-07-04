@@ -1,12 +1,17 @@
+//! Debug draw collection and optional Bevy gizmo rendering.
+
 use crate::errors::report_error;
 use crate::messages::{BoxdddErrorMessage, BoxdddOperation};
 use crate::resources::{BoxdddPhysicsContext, BoxdddPhysicsSettings};
 use bevy_ecs::message::MessageWriter;
 use bevy_ecs::prelude::{NonSendMut, Res, ResMut, Resource};
 
+/// Controls whether Box3D debug draw commands are collected after each step.
 #[derive(Resource, Copy, Clone, Debug)]
 pub struct BoxdddDebugDrawSettings {
+    /// Enables debug draw command collection when true.
     pub enabled: bool,
+    /// Box3D debug draw options forwarded to the native world.
     pub options: boxddd::DebugDrawOptions,
 }
 
@@ -19,21 +24,25 @@ impl Default for BoxdddDebugDrawSettings {
     }
 }
 
+/// Last collected Box3D debug draw command buffer.
 #[derive(Resource, Clone, Debug, Default)]
 pub struct BoxdddDebugDrawCommands {
     commands: Vec<boxddd::DebugDrawCommand>,
 }
 
 impl BoxdddDebugDrawCommands {
+    /// Returns the commands collected during the most recent debug draw pass.
     pub fn commands(&self) -> &[boxddd::DebugDrawCommand] {
         &self.commands
     }
 
+    /// Clears the stored debug draw commands.
     pub fn clear(&mut self) {
         self.commands.clear();
     }
 }
 
+/// Collects native Box3D debug draw commands into [`BoxdddDebugDrawCommands`].
 pub fn collect_debug_draw_commands(
     mut context: NonSendMut<BoxdddPhysicsContext>,
     settings: Res<BoxdddPhysicsSettings>,
@@ -66,6 +75,7 @@ pub fn collect_debug_draw_commands(
 }
 
 #[cfg(feature = "debug-gizmos")]
+/// Renders collected Box3D debug draw commands using Bevy `Gizmos`.
 pub fn draw_debug_gizmos(
     debug_commands: Res<BoxdddDebugDrawCommands>,
     mut gizmos: bevy_gizmos::prelude::Gizmos,

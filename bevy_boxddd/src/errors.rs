@@ -1,3 +1,5 @@
+//! Internal error reporting helpers for plugin systems.
+
 use crate::messages::BoxdddErrorMessage;
 use crate::resources::{BoxdddErrorPolicy, BoxdddPhysicsSettings};
 use bevy_ecs::message::MessageWriter;

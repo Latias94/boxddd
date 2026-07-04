@@ -56,6 +56,31 @@ cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example t
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
+## Rustdoc Coverage
+
+The `bevy_boxddd` integration layer is small enough that public rustdoc should
+stay complete:
+
+```bash
+cargo rustdoc -p bevy_boxddd --all-features -- -D missing_docs
+```
+
+The core `boxddd` crate is not yet ready for a workspace-wide
+`-D missing_docs` gate. The latest audit after adding module-level docs still
+reports 1669 missing public item docs, concentrated in:
+
+- `boxddd/src/shapes.rs`
+- `boxddd/src/collision.rs`
+- `boxddd/src/joints/defs.rs`
+- `boxddd/src/types/math.rs`
+- `boxddd/src/events.rs`
+- `boxddd/src/debug_draw.rs`
+- `boxddd/src/world/body_api.rs`
+
+Treat that as release documentation debt rather than a CI failure today. When
+adding or changing public `boxddd` APIs, include rustdoc for the touched public
+types and methods so the count only moves down.
+
 ## Binding Checks
 
 Default builds use vendored Box3D C sources and pregenerated bindings, so normal

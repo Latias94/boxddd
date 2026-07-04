@@ -1,3 +1,5 @@
+//! Fixed-update systems registered by [`crate::BoxdddPhysicsPlugin`].
+
 use crate::components::{
     AngularVelocity, BoxdddBody, BoxdddJoint, BoxdddShape, Collider, ExternalForce,
     ExternalImpulse, Joint, JointTarget, LinearVelocity, PhysicsMaterial, RigidBody,
@@ -25,6 +27,7 @@ use boxddd::{
     WheelJointDef, WorldTransform as BoxdddWorldTransform,
 };
 
+/// Creates native Box3D bodies for entities with [`RigidBody`] but no [`BoxdddBody`].
 pub fn create_missing_bodies(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -85,6 +88,9 @@ pub fn create_missing_bodies(
     }
 }
 
+/// Creates native Box3D shapes for entities with [`Collider`] but no [`BoxdddShape`].
+///
+/// Colliders may live on the body entity itself or on a child entity of a body.
 pub fn create_missing_shapes(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -151,6 +157,7 @@ pub fn create_missing_shapes(
     }
 }
 
+/// Creates native Box3D joints for entities with [`JointTarget`] and [`Joint`].
 pub fn create_missing_joints(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -191,6 +198,7 @@ pub fn create_missing_joints(
     }
 }
 
+/// Destroys or recreates native shapes when collider entities are removed or changed.
 pub fn cleanup_removed_colliders(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -292,6 +300,7 @@ pub fn cleanup_removed_colliders(
     }
 }
 
+/// Destroys or recreates native joints when joint entities are removed or changed.
 pub fn cleanup_removed_joints(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -374,6 +383,9 @@ pub fn cleanup_removed_joints(
     }
 }
 
+/// Destroys native bodies when their Bevy body entities are removed.
+///
+/// Shapes and joints owned by the removed body are detached from their Bevy entities too.
 pub fn cleanup_removed_bodies(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -486,6 +498,7 @@ fn resolve_joint_bodies(
     Ok((body_a, body_b))
 }
 
+/// Applies velocity, force, and one-shot impulse components to native bodies.
 pub fn apply_body_controls(
     mut commands: Commands,
     mut context: NonSendMut<BoxdddPhysicsContext>,
@@ -571,6 +584,7 @@ pub fn apply_body_controls(
     }
 }
 
+/// Writes Bevy transforms into Box3D for bodies using [`TransformSyncMode::BevyToPhysics`].
 pub fn sync_bevy_transforms_to_boxddd(
     mut context: NonSendMut<BoxdddPhysicsContext>,
     settings: Res<BoxdddPhysicsSettings>,
@@ -615,6 +629,7 @@ pub fn sync_bevy_transforms_to_boxddd(
     }
 }
 
+/// Advances the Box3D world by Bevy's fixed timestep.
 pub fn step_world(
     mut context: NonSendMut<BoxdddPhysicsContext>,
     settings: Res<BoxdddPhysicsSettings>,
@@ -644,6 +659,7 @@ pub fn step_world(
     }
 }
 
+/// Publishes body, contact, and sensor messages produced by the last successful step.
 pub fn publish_physics_messages(
     context: NonSendMut<BoxdddPhysicsContext>,
     settings: Res<BoxdddPhysicsSettings>,
@@ -765,6 +781,7 @@ pub fn publish_physics_messages(
     }
 }
 
+/// Writes Box3D transforms into Bevy for bodies using [`TransformSyncMode::PhysicsToBevy`].
 pub fn sync_boxddd_transforms_to_bevy(
     context: NonSendMut<BoxdddPhysicsContext>,
     settings: Res<BoxdddPhysicsSettings>,

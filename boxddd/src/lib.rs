@@ -8,8 +8,11 @@
 //!
 //! See the repository's `docs/api-coverage.md` for the tested upstream API coverage inventory.
 
+#[doc = "Body definitions, body types, and body builder types."]
 pub mod body;
+#[doc = "World callback adapters for custom filtering and material mixing."]
 pub mod callbacks;
+#[doc = "Standalone collision, cast, overlap, distance, manifold, and plane helpers."]
 pub mod collision;
 mod core {
     pub(crate) mod box3d_lock;
@@ -20,9 +23,13 @@ mod core {
     pub(crate) mod task_system;
     pub(crate) mod wasm;
 }
+#[doc = "Collected debug draw commands and debug draw option types."]
 pub mod debug_draw;
+#[doc = "Standalone broad-phase dynamic tree wrapper."]
 pub mod dynamic_tree;
+#[doc = "Error and result types returned by the safe wrapper."]
 pub mod error;
+#[doc = "Body, contact, joint, and sensor event snapshots read from a world."]
 pub mod events;
 #[cfg(any(
     feature = "mint",
@@ -31,13 +38,21 @@ pub mod events;
     feature = "nalgebra"
 ))]
 mod interop;
+#[doc = "Joint definitions and joint-specific world APIs."]
 pub mod joints;
+#[doc = "Common imports for applications using `boxddd`."]
 pub mod prelude;
+#[doc = "World, body, shape, and tree query result types."]
 pub mod query;
+#[doc = "Explicit raw interop boundary for APIs that expose native Box3D concepts."]
 pub mod raw;
+#[doc = "Recording and replay support for Box3D simulation traces."]
 pub mod recording;
+#[doc = "Shape descriptors, native resource owners, and shape data builders."]
 pub mod shapes;
+#[doc = "Value types for ids, math, contacts, stats, filters, and transforms."]
 pub mod types;
+#[doc = "World creation, stepping, body APIs, shape APIs, and global metadata."]
 pub mod world;
 
 pub use body::{BodyDef, BodyDefBuilder, BodyType};

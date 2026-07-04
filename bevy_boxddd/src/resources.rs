@@ -1,22 +1,33 @@
+//! Bevy resources that own the native physics world and plugin settings.
+
 use crate::components::{Collider, Joint, PhysicsMaterial};
 use bevy_ecs::prelude::{Entity, Resource};
 use bevy_math::{Quat, Vec3};
 use boxddd::{BodyId, JointId, ShapeId, World, WorldDef};
 use std::collections::HashMap;
 
+/// How the plugin reports recoverable errors from fixed-update systems.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum BoxdddErrorPolicy {
+    /// Emit [`crate::BoxdddErrorMessage`] only.
     #[default]
     MessageOnly,
+    /// Emit [`crate::BoxdddErrorMessage`] and log the error.
     MessageAndLog,
+    /// Panic immediately when a recoverable plugin error is observed.
     Panic,
 }
 
+/// Runtime settings used by [`crate::BoxdddPhysicsPlugin`].
 #[derive(Resource, Clone, Debug)]
 pub struct BoxdddPhysicsSettings {
+    /// Gravity used when creating the native Box3D world.
     pub gravity: Vec3,
+    /// Box3D sub-step count used for each fixed step.
     pub sub_step_count: i32,
+    /// Optional Bevy fixed timestep override in seconds.
     pub fixed_timestep_seconds: Option<f64>,
+    /// Error reporting policy for plugin systems.
     pub error_policy: BoxdddErrorPolicy,
 }
 
@@ -31,6 +42,11 @@ impl Default for BoxdddPhysicsSettings {
     }
 }
 
+/// Non-send resource that owns the native Box3D world and ECS id mappings.
+///
+/// `boxddd::World` is intentionally `!Send`/`!Sync`; Bevy apps should access
+/// this resource from main-thread systems and move plain snapshots across
+/// threads when needed.
 #[derive(Debug)]
 pub struct BoxdddPhysicsContext {
     world: Option<World>,
@@ -48,12 +64,17 @@ pub struct BoxdddPhysicsContext {
 }
 
 impl BoxdddPhysicsContext {
+    /// Creates a context and native Box3D world from plugin settings.
     pub fn new(settings: &BoxdddPhysicsSettings) -> boxddd::Result<Self> {
         let gravity = boxddd::Vec3::new(settings.gravity.x, settings.gravity.y, settings.gravity.z);
         let world = World::new(WorldDef::builder().gravity(gravity).build())?;
         Ok(Self::from_world(world))
     }
 
+    /// Creates a context without a native world.
+    ///
+    /// This is used after startup world creation fails so the app can keep
+    /// running while reporting the failure through the configured error policy.
     pub fn disabled() -> Self {
         Self {
             world: None,
@@ -71,6 +92,7 @@ impl BoxdddPhysicsContext {
         }
     }
 
+    /// Creates a context from an existing native world.
     pub fn from_world(world: World) -> Self {
         Self {
             world: Some(world),
@@ -88,22 +110,27 @@ impl BoxdddPhysicsContext {
         }
     }
 
+    /// Returns the native world, if startup succeeded.
     pub fn world(&self) -> Option<&World> {
         self.world.as_ref()
     }
 
+    /// Returns the native world mutably, if startup succeeded.
     pub fn world_mut(&mut self) -> Option<&mut World> {
         self.world.as_mut()
     }
 
+    /// Returns the Bevy entity mapped to a native body id.
     pub fn body_entity(&self, body_id: BodyId) -> Option<Entity> {
         self.body_to_entity.get(&body_id).copied()
     }
 
+    /// Returns the Bevy entity mapped to a native shape id.
     pub fn shape_entity(&self, shape_id: ShapeId) -> Option<Entity> {
         self.shape_to_entity.get(&shape_id).copied()
     }
 
+    /// Returns the Bevy entity mapped to a native joint id.
     pub fn joint_entity(&self, joint_id: JointId) -> Option<Entity> {
         self.joint_to_entity.get(&joint_id).copied()
     }

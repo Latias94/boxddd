@@ -1,3 +1,5 @@
+//! Bevy plugin wiring for `boxddd` fixed-step physics.
+
 use crate::debug_draw::{
     BoxdddDebugDrawCommands, BoxdddDebugDrawSettings, collect_debug_draw_commands,
 };
@@ -16,12 +18,14 @@ use bevy_app::{App, FixedUpdate, Plugin};
 use bevy_ecs::schedule::{ApplyDeferred, IntoScheduleConfigs};
 use bevy_time::{Fixed, Time};
 
+/// Plugin that owns the Box3D world and registers fixed-step physics systems.
 #[derive(Clone, Debug, Default)]
 pub struct BoxdddPhysicsPlugin {
     settings: BoxdddPhysicsSettings,
 }
 
 impl BoxdddPhysicsPlugin {
+    /// Creates the plugin with custom physics settings.
     pub fn new(settings: BoxdddPhysicsSettings) -> Self {
         Self { settings }
     }
