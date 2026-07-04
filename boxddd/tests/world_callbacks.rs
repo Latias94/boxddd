@@ -182,6 +182,54 @@ fn material_mix_callbacks_receive_user_material_ids() {
 }
 
 #[test]
+fn material_mix_callback_panic_is_reported_after_step() {
+    let (mut world, _, _) = contact_world();
+    world.set_friction_callback(|_, _| panic!("friction mix panic"));
+
+    let mut result = Ok(());
+    for _ in 0..90 {
+        result = world.try_step(1.0 / 60.0, 4);
+        if result == Err(Error::CallbackPanicked) {
+            break;
+        }
+    }
+
+    assert_eq!(result, Err(Error::CallbackPanicked));
+    world.clear_friction_callback();
+}
+
+#[test]
+fn non_finite_material_mix_returns_fallback_without_panic() {
+    let (mut world, _, _) = contact_world();
+    let friction_calls = Arc::new(AtomicUsize::new(0));
+    let restitution_calls = Arc::new(AtomicUsize::new(0));
+
+    world.set_friction_callback({
+        let friction_calls = Arc::clone(&friction_calls);
+        move |_, _| {
+            friction_calls.fetch_add(1, Ordering::Relaxed);
+            f32::NAN
+        }
+    });
+    world.set_restitution_callback({
+        let restitution_calls = Arc::clone(&restitution_calls);
+        move |_, _| {
+            restitution_calls.fetch_add(1, Ordering::Relaxed);
+            f32::INFINITY
+        }
+    });
+
+    for _ in 0..90 {
+        world.try_step(1.0 / 60.0, 4).unwrap();
+    }
+
+    assert!(friction_calls.load(Ordering::Relaxed) > 0);
+    assert!(restitution_calls.load(Ordering::Relaxed) > 0);
+    world.clear_friction_callback();
+    world.clear_restitution_callback();
+}
+
+#[test]
 fn callback_registration_respects_callback_guard() {
     let mut world = World::new(WorldDef::default()).unwrap();
     let _guard = boxddd::__private::enter_callback_guard_for_test();

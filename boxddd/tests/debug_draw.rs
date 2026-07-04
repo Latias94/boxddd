@@ -46,6 +46,45 @@ fn debug_draw_options_can_collect_bounds_commands() {
 }
 
 #[test]
+fn debug_draw_shape_callback_visits_shape_commands() {
+    #[derive(Default)]
+    struct CountingDrawer {
+        shapes: usize,
+    }
+
+    impl DebugDraw for CountingDrawer {
+        fn draw_shape(
+            &mut self,
+            _shape: Option<boxddd::DebugShape>,
+            _transform: boxddd::WorldTransform,
+            _color: boxddd::HexColor,
+        ) {
+            self.shapes += 1;
+        }
+    }
+
+    let mut world = World::new(WorldDef::default()).unwrap();
+    for offset in [-2.0, 0.0, 2.0] {
+        let body = world.create_body(BodyDef::builder().position([offset, 0.0, 0.0]).build());
+        world.create_hull_shape(body, &ShapeDef::default(), &BoxHull::cube(0.2));
+    }
+
+    let baseline_shape_count = world
+        .debug_draw_collect(DebugDrawOptions::default())
+        .iter()
+        .filter(|command| matches!(command, DebugDrawCommand::Shape { .. }))
+        .count();
+    assert!(baseline_shape_count > 1);
+
+    let mut drawer = CountingDrawer::default();
+    world
+        .try_debug_draw(&mut drawer, DebugDrawOptions::default())
+        .unwrap();
+
+    assert_eq!(drawer.shapes, baseline_shape_count);
+}
+
+#[test]
 fn debug_draw_callback_panic_is_reported_without_crossing_ffi() {
     struct PanickingDrawer;
 
@@ -55,7 +94,7 @@ fn debug_draw_callback_panic_is_reported_without_crossing_ffi() {
             _shape: Option<boxddd::DebugShape>,
             _transform: boxddd::WorldTransform,
             _color: boxddd::HexColor,
-        ) -> bool {
+        ) {
             panic!("debug draw panic");
         }
     }

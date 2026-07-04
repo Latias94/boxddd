@@ -642,6 +642,14 @@ impl World {
     /// The borrowed iterators view Box3D's transient event arrays and cannot safely escape
     /// the closure. Use [`Self::try_sensor_events`] when events must be stored or processed
     /// after additional world mutations.
+    ///
+    /// ```compile_fail
+    /// use boxddd::{SensorBeginIter, World};
+    ///
+    /// fn leak_sensor_events(world: &World) -> SensorBeginIter<'_> {
+    ///     world.with_sensor_events_view(|begin, _end| begin)
+    /// }
+    /// ```
     pub fn try_with_sensor_events_view<T>(
         &self,
         f: impl FnOnce(SensorBeginIter<'_>, SensorEndIter<'_>) -> T,
@@ -783,6 +791,14 @@ impl World {
     /// The borrowed iterators view Box3D's transient event arrays. Use
     /// [`Self::try_contact_events`] when events must outlive the closure or be processed
     /// after additional world mutations.
+    ///
+    /// ```compile_fail
+    /// use boxddd::{ContactBeginIter, World};
+    ///
+    /// fn leak_contact_events(world: &World) -> ContactBeginIter<'_> {
+    ///     world.with_contact_events_view(|begin, _end, _hit| begin)
+    /// }
+    /// ```
     pub fn try_with_contact_events_view<T>(
         &self,
         f: impl FnOnce(ContactBeginIter<'_>, ContactEndIter<'_>, ContactHitIter<'_>) -> T,
@@ -895,6 +911,14 @@ impl World {
     ///
     /// The borrowed iterator views Box3D's transient joint event array. Use
     /// [`Self::try_joint_events`] when events must be stored after the closure.
+    ///
+    /// ```compile_fail
+    /// use boxddd::{JointEventIter, World};
+    ///
+    /// fn leak_joint_events(world: &World) -> JointEventIter<'_> {
+    ///     world.with_joint_events_view(|events| events)
+    /// }
+    /// ```
     pub fn try_with_joint_events_view<T>(
         &self,
         f: impl FnOnce(JointEventIter<'_>) -> T,

@@ -162,15 +162,12 @@ pub enum DebugDrawCommand {
 /// [`World::try_debug_draw`] as [`Error::CallbackPanicked`].
 pub trait DebugDraw {
     /// Draws a shape outline.
-    ///
-    /// Returning `false` asks Box3D to stop drawing further shapes.
     fn draw_shape(
         &mut self,
         _shape: Option<DebugShape>,
         _transform: WorldTransform,
         _color: HexColor,
-    ) -> bool {
-        true
+    ) {
     }
 
     /// Draws a line segment.
@@ -401,13 +398,12 @@ impl DebugDraw for CollectDebugDraw<'_> {
         shape: Option<DebugShape>,
         transform: WorldTransform,
         color: HexColor,
-    ) -> bool {
+    ) {
         self.replace_or_push(DebugDrawCommand::Shape {
             shape,
             transform,
             color,
         });
-        true
     }
 
     fn draw_segment(&mut self, p1: Pos, p2: Pos, color: HexColor) {
@@ -486,13 +482,14 @@ unsafe extern "C" fn draw_shape(
     context: *mut c_void,
 ) -> bool {
     let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
-    run_debug_draw_callback(context, false, |drawer| {
+    run_debug_draw_callback(context, (), |drawer| {
         drawer.draw_shape(
             debug_shape_from_user_shape(user_shape),
             WorldTransform::from_raw(transform),
             HexColor::from_raw(color),
-        )
-    })
+        );
+    });
+    !context.panicked
 }
 
 unsafe extern "C" fn draw_segment(

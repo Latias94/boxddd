@@ -43,7 +43,7 @@ Reasoning:
 Future hardening:
 
 - The no-escape contract is now covered by rustdoc `compile_fail` examples for
-  closure-scoped event views.
+  body, sensor, contact, and joint closure-scoped event views.
 
 ### Recording Bytes
 
@@ -139,6 +139,26 @@ Token decision:
   state, FFI reentrancy, debug draw/query visitors, and future callback surfaces
   that Rust's type system cannot fully model.
 
+### Debug Draw Callbacks
+
+Debug draw callbacks receive transient Box3D draw data while Box3D walks the
+world for visualization.
+
+Status: acceptable.
+
+Reasoning:
+
+- The safe `DebugDraw` trait receives copied value types and optional safe shape
+  identifiers instead of raw Box3D pointers.
+- Debug drawing enters the same callback-state guard used by other Box3D
+  callback surfaces, so reentrant safe `World` APIs return `Error::InCallback`.
+- `World::try_debug_draw` catches Rust panics and reports
+  `Error::CallbackPanicked` after the FFI call returns.
+- The safe `DebugDraw::draw_shape` method intentionally returns `()`. The
+  upstream C callback type returns `bool`, but the current Box3D draw loop does
+  not consume that return value, so the safe API does not expose it as a
+  misleading control-flow contract.
+
 ### Task System
 
 Box3D requires `finishTask` to block until a task completes. The current
@@ -175,8 +195,13 @@ new public API needs to return borrowed transient data directly.
 Evidence:
 
 - Event borrowed views are exposed only through `with_*_events_view` closures and
-  have rustdoc `compile_fail` examples showing they cannot escape.
+  body, sensor, contact, and joint views have rustdoc `compile_fail` examples
+  showing they cannot escape.
 - Callback registration signatures and `World: !Send + !Sync` prevent moving a
   live `World` into Box3D callbacks in safe Rust.
+- World callback tests cover panic containment and non-finite material-mix
+  fallback behavior.
+- Debug draw tests cover panic containment, callback-guard rejection, invalid
+  bounds rejection, and shape callback visitation.
 - Shape and compound borrowed views are tied to `&World` or `&Compound` and now
   document that replacing or destroying the owner invalidates the native view.

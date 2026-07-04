@@ -25,6 +25,23 @@ The current fixture classifies 578 unique upstream `B3_API` functions:
 
 Counts are intentionally checked by tests instead of maintained only in prose. When the fixture changes, update this snapshot in the same commit.
 
+Safe wrapper coverage is 538 of 578 public `B3_API` symbols, or about 93%.
+The remaining 40 symbols are not unplanned API gaps: they are classified as
+explicit raw interop or intentionally omitted from the safe ownership model.
+
+## Current Non-Safe Boundary
+
+| Boundary | Count | Why this is not ordinary safe API |
+|---|---:|---|
+| Base hooks, timers, sleep, hash, and binary file helpers | 12 | Upstream treats these as platform, diagnostics, determinism, or file helpers; allocator/assert/log hooks are process-global callbacks. |
+| Raw `void*` user data on worlds, bodies, shapes, and joints | 8 | Untyped pointers cannot express Rust ownership or aliasing; access stays under `boxddd::raw` `unsafe` functions with handle validation. |
+| World dump/debug file helpers | 4 | Debug dump output is file/diagnostic oriented rather than a stable safe data model. |
+| Recording file IO and debug-shape callback hook | 3 | In-memory recording/replay is safe; file IO and raw debug-shape callback installation remain low-level interop. |
+| Dynamic-tree and height-field file helpers | 4 | File-backed native helpers do not provide a Rust-owned resource contract. |
+| Process-global tuning | 4 | Length-unit and stall-threshold tuning is process-global state and stays in `boxddd::raw` with validation and docs. |
+| Low-level graph-color diagnostic helper | 1 | Useful for native diagnostics, not part of the public safe simulation model. |
+| Omitted diagnostics and redundant world-handle getters | 4 | Global world-count diagnostics and shape/joint world getters duplicate ownership already represented by `World`. |
+
 ## Safe Boundary Rules
 
 - Safe APIs must validate handles and scalar/vector inputs before crossing FFI when validation is possible.
