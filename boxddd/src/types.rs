@@ -1,3 +1,5 @@
+//! Shared value types re-exported by the crate root.
+
 use crate::error::{Error, Result};
 use boxddd_sys::ffi;
 

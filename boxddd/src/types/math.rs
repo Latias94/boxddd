@@ -1,19 +1,26 @@
+//! FFI-compatible math value types used throughout `boxddd`.
+
 use super::*;
 
+/// Returns whether a scalar is finite and accepted by Box3D validation.
 #[inline]
 pub fn is_valid_float(value: f32) -> bool {
     unsafe { ffi::b3IsValidFloat(value) }
 }
 
+/// Deterministic cosine/sine pair returned by Box3D's trigonometry helpers.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct CosSin {
+    /// Cosine component.
     pub cosine: f32,
+    /// Sine component.
     pub sine: f32,
 }
 
 impl CosSin {
+    /// Converts a raw Box3D cosine/sine pair into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3CosSin) -> Self {
         Self {
@@ -22,6 +29,7 @@ impl CosSin {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3CosSin {
         ffi::b3CosSin {
@@ -40,6 +48,7 @@ impl CosSin {
     }
 }
 
+/// Computes Box3D's deterministic `atan2` for valid scalar inputs.
 pub fn deterministic_atan2(y: f32, x: f32) -> Result<f32> {
     if !is_valid_float(y) || !is_valid_float(x) {
         return Err(Error::InvalidArgument);
@@ -52,6 +61,7 @@ pub fn deterministic_atan2(y: f32, x: f32) -> Result<f32> {
     }
 }
 
+/// Computes Box3D's deterministic cosine and sine for an angle in radians.
 pub fn compute_cos_sin(radians: f32) -> Result<CosSin> {
     if !is_valid_float(radians) {
         return Err(Error::InvalidArgument);
@@ -59,27 +69,34 @@ pub fn compute_cos_sin(radians: f32) -> Result<CosSin> {
     CosSin::from_raw(unsafe { ffi::b3ComputeCosSin(radians) }).validate()
 }
 
+/// Two-dimensional vector with the same layout as `b3Vec2`.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Vec2 {
+    /// X component.
     pub x: f32,
+    /// Y component.
     pub y: f32,
 }
 
 impl Vec2 {
+    /// Zero vector.
     pub const ZERO: Self = Self::new(0.0, 0.0);
 
+    /// Creates a vector from components.
     #[inline]
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
+    /// Converts a raw Box3D vector into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Vec2) -> Self {
         Self { x: raw.x, y: raw.y }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Vec2 {
         ffi::b3Vec2 {
@@ -103,26 +120,36 @@ impl From<(f32, f32)> for Vec2 {
     }
 }
 
+/// Three-dimensional vector with the same layout as `b3Vec3`.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Vec3 {
+    /// X component.
     pub x: f32,
+    /// Y component.
     pub y: f32,
+    /// Z component.
     pub z: f32,
 }
 
 impl Vec3 {
+    /// Zero vector.
     pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
+    /// Unit vector along the positive X axis.
     pub const X: Self = Self::new(1.0, 0.0, 0.0);
+    /// Unit vector along the positive Y axis.
     pub const Y: Self = Self::new(0.0, 1.0, 0.0);
+    /// Unit vector along the positive Z axis.
     pub const Z: Self = Self::new(0.0, 0.0, 1.0);
 
+    /// Creates a vector from components.
     #[inline]
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
+    /// Converts a raw Box3D vector into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Vec3) -> Self {
         Self {
@@ -132,6 +159,7 @@ impl Vec3 {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Vec3 {
         ffi::b3Vec3 {
@@ -141,11 +169,13 @@ impl Vec3 {
         }
     }
 
+    /// Returns whether all components are valid Box3D scalars.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidVec3(self.into_raw()) }
     }
 
+    /// Returns this vector or [`Error::InvalidArgument`] if any component is invalid.
     #[inline]
     pub fn validate(self) -> crate::error::Result<Self> {
         if self.is_valid() {
@@ -156,16 +186,22 @@ impl Vec3 {
     }
 }
 
+/// Closest-point result for two lines or segments.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct SegmentDistanceResult {
+    /// Closest point on the first line or segment.
     pub point1: Vec3,
+    /// Fraction along the first segment when the query is segment-based.
     pub fraction1: f32,
+    /// Closest point on the second line or segment.
     pub point2: Vec3,
+    /// Fraction along the second segment when the query is segment-based.
     pub fraction2: f32,
 }
 
 impl SegmentDistanceResult {
+    /// Returns the squared distance between `point1` and `point2`.
     #[inline]
     pub fn distance_squared(self) -> f32 {
         let delta = Vec3::new(
@@ -176,6 +212,7 @@ impl SegmentDistanceResult {
         vec3_length_squared(delta)
     }
 
+    /// Returns the distance between `point1` and `point2`.
     #[inline]
     pub fn distance(self) -> f32 {
         self.distance_squared().sqrt()
@@ -206,6 +243,7 @@ impl SegmentDistanceResult {
     }
 }
 
+/// Returns the closest point on segment `a`-`b` to query point `q`.
 pub fn closest_point_on_segment(
     a: impl Into<Vec3>,
     b: impl Into<Vec3>,
@@ -220,6 +258,9 @@ pub fn closest_point_on_segment(
     .validate()
 }
 
+/// Computes closest points between two infinite lines.
+///
+/// Direction vectors `d1` and `d2` must be finite and non-zero.
 pub fn line_distance(
     p1: impl Into<Vec3>,
     d1: impl Into<Vec3>,
@@ -239,6 +280,7 @@ pub fn line_distance(
     .validate()
 }
 
+/// Computes closest points between two finite segments.
 pub fn segment_distance(
     p1: impl Into<Vec3>,
     q1: impl Into<Vec3>,
@@ -283,25 +325,31 @@ impl From<(f32, f32, f32)> for Vec3 {
     }
 }
 
+/// Quaternion with vector part `v` and scalar part `s`.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Quat {
+    /// Vector component.
     pub v: Vec3,
+    /// Scalar component.
     pub s: f32,
 }
 
 impl Quat {
+    /// Identity rotation.
     pub const IDENTITY: Self = Self {
         v: Vec3::ZERO,
         s: 1.0,
     };
 
+    /// Creates a quaternion from vector and scalar parts.
     #[inline]
     pub const fn new(v: Vec3, s: f32) -> Self {
         Self { v, s }
     }
 
+    /// Converts a raw Box3D quaternion into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Quat) -> Self {
         Self {
@@ -310,6 +358,7 @@ impl Quat {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Quat {
         ffi::b3Quat {
@@ -318,11 +367,13 @@ impl Quat {
         }
     }
 
+    /// Returns whether this quaternion is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidQuat(self.into_raw()) }
     }
 
+    /// Returns this quaternion or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> crate::error::Result<Self> {
         if self.is_valid() {
@@ -332,11 +383,13 @@ impl Quat {
         }
     }
 
+    /// Builds a quaternion from a valid 3x3 rotation matrix.
     pub fn from_matrix(matrix: Matrix3) -> Result<Self> {
         let matrix = matrix.validate()?;
         Self::from_raw(unsafe { ffi::b3MakeQuatFromMatrix(&matrix.into_raw()) }).validate()
     }
 
+    /// Computes the rotation between two unit vectors.
     pub fn between_unit_vectors(v1: impl Into<Vec3>, v2: impl Into<Vec3>) -> Result<Self> {
         let v1 = validate_unit_vec3(v1.into())?;
         let v2 = validate_unit_vec3(v2.into())?;
@@ -353,25 +406,31 @@ impl Default for Quat {
     }
 }
 
+/// Local transform using `Vec3` translation and `Quat` rotation.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Transform {
+    /// Local translation.
     pub p: Vec3,
+    /// Local rotation.
     pub q: Quat,
 }
 
 impl Transform {
+    /// Identity transform.
     pub const IDENTITY: Self = Self {
         p: Vec3::ZERO,
         q: Quat::IDENTITY,
     };
 
+    /// Creates a transform from translation and rotation.
     #[inline]
     pub const fn new(p: Vec3, q: Quat) -> Self {
         Self { p, q }
     }
 
+    /// Converts a raw Box3D transform into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Transform) -> Self {
         Self {
@@ -380,6 +439,7 @@ impl Transform {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Transform {
         ffi::b3Transform {
@@ -388,11 +448,13 @@ impl Transform {
         }
     }
 
+    /// Returns whether this transform is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidTransform(self.into_raw()) }
     }
 
+    /// Returns this transform or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> crate::error::Result<Self> {
         if self.is_valid() {
@@ -403,28 +465,37 @@ impl Transform {
     }
 }
 
+/// Position scalar type used by [`Pos`].
 #[cfg(not(feature = "double-precision"))]
 pub type PosScalar = f32;
+/// Position scalar type used by [`Pos`] in double-precision builds.
 #[cfg(feature = "double-precision")]
 pub type PosScalar = f64;
 
+/// World-space position with precision selected by the `double-precision` feature.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Pos {
+    /// X coordinate.
     pub x: PosScalar,
+    /// Y coordinate.
     pub y: PosScalar,
+    /// Z coordinate.
     pub z: PosScalar,
 }
 
 impl Pos {
+    /// Zero position.
     pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
 
+    /// Creates a position from coordinates.
     #[inline]
     pub const fn new(x: PosScalar, y: PosScalar, z: PosScalar) -> Self {
         Self { x, y, z }
     }
 
+    /// Converts a raw Box3D position into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Pos) -> Self {
         Self {
@@ -434,6 +505,7 @@ impl Pos {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Pos {
         ffi::b3Pos {
@@ -443,11 +515,13 @@ impl Pos {
         }
     }
 
+    /// Returns whether this position is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidPosition(self.into_raw()) }
     }
 
+    /// Returns this position or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> crate::error::Result<Self> {
         if self.is_valid() {
@@ -495,25 +569,31 @@ impl From<(f64, f64, f64)> for Pos {
     }
 }
 
+/// World-space transform using [`Pos`] for translation and [`Quat`] for rotation.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct WorldTransform {
+    /// World-space position.
     pub p: Pos,
+    /// World-space rotation.
     pub q: Quat,
 }
 
 impl WorldTransform {
+    /// Identity world transform.
     pub const IDENTITY: Self = Self {
         p: Pos::ZERO,
         q: Quat::IDENTITY,
     };
 
+    /// Creates a world transform from position and rotation.
     #[inline]
     pub const fn new(p: Pos, q: Quat) -> Self {
         Self { p, q }
     }
 
+    /// Converts a raw Box3D world transform into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3WorldTransform) -> Self {
         Self {
@@ -522,6 +602,7 @@ impl WorldTransform {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3WorldTransform {
         ffi::b3WorldTransform {
@@ -530,22 +611,28 @@ impl WorldTransform {
         }
     }
 
+    /// Returns whether this world transform is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidWorldTransform(self.into_raw()) }
     }
 }
 
+/// 3x3 matrix stored as column vectors.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Matrix3 {
+    /// First column.
     pub cx: Vec3,
+    /// Second column.
     pub cy: Vec3,
+    /// Third column.
     pub cz: Vec3,
 }
 
 impl Matrix3 {
+    /// Converts a raw Box3D matrix into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Matrix3) -> Self {
         Self {
@@ -555,6 +642,7 @@ impl Matrix3 {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Matrix3 {
         ffi::b3Matrix3 {
@@ -564,11 +652,13 @@ impl Matrix3 {
         }
     }
 
+    /// Returns whether this matrix is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidMatrix3(self.into_raw()) }
     }
 
+    /// Returns this matrix or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> Result<Self> {
         if self.is_valid() {
@@ -579,15 +669,19 @@ impl Matrix3 {
     }
 }
 
+/// Axis-aligned bounding box.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Aabb {
+    /// Minimum corner.
     pub lower_bound: Vec3,
+    /// Maximum corner.
     pub upper_bound: Vec3,
 }
 
 impl Aabb {
+    /// Converts a raw Box3D AABB into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3AABB) -> Self {
         Self {
@@ -596,6 +690,7 @@ impl Aabb {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3AABB {
         ffi::b3AABB {
@@ -604,11 +699,13 @@ impl Aabb {
         }
     }
 
+    /// Returns whether this AABB is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidAABB(self.into_raw()) }
     }
 
+    /// Returns this AABB or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> Result<Self> {
         if self.is_valid() {
@@ -618,17 +715,20 @@ impl Aabb {
         }
     }
 
+    /// Returns whether this AABB is valid and finite-bounded.
     #[inline]
     pub fn is_bounded(self) -> bool {
         self.is_valid() && unsafe { ffi::b3IsBoundedAABB(self.into_raw()) }
     }
 
+    /// Returns whether this AABB passes Box3D's broader sanity checks.
     #[inline]
     pub fn is_sane(self) -> bool {
         unsafe { ffi::b3IsSaneAABB(self.into_raw()) }
     }
 }
 
+/// Applies the Steiner theorem to compute inertia for a point mass at `origin`.
 pub fn steiner_inertia(mass: f32, origin: impl Into<Vec3>) -> Result<Matrix3> {
     let origin = origin.into().validate()?;
     if !is_valid_float(mass) || mass < 0.0 {
@@ -637,15 +737,19 @@ pub fn steiner_inertia(mass: f32, origin: impl Into<Vec3>) -> Result<Matrix3> {
     Matrix3::from_raw(unsafe { ffi::b3Steiner(mass, origin.into_raw()) }).validate()
 }
 
+/// Plane represented by a normal and offset.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Plane {
+    /// Plane normal.
     pub normal: Vec3,
+    /// Plane offset.
     pub offset: f32,
 }
 
 impl Plane {
+    /// Converts a raw Box3D plane into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Plane) -> Self {
         Self {
@@ -654,6 +758,7 @@ impl Plane {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Plane {
         ffi::b3Plane {
@@ -662,11 +767,13 @@ impl Plane {
         }
     }
 
+    /// Returns whether this plane is valid according to Box3D.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3IsValidPlane(self.into_raw()) }
     }
 
+    /// Returns this plane or [`Error::InvalidArgument`] if it is invalid.
     #[inline]
     pub fn validate(self) -> Result<Self> {
         if self.is_valid() {
@@ -677,16 +784,21 @@ impl Plane {
     }
 }
 
+/// Collision filter data used by shapes and queries.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Filter {
+    /// Category bits assigned to the shape.
     pub category_bits: u64,
+    /// Mask bits accepted by the shape.
     pub mask_bits: u64,
+    /// Group override index. Matching non-zero groups override category/mask filtering.
     pub group_index: i32,
 }
 
 impl Filter {
+    /// Converts a raw Box3D filter into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3Filter) -> Self {
         Self {
@@ -696,6 +808,7 @@ impl Filter {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3Filter {
         ffi::b3Filter {
@@ -712,16 +825,21 @@ impl Default for Filter {
     }
 }
 
+/// Mass properties for a shape or body.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct MassData {
+    /// Mass.
     pub mass: f32,
+    /// Local center of mass.
     pub center: Vec3,
+    /// Inertia tensor.
     pub inertia: Matrix3,
 }
 
 impl MassData {
+    /// Converts raw Box3D mass data into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3MassData) -> Self {
         Self {
@@ -731,6 +849,7 @@ impl MassData {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3MassData {
         ffi::b3MassData {
@@ -741,19 +860,27 @@ impl MassData {
     }
 }
 
+/// Per-axis motion locks for a body.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct MotionLocks {
+    /// Locks linear motion along the X axis.
     pub linear_x: bool,
+    /// Locks linear motion along the Y axis.
     pub linear_y: bool,
+    /// Locks linear motion along the Z axis.
     pub linear_z: bool,
+    /// Locks angular motion around the X axis.
     pub angular_x: bool,
+    /// Locks angular motion around the Y axis.
     pub angular_y: bool,
+    /// Locks angular motion around the Z axis.
     pub angular_z: bool,
 }
 
 impl MotionLocks {
+    /// Creates motion locks from individual axis flags.
     #[inline]
     pub const fn new(
         linear_x: bool,
@@ -773,6 +900,7 @@ impl MotionLocks {
         }
     }
 
+    /// Converts raw Box3D motion locks into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3MotionLocks) -> Self {
         Self {
@@ -785,6 +913,7 @@ impl MotionLocks {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3MotionLocks {
         ffi::b3MotionLocks {

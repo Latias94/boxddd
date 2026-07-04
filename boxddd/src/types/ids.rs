@@ -1,14 +1,22 @@
+//! FFI-compatible ids for native Box3D resources.
+
 use super::*;
+
+/// Handle id for a body in a Box3D world.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct BodyId {
+    /// One-based native index. Zero is an invalid/null id.
     pub index1: i32,
+    /// Native world index this id belongs to.
     pub world0: u16,
+    /// Native generation used to reject stale ids.
     pub generation: u16,
 }
 
 impl BodyId {
+    /// Converts a raw Box3D body id into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3BodyId) -> Self {
         Self {
@@ -18,6 +26,7 @@ impl BodyId {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3BodyId {
         ffi::b3BodyId {
@@ -27,22 +36,28 @@ impl BodyId {
         }
     }
 
+    /// Returns whether the native id currently names a valid body.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3Body_IsValid(self.into_raw()) }
     }
 }
 
+/// Handle id for a shape in a Box3D world.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ShapeId {
+    /// One-based native index. Zero is an invalid/null id.
     pub index1: i32,
+    /// Native world index this id belongs to.
     pub world0: u16,
+    /// Native generation used to reject stale ids.
     pub generation: u16,
 }
 
 impl ShapeId {
+    /// Converts a raw Box3D shape id into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3ShapeId) -> Self {
         Self {
@@ -52,6 +67,7 @@ impl ShapeId {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3ShapeId {
         ffi::b3ShapeId {
@@ -61,22 +77,28 @@ impl ShapeId {
         }
     }
 
+    /// Returns whether the native id currently names a valid shape.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3Shape_IsValid(self.into_raw()) }
     }
 }
 
+/// Handle id for a joint in a Box3D world.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct JointId {
+    /// One-based native index. Zero is an invalid/null id.
     pub index1: i32,
+    /// Native world index this id belongs to.
     pub world0: u16,
+    /// Native generation used to reject stale ids.
     pub generation: u16,
 }
 
 impl JointId {
+    /// Converts a raw Box3D joint id into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3JointId) -> Self {
         Self {
@@ -86,6 +108,7 @@ impl JointId {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3JointId {
         ffi::b3JointId {
@@ -95,23 +118,30 @@ impl JointId {
         }
     }
 
+    /// Returns whether the native id currently names a valid joint.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3Joint_IsValid(self.into_raw()) }
     }
 }
 
+/// Handle id for a contact in a Box3D world.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ContactId {
+    /// One-based native index. Zero is an invalid/null id.
     pub index1: i32,
+    /// Native world index this id belongs to.
     pub world0: u16,
+    /// Native padding field preserved for ABI compatibility.
     pub padding: i16,
+    /// Native generation used to reject stale ids.
     pub generation: u32,
 }
 
 impl ContactId {
+    /// Converts a raw Box3D contact id into the Rust value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3ContactId) -> Self {
         Self {
@@ -122,6 +152,7 @@ impl ContactId {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3ContactId {
         ffi::b3ContactId {
@@ -132,6 +163,7 @@ impl ContactId {
         }
     }
 
+    /// Returns whether the native id currently names a valid contact.
     #[inline]
     pub fn is_valid(self) -> bool {
         unsafe { ffi::b3Contact_IsValid(self.into_raw()) }
