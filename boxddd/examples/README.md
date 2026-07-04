@@ -115,18 +115,10 @@ cargo check -p bevy_boxddd --features physics-picking --example physics_picking_
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
 
-## Porting Targets From Official Box3D Samples
+## Official Box3D Sample Parity
 
-The upstream Box3D repository groups interactive demos under `samples/`:
-`sample_bodies.cpp`, `sample_character.cpp`, `sample_collision.cpp`,
-`sample_compound.cpp`, `sample_continuous.cpp`, `sample_events.cpp`,
-`sample_geometry.cpp`, `sample_joint.cpp`, `sample_mesh.cpp`, `sample_replay.cpp`,
-`sample_robustness.cpp`, `sample_shapes.cpp`, and `sample_world.cpp`.
-
-Good next ports for `boxddd` are:
-
-- world/body laboratory: `sample_world.cpp` + `sample_bodies.cpp`
-- geometry showcase: `sample_shapes.cpp`, `sample_mesh.cpp`, `sample_compound.cpp`
-- query/collision teaching: `sample_collision.cpp`, `sample_manifold.cpp`
-- gameplay-like scenes: `sample_character.cpp`, `sample_joint.cpp`, `sample_continuous.cpp`
-- diagnostics: `sample_events.cpp`, `sample_replay.cpp`, `sample_determinism.cpp`
+The maintained mapping from vendored Box3D official samples to Rust examples is
+[`docs/upstream-parity/box3d-sample-matrix.md`](../../docs/upstream-parity/box3d-sample-matrix.md).
+Use that matrix when deciding whether a new example should be a core headless
+example, a Bevy visual scene, a focused test, or deferred upstream reference
+material.

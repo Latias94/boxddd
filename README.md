@@ -150,6 +150,7 @@ Start here:
 | Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable visible 3D scenes |
 
 The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.md) and [`bevy_boxddd/README.md`](bevy_boxddd/README.md).
+The mapping from official Box3D samples to Rust examples and deliberate deferrals lives in [`docs/upstream-parity/box3d-sample-matrix.md`](docs/upstream-parity/box3d-sample-matrix.md).
 
 ## Design Goals
 

@@ -95,6 +95,10 @@ The plugin registers Bevy messages for errors, body moves, contact begin/end/hit
 
 ## Examples
 
+The visible examples complement the core headless examples and follow the
+official Box3D sample parity map in
+[`docs/upstream-parity/box3d-sample-matrix.md`](../docs/upstream-parity/box3d-sample-matrix.md).
+
 | Example | Run command | Purpose |
 |---|---|---|
 | `falling_stack_3d` | `cargo run -p bevy_boxddd --example falling_stack_3d` | Basic windowed stack with plugin-driven transforms. |
