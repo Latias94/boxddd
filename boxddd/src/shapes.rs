@@ -2381,7 +2381,7 @@ impl CompoundSphere {
 #[derive(Copy, Clone, Debug)]
 /// Flattened child returned from generic compound indexing and queries.
 pub struct CompoundChild<'a> {
-    /// Child geometry variant.
+    /// Child geometry stored by a compound shape.
     pub shape: CompoundChildShape<'a>,
     /// Child transform in compound-local space.
     pub transform: Transform,

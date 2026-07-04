@@ -58,27 +58,18 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 
 ## Rustdoc Coverage
 
-The `bevy_boxddd` integration layer is small enough that public rustdoc should
-stay complete:
+The public rustdoc gate should stay complete for both the core binding and the
+Bevy integration layer:
 
 ```bash
+cargo rustdoc -p boxddd --all-features -- -D missing_docs
 cargo rustdoc -p bevy_boxddd --all-features -- -D missing_docs
 ```
 
-The core `boxddd` crate is not yet ready for a workspace-wide
-`-D missing_docs` gate. The latest audit after documenting the shared `types`
-and shape resource layers reports 1196 missing public item docs, concentrated
-in:
-
-- `boxddd/src/collision.rs`
-- `boxddd/src/joints/defs.rs`
-- `boxddd/src/events.rs`
-- `boxddd/src/debug_draw.rs`
-- `boxddd/src/world/body_api.rs`
-
-Treat that as release documentation debt rather than a CI failure today. When
-adding or changing public `boxddd` APIs, include rustdoc for the touched public
-types and methods so the count only moves down.
+`RUSTDOCFLAGS="-D warnings" cargo doc -p boxddd --all-features --no-deps`
+should also pass before release. See `rustdoc-alignment.md` for the semantic
+alignment status by module and `ffi-lifetime-audit.md` for ownership and
+lifetime decisions that should be reflected in rustdoc.
 
 ## Binding Checks
 

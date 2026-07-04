@@ -80,6 +80,7 @@ pub(crate) fn detach_world_recording_locked(world: ffi::b3WorldId) {
     records.retain(|record| !same_world_id(record.world, world));
 }
 
+/// Owning handle for a Box3D recording stream.
 #[derive(Debug)]
 pub struct Recording {
     raw: NonNull<ffi::b3Recording>,
@@ -88,10 +89,12 @@ pub struct Recording {
 }
 
 impl Recording {
+    /// Creates a recording buffer with Box3D's default initial capacity.
     pub fn new() -> Result<Self> {
         Self::with_capacity(0)
     }
 
+    /// Creates a recording buffer with an optional initial byte capacity.
     pub fn with_capacity(byte_capacity: usize) -> Result<Self> {
         let byte_capacity = i32::try_from(byte_capacity).map_err(|_| Error::InvalidArgument)?;
         callback_state::check_not_in_callback()?;
@@ -104,6 +107,7 @@ impl Recording {
         })
     }
 
+    /// Loads a recording buffer from a file.
     pub fn load_from_file(path: impl AsRef<Path>) -> Result<Self> {
         let path = path_to_cstring(path)?;
         callback_state::check_not_in_callback()?;
@@ -116,6 +120,10 @@ impl Recording {
         })
     }
 
+    /// Saves the current recording bytes to a file.
+    ///
+    /// This fails while the recording is attached to a live world because Box3D
+    /// may still be mutating the backing buffer.
     pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<()> {
         let path = path.as_ref();
         callback_state::check_not_in_callback()?;
@@ -133,15 +141,21 @@ impl Recording {
             .map_err(|_| Error::RecordingIoFailed)
     }
 
+    /// Returns the number of bytes currently stored in the recording buffer.
     pub fn len(&self) -> usize {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3Recording_GetSize(self.raw.as_ptr()) }.max(0) as usize
     }
 
+    /// Returns whether the recording buffer currently has no bytes.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Borrows the raw recording bytes.
+    ///
+    /// The returned slice is tied to `self` and is unavailable while recording is
+    /// active on a live world.
     pub fn bytes(&self) -> Result<&[u8]> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -151,14 +165,17 @@ impl Recording {
         Ok(unsafe { self.bytes_locked() })
     }
 
+    /// Copies the raw recording bytes into an owned vector.
     pub fn to_vec(&self) -> Result<Vec<u8>> {
         Ok(self.bytes()?.to_vec())
     }
 
+    /// Validates that this recording can replay with the requested worker count.
     pub fn validate_replay(&self, worker_count: i32) -> Result<bool> {
         validate_replay_bytes(self.bytes()?, worker_count)
     }
 
+    /// Creates a replay player from this recording.
     pub fn create_player(&self, worker_count: i32) -> Result<RecPlayer> {
         RecPlayer::from_bytes(self.bytes()?, worker_count)
     }
@@ -205,19 +222,28 @@ impl Drop for Recording {
     }
 }
 
+/// Kind of query captured in a recording.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RecQueryType {
+    /// Axis-aligned bounding-box overlap query.
     OverlapAabb,
+    /// Shape overlap query.
     OverlapShape,
+    /// Ray-cast query.
     CastRay,
+    /// Shape-cast query.
     CastShape,
+    /// Closest-hit ray-cast query.
     CastRayClosest,
+    /// Capsule mover cast query.
     CastMover,
+    /// Capsule mover collision-plane query.
     CollideMover,
 }
 
 impl RecQueryType {
+    /// Converts raw Box3D data into the safe value type.
     pub const fn from_raw(raw: ffi::b3RecQueryType) -> Option<Self> {
         match raw {
             ffi::b3RecQueryType_b3_recQueryOverlapAABB => Some(Self::OverlapAabb),
@@ -232,18 +258,26 @@ impl RecQueryType {
     }
 }
 
+/// Metadata stored by a recording replay player.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecPlayerInfo {
+    /// Number of recorded frames.
     pub frame_count: i32,
+    /// Worker count used by the recording.
     pub worker_count: i32,
+    /// Simulation time step for the frame.
     pub time_step: f32,
+    /// Sub-step count used by the recording.
     pub sub_step_count: i32,
+    /// Length scale used by the recording.
     pub length_scale: f32,
+    /// Bounds stored in the recording metadata.
     pub bounds: Aabb,
 }
 
 impl RecPlayerInfo {
+    /// Converts raw Box3D data into the safe value type.
     #[inline]
     pub fn from_raw(raw: ffi::b3RecPlayerInfo) -> Self {
         Self {
@@ -257,17 +291,27 @@ impl RecPlayerInfo {
     }
 }
 
+/// Metadata for a query captured in the current replay frame.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecQueryInfo {
+    /// Recorded query kind.
     pub query_type: RecQueryType,
+    /// Collision filter used by the query.
     pub filter: QueryFilter,
+    /// Axis-aligned bounding box.
     pub aabb: Aabb,
+    /// Query origin.
     pub origin: Pos,
+    /// Translation vector used by the query.
     pub translation: Vec3,
+    /// Number of hits recorded for the query.
     pub hit_count: i32,
+    /// Recording key.
     pub key: u64,
+    /// User-defined query identifier.
     pub id: u64,
+    /// Recorded name.
     pub name: Option<String>,
 }
 
@@ -299,12 +343,17 @@ impl RecQueryInfo {
     }
 }
 
+/// Hit recorded for a replay-frame query.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RecQueryHit {
+    /// Shape associated with the result.
     pub shape_id: ShapeId,
+    /// World-space point for the result.
     pub point: Pos,
+    /// World-space normal for the result.
     pub normal: Vec3,
+    /// Fraction along the query translation.
     pub fraction: f32,
 }
 
@@ -320,14 +369,18 @@ impl RecQueryHit {
     }
 }
 
+/// World id created by a replay player.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ReplayWorldId {
+    /// Native Box3D handle index.
     pub index1: u16,
+    /// Handle generation value.
     pub generation: u16,
 }
 
 impl ReplayWorldId {
+    /// Converts raw Box3D data into the safe value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3WorldId) -> Self {
         Self {
@@ -336,6 +389,7 @@ impl ReplayWorldId {
         }
     }
 
+    /// Converts this value into the raw Box3D representation.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3WorldId {
         ffi::b3WorldId {
@@ -344,12 +398,14 @@ impl ReplayWorldId {
         }
     }
 
+    /// Returns whether the Box3D handle is still valid.
     pub fn is_valid(self) -> bool {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3World_IsValid(self.into_raw()) }
     }
 }
 
+/// Player used to replay and inspect a Box3D recording.
 #[derive(Debug)]
 pub struct RecPlayer {
     raw: NonNull<ffi::b3RecPlayer>,
@@ -357,6 +413,7 @@ pub struct RecPlayer {
 }
 
 impl RecPlayer {
+    /// Creates a replay player from raw recording bytes.
     pub fn from_bytes(bytes: &[u8], worker_count: i32) -> Result<Self> {
         validate_replay_input(bytes, worker_count)?;
         callback_state::check_not_in_callback()?;
@@ -370,17 +427,20 @@ impl RecPlayer {
         })
     }
 
+    /// Returns the world id owned by the replay player.
     pub fn world_id(&self) -> ReplayWorldId {
         let _guard = box3d_lock::lock();
         ReplayWorldId::from_raw(unsafe { ffi::b3RecPlayer_GetWorldId(self.raw.as_ptr()) })
     }
 
+    /// Steps the replay by one recorded frame.
     pub fn step_frame(&mut self) -> Result<bool> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
         Ok(unsafe { ffi::b3RecPlayer_StepFrame(self.raw.as_ptr()) })
     }
 
+    /// Restarts replay from the first recorded frame.
     pub fn restart(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -388,6 +448,7 @@ impl RecPlayer {
         Ok(())
     }
 
+    /// Seeks replay to a recorded frame.
     pub fn seek_frame(&mut self, target_frame: i32) -> Result<()> {
         if target_frame < 0 {
             return Err(Error::InvalidArgument);
@@ -398,37 +459,44 @@ impl RecPlayer {
         Ok(())
     }
 
+    /// Returns the current replay frame index.
     pub fn frame(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetFrame(self.raw.as_ptr()) }
     }
 
+    /// Returns the number of recorded frames.
     pub fn frame_count(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetFrameCount(self.raw.as_ptr()) }
     }
 
+    /// Returns whether replay has reached the end of the recording.
     pub fn is_at_end(&self) -> bool {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_IsAtEnd(self.raw.as_ptr()) }
     }
 
+    /// Returns whether replay has diverged from the recorded state.
     pub fn has_diverged(&self) -> bool {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_HasDiverged(self.raw.as_ptr()) }
     }
 
+    /// Returns metadata for the loaded recording.
     pub fn info(&self) -> RecPlayerInfo {
         let _guard = box3d_lock::lock();
         RecPlayerInfo::from_raw(unsafe { ffi::b3RecPlayer_GetInfo(self.raw.as_ptr()) })
     }
 
+    /// Returns the first frame where replay diverged, if any.
     pub fn diverge_frame(&self) -> Option<i32> {
         let _guard = box3d_lock::lock();
         let frame = unsafe { ffi::b3RecPlayer_GetDivergeFrame(self.raw.as_ptr()) };
         (frame >= 0).then_some(frame)
     }
 
+    /// Sets the worker count.
     pub fn set_worker_count(&mut self, count: i32) -> Result<()> {
         validate_replay_worker_count(count)?;
         callback_state::check_not_in_callback()?;
@@ -437,6 +505,7 @@ impl RecPlayer {
         Ok(())
     }
 
+    /// Sets the keyframe policy.
     pub fn set_keyframe_policy(
         &mut self,
         budget_bytes: usize,
@@ -453,31 +522,37 @@ impl RecPlayer {
         Ok(())
     }
 
+    /// Returns the configured replay keyframe memory budget.
     pub fn keyframe_budget(&self) -> usize {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetKeyframeBudget(self.raw.as_ptr()) }
     }
 
+    /// Returns the minimum frame interval between replay keyframes.
     pub fn keyframe_min_interval(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetKeyframeMinInterval(self.raw.as_ptr()) }
     }
 
+    /// Returns the current frame interval between replay keyframes.
     pub fn keyframe_interval(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetKeyframeInterval(self.raw.as_ptr()) }
     }
 
+    /// Returns the bytes currently used by replay keyframes.
     pub fn keyframe_bytes(&self) -> usize {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetKeyframeBytes(self.raw.as_ptr()) }
     }
 
+    /// Returns the number of bodies in the replay world.
     pub fn body_count(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetBodyCount(self.raw.as_ptr()) }
     }
 
+    /// Returns a body id from the replay world by index.
     pub fn body_id(&self, index: i32) -> Result<Option<BodyId>> {
         if index < 0 {
             return Err(Error::IndexOutOfRange);
@@ -491,11 +566,13 @@ impl RecPlayer {
         }
     }
 
+    /// Returns the number of queries captured for the current replay frame.
     pub fn frame_query_count(&self) -> i32 {
         let _guard = box3d_lock::lock();
         unsafe { ffi::b3RecPlayer_GetFrameQueryCount(self.raw.as_ptr()) }
     }
 
+    /// Returns metadata for a captured query in the current replay frame.
     pub fn frame_query(&self, index: i32) -> Result<RecQueryInfo> {
         if index < 0 || index >= self.frame_query_count() {
             return Err(Error::IndexOutOfRange);
@@ -504,6 +581,7 @@ impl RecPlayer {
         RecQueryInfo::from_raw(unsafe { ffi::b3RecPlayer_GetFrameQuery(self.raw.as_ptr(), index) })
     }
 
+    /// Returns a hit recorded for a captured frame query.
     pub fn frame_query_hit(&self, query_index: i32, hit_index: i32) -> Result<RecQueryHit> {
         let query = self.frame_query(query_index)?;
         if hit_index < 0 || hit_index >= query.hit_count {
@@ -515,6 +593,7 @@ impl RecPlayer {
         }))
     }
 
+    /// Collects debug draw commands for recorded frame queries.
     pub fn draw_frame_queries_collect(
         &mut self,
         options: DebugDrawOptions,
@@ -526,6 +605,7 @@ impl RecPlayer {
         Ok(commands)
     }
 
+    /// Collects debug draw commands for recorded frame queries into `out`.
     pub fn draw_frame_queries_collect_into(
         &mut self,
         out: &mut Vec<DebugDrawCommand>,
@@ -540,6 +620,7 @@ impl RecPlayer {
         Ok(())
     }
 
+    /// Draws recorded frame queries with a custom debug draw sink.
     pub fn draw_frame_queries(
         &mut self,
         drawer: &mut impl DebugDraw,
@@ -576,6 +657,7 @@ impl Drop for RecPlayer {
 }
 
 impl World {
+    /// Tries to begin recording world mutations into the provided buffer.
     pub fn try_start_recording(&mut self, recording: &mut Recording) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -593,11 +675,13 @@ impl World {
         Ok(())
     }
 
+    /// Starts recording world mutations or panics if Box3D rejects the request.
     pub fn start_recording(&mut self, recording: &mut Recording) {
         self.try_start_recording(recording)
             .expect("Box3D failed to start recording");
     }
 
+    /// Tries to stop recording world mutations into the provided buffer.
     pub fn try_stop_recording(&mut self, recording: &mut Recording) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -617,12 +701,14 @@ impl World {
         Ok(())
     }
 
+    /// Stops recording world mutations or panics if Box3D rejects the request.
     pub fn stop_recording(&mut self, recording: &mut Recording) {
         self.try_stop_recording(recording)
             .expect("Box3D failed to stop recording");
     }
 }
 
+/// Validates that raw recording bytes can replay with the requested worker count.
 pub fn validate_replay_bytes(bytes: &[u8], worker_count: i32) -> Result<bool> {
     validate_replay_input(bytes, worker_count)?;
     callback_state::check_not_in_callback()?;

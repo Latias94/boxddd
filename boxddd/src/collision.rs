@@ -7,16 +7,20 @@ use crate::types::{Aabb, MassData, Plane, Quat, Transform, Vec3};
 use boxddd_sys::ffi;
 use std::mem::MaybeUninit;
 
+/// Maximum point count accepted by a shape proxy.
 pub const MAX_SHAPE_PROXY_POINTS: usize = ffi::B3_MAX_SHAPE_CAST_POINTS as usize;
+/// Maximum contact point count returned by local manifold helpers.
 pub const MAX_LOCAL_MANIFOLD_POINTS: usize = ffi::B3_MAX_MANIFOLD_POINTS as usize;
 
 #[derive(Clone, Debug, PartialEq)]
+/// Convex point cloud proxy used by distance, overlap, and shape-cast helpers.
 pub struct ShapeProxy {
     points: Vec<Vec3>,
     radius: f32,
 }
 
 impl ShapeProxy {
+    /// Creates a proxy from support points and a non-negative radius.
     pub fn new(points: impl Into<Vec<Vec3>>, radius: f32) -> Result<Self> {
         let points = points.into();
         if points.is_empty()
@@ -30,10 +34,12 @@ impl ShapeProxy {
         Ok(Self { points, radius })
     }
 
+    /// Creates a sphere proxy centered at the origin.
     pub fn sphere(radius: f32) -> Result<Self> {
         Self::new(vec![Vec3::ZERO], radius)
     }
 
+    /// Creates a capsule proxy from two centerline points and a radius.
     pub fn capsule(
         center1: impl Into<Vec3>,
         center2: impl Into<Vec3>,
@@ -43,11 +49,13 @@ impl ShapeProxy {
     }
 
     #[inline]
+    /// Returns the convex support points passed to GJK-style queries and casts.
     pub fn points(&self) -> &[Vec3] {
         &self.points
     }
 
     #[inline]
+    /// Returns the convex radius applied around each proxy support point.
     pub fn radius(&self) -> f32 {
         self.radius
     }
@@ -64,17 +72,23 @@ impl ShapeProxy {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Ray-cast input in local shape space.
 pub struct RayCastInput {
+    /// Ray origin.
     pub origin: Vec3,
+    /// Ray translation vector.
     pub translation: Vec3,
+    /// Maximum fraction of the translation to consider.
     pub max_fraction: f32,
 }
 
 impl RayCastInput {
+    /// Creates a ray-cast input with `max_fraction` set to `1.0`.
     pub fn new(origin: impl Into<Vec3>, translation: impl Into<Vec3>) -> Result<Self> {
         Self::with_max_fraction(origin, translation, 1.0)
     }
 
+    /// Creates a ray-cast input with an explicit maximum fraction.
     pub fn with_max_fraction(
         origin: impl Into<Vec3>,
         translation: impl Into<Vec3>,
@@ -121,17 +135,23 @@ impl RayCastInput {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Box-cast input for sweeping an AABB.
 pub struct BoxCastInput {
+    /// Box bounds at the start of the cast.
     pub aabb: Aabb,
+    /// Cast translation.
     pub translation: Vec3,
+    /// Maximum fraction of the translation to consider.
     pub max_fraction: f32,
 }
 
 impl BoxCastInput {
+    /// Creates a box-cast input with `max_fraction` set to `1.0`.
     pub fn new(aabb: Aabb, translation: impl Into<Vec3>) -> Result<Self> {
         Self::with_max_fraction(aabb, translation, 1.0)
     }
 
+    /// Creates a box-cast input with an explicit maximum fraction.
     pub fn with_max_fraction(
         aabb: Aabb,
         translation: impl Into<Vec3>,
@@ -177,18 +197,25 @@ impl BoxCastInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+/// Shape-cast input for sweeping a convex proxy.
 pub struct ShapeCastInput {
+    /// Convex proxy to sweep.
     pub proxy: ShapeProxy,
+    /// Cast translation.
     pub translation: Vec3,
+    /// Maximum fraction of the translation to consider.
     pub max_fraction: f32,
+    /// Whether the cast may start slightly encroached on the target.
     pub can_encroach: bool,
 }
 
 impl ShapeCastInput {
+    /// Creates a shape-cast input with default options.
     pub fn new(proxy: ShapeProxy, translation: impl Into<Vec3>) -> Result<Self> {
         Self::with_options(proxy, translation, 1.0, false)
     }
 
+    /// Creates a shape-cast input with explicit options.
     pub fn with_options(
         proxy: ShapeProxy,
         translation: impl Into<Vec3>,
@@ -233,14 +260,20 @@ impl ShapeCastInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+/// Input for computing distance between two convex proxies.
 pub struct DistanceInput {
+    /// First proxy, expressed in frame A.
     pub proxy_a: ShapeProxy,
+    /// Second proxy, expressed in frame B.
     pub proxy_b: ShapeProxy,
+    /// Transform that moves points from frame B into frame A.
     pub transform_b_to_a: Transform,
+    /// Whether proxy radii should be included in the distance result.
     pub use_radii: bool,
 }
 
 impl DistanceInput {
+    /// Creates distance input that includes proxy radii.
     pub fn new(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -249,6 +282,7 @@ impl DistanceInput {
         Self::with_options(proxy_a, proxy_b, transform_b_to_a, true)
     }
 
+    /// Creates distance input with explicit radius handling.
     pub fn with_options(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -276,16 +310,24 @@ impl DistanceInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+/// Input for sweeping one convex proxy against another.
 pub struct ShapeCastPairInput {
+    /// First proxy, expressed in frame A.
     pub proxy_a: ShapeProxy,
+    /// Second proxy, expressed in frame B.
     pub proxy_b: ShapeProxy,
+    /// Transform that moves points from frame B into frame A.
     pub transform_b_to_a: Transform,
+    /// Translation applied to proxy B.
     pub translation_b: Vec3,
+    /// Maximum fraction of the translation to consider.
     pub max_fraction: f32,
+    /// Whether the cast may start slightly encroached.
     pub can_encroach: bool,
 }
 
 impl ShapeCastPairInput {
+    /// Creates pair shape-cast input with default options.
     pub fn new(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -302,6 +344,7 @@ impl ShapeCastPairInput {
         )
     }
 
+    /// Creates pair shape-cast input with explicit options.
     pub fn with_options(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -340,19 +383,29 @@ impl ShapeCastPairInput {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+/// Result returned by ray-cast and shape-cast helpers.
 pub struct CastOutput {
+    /// Hit normal, if any.
     pub normal: Vec3,
+    /// Hit point, if any.
     pub point: Vec3,
+    /// Fraction along the cast where the hit occurred.
     pub fraction: f32,
+    /// Iteration count used by the cast algorithm.
     pub iterations: i32,
+    /// Triangle index hit by mesh or height-field casts.
     pub triangle_index: i32,
+    /// Child index hit by compound casts.
     pub child_index: i32,
+    /// Material index hit by mesh, height-field, or compound casts.
     pub material_index: i32,
+    /// Whether the cast hit.
     pub hit: bool,
 }
 
 impl CastOutput {
     #[inline]
+    /// Converts a raw Box3D cast output into the safe value type.
     pub fn from_raw(raw: ffi::b3CastOutput) -> Self {
         Self {
             normal: Vec3::from_raw(raw.normal),
@@ -368,12 +421,19 @@ impl CastOutput {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+/// Result returned by the proxy distance helper.
 pub struct DistanceOutput {
+    /// Closest point on proxy A.
     pub point_a: Vec3,
+    /// Closest point on proxy B.
     pub point_b: Vec3,
+    /// Normal pointing from A toward B.
     pub normal: Vec3,
+    /// Distance between the proxies.
     pub distance: f32,
+    /// Iteration count used by the distance algorithm.
     pub iterations: i32,
+    /// Number of simplex points in the final cache.
     pub simplex_count: i32,
 }
 
@@ -392,15 +452,22 @@ impl DistanceOutput {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Swept transform endpoints used by time-of-impact queries.
 pub struct Sweep {
+    /// Local center of mass.
     pub local_center: Vec3,
+    /// Center position at the start of the sweep.
     pub c1: Vec3,
+    /// Center position at the end of the sweep.
     pub c2: Vec3,
+    /// Rotation at the start of the sweep.
     pub q1: Quat,
+    /// Rotation at the end of the sweep.
     pub q2: Quat,
 }
 
 impl Sweep {
+    /// Creates a validated sweep.
     pub fn new(local_center: Vec3, c1: Vec3, c2: Vec3, q1: Quat, q2: Quat) -> Result<Self> {
         let sweep = Self {
             local_center,
@@ -451,15 +518,22 @@ impl Default for Sweep {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+/// Input for continuous collision detection between two swept proxies.
 pub struct TimeOfImpactInput {
+    /// First proxy.
     pub proxy_a: ShapeProxy,
+    /// Second proxy.
     pub proxy_b: ShapeProxy,
+    /// Sweep for proxy A.
     pub sweep_a: Sweep,
+    /// Sweep for proxy B.
     pub sweep_b: Sweep,
+    /// Maximum sweep fraction to consider.
     pub max_fraction: f32,
 }
 
 impl TimeOfImpactInput {
+    /// Creates time-of-impact input with `max_fraction` set to `1.0`.
     pub fn new(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -469,6 +543,7 @@ impl TimeOfImpactInput {
         Self::with_max_fraction(proxy_a, proxy_b, sweep_a, sweep_b, 1.0)
     }
 
+    /// Creates time-of-impact input with an explicit maximum fraction.
     pub fn with_max_fraction(
         proxy_a: ShapeProxy,
         proxy_b: ShapeProxy,
@@ -504,11 +579,17 @@ impl TimeOfImpactInput {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// State reported by a time-of-impact query.
 pub enum TimeOfImpactState {
+    /// The raw state was not recognized.
     Unknown,
+    /// The solver failed to produce a reliable result.
     Failed,
+    /// The sweeps start overlapped.
     Overlapped,
+    /// The sweeps touch within the requested fraction.
     Hit,
+    /// The sweeps remain separated within the requested fraction.
     Separated,
 }
 
@@ -526,15 +607,25 @@ impl TimeOfImpactState {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Output from a time-of-impact query.
 pub struct TimeOfImpactOutput {
+    /// Solver state.
     pub state: TimeOfImpactState,
+    /// Contact point at the time of impact.
     pub point: Vec3,
+    /// Contact normal at the time of impact.
     pub normal: Vec3,
+    /// Fraction at which the reported state occurred.
     pub fraction: f32,
+    /// Distance at the reported state.
     pub distance: f32,
+    /// Distance solver iteration count.
     pub distance_iterations: i32,
+    /// Push-back solver iteration count.
     pub push_back_iterations: i32,
+    /// Root solver iteration count.
     pub root_iterations: i32,
+    /// Whether Box3D used a fallback path.
     pub used_fallback: bool,
 }
 
@@ -556,18 +647,25 @@ impl TimeOfImpactOutput {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Plane constraint used by the collision plane solver.
 pub struct CollisionPlane {
+    /// Plane equation.
     pub plane: Plane,
+    /// Maximum push distance allowed for this plane.
     pub push_limit: f32,
+    /// Push distance accumulated by the solver.
     pub push: f32,
+    /// Whether velocity should be clipped by this plane.
     pub clip_velocity: bool,
 }
 
 impl CollisionPlane {
+    /// Creates a collision plane with zero initial push.
     pub fn new(plane: Plane, push_limit: f32, clip_velocity: bool) -> Result<Self> {
         Self::with_options(plane, push_limit, 0.0, clip_velocity)
     }
 
+    /// Creates a collision plane with explicit solver state.
     pub fn with_options(
         plane: Plane,
         push_limit: f32,
@@ -608,8 +706,11 @@ impl CollisionPlane {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+/// Result returned by `solve_planes`.
 pub struct PlaneSolverResult {
+    /// Solver displacement.
     pub delta: Vec3,
+    /// Number of solver iterations used.
     pub iteration_count: i32,
 }
 
@@ -624,16 +725,24 @@ impl PlaneSolverResult {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+/// Contact point returned by local manifold helpers.
 pub struct LocalManifoldPoint {
+    /// Contact point in local space.
     pub point: Vec3,
+    /// Contact separation.
     pub separation: f32,
+    /// Triangle index associated with the point, when applicable.
     pub triangle_index: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+/// Local-space manifold returned by narrow-phase collision helpers.
 pub struct LocalManifold {
+    /// Manifold normal.
     pub normal: Vec3,
+    /// Triangle normal, when the manifold comes from triangle collision.
     pub triangle_normal: Vec3,
+    /// Contact points in the manifold.
     pub points: Vec<LocalManifoldPoint>,
 }
 
@@ -654,6 +763,7 @@ impl LocalManifold {
     }
 }
 
+/// Computes mass properties for a sphere at the given density.
 pub fn compute_sphere_mass(sphere: &Sphere, density: f32) -> Result<MassData> {
     sphere.validate()?;
     validate_density(density)?;
@@ -663,6 +773,7 @@ pub fn compute_sphere_mass(sphere: &Sphere, density: f32) -> Result<MassData> {
     }))
 }
 
+/// Computes mass properties for a capsule at the given density.
 pub fn compute_capsule_mass(capsule: &Capsule, density: f32) -> Result<MassData> {
     capsule.validate()?;
     validate_density(density)?;
@@ -672,6 +783,7 @@ pub fn compute_capsule_mass(capsule: &Capsule, density: f32) -> Result<MassData>
     }))
 }
 
+/// Computes mass properties for a convex hull at the given density.
 pub fn compute_hull_mass(hull: &Hull, density: f32) -> Result<MassData> {
     validate_density(density)?;
     let _guard = box3d_lock::lock();
@@ -680,6 +792,7 @@ pub fn compute_hull_mass(hull: &Hull, density: f32) -> Result<MassData> {
     }))
 }
 
+/// Computes the world-space AABB for a transformed sphere.
 pub fn compute_sphere_aabb(sphere: &Sphere, transform: Transform) -> Result<Aabb> {
     sphere.validate()?;
     transform.validate()?;
@@ -689,6 +802,7 @@ pub fn compute_sphere_aabb(sphere: &Sphere, transform: Transform) -> Result<Aabb
     }))
 }
 
+/// Computes the world-space AABB for a transformed capsule.
 pub fn compute_capsule_aabb(capsule: &Capsule, transform: Transform) -> Result<Aabb> {
     capsule.validate()?;
     transform.validate()?;
@@ -698,6 +812,7 @@ pub fn compute_capsule_aabb(capsule: &Capsule, transform: Transform) -> Result<A
     }))
 }
 
+/// Computes the world-space AABB for a transformed hull.
 pub fn compute_hull_aabb(hull: &Hull, transform: Transform) -> Result<Aabb> {
     transform.validate()?;
     let _guard = box3d_lock::lock();
@@ -706,6 +821,7 @@ pub fn compute_hull_aabb(hull: &Hull, transform: Transform) -> Result<Aabb> {
     }))
 }
 
+/// Computes the world-space AABB for a transformed and scaled mesh.
 pub fn compute_mesh_aabb(
     mesh: &MeshData,
     transform: Transform,
@@ -719,6 +835,7 @@ pub fn compute_mesh_aabb(
     }))
 }
 
+/// Computes the world-space AABB for a transformed height field.
 pub fn compute_height_field_aabb(height_field: &HeightField, transform: Transform) -> Result<Aabb> {
     transform.validate()?;
     let _guard = box3d_lock::lock();
@@ -727,6 +844,7 @@ pub fn compute_height_field_aabb(height_field: &HeightField, transform: Transfor
     }))
 }
 
+/// Computes the world-space AABB for a transformed compound.
 pub fn compute_compound_aabb(compound: &Compound, transform: Transform) -> Result<Aabb> {
     transform.validate()?;
     let _guard = box3d_lock::lock();
@@ -735,6 +853,7 @@ pub fn compute_compound_aabb(compound: &Compound, transform: Transform) -> Resul
     }))
 }
 
+/// Computes closest points and distance between two shape proxies.
 pub fn shape_distance(input: DistanceInput) -> Result<DistanceOutput> {
     input.transform_b_to_a.validate()?;
     let raw = input.raw();
@@ -745,6 +864,7 @@ pub fn shape_distance(input: DistanceInput) -> Result<DistanceOutput> {
     }))
 }
 
+/// Sweeps one shape proxy against another.
 pub fn shape_cast_pair(input: ShapeCastPairInput) -> Result<CastOutput> {
     input.transform_b_to_a.validate()?;
     if !input.translation_b.is_valid()
@@ -758,6 +878,7 @@ pub fn shape_cast_pair(input: ShapeCastPairInput) -> Result<CastOutput> {
     Ok(CastOutput::from_raw(unsafe { ffi::b3ShapeCast(&raw) }))
 }
 
+/// Interpolates a sweep at a time fraction in `[0, 1]`.
 pub fn sweep_transform(sweep: Sweep, time: f32) -> Result<Transform> {
     let sweep = sweep.validate()?;
     if !time.is_finite() || !(0.0..=1.0).contains(&time) {
@@ -770,10 +891,12 @@ pub fn sweep_transform(sweep: Sweep, time: f32) -> Result<Transform> {
     }))
 }
 
+/// Interpolates a borrowed sweep at a time fraction in `[0, 1]`.
 pub fn get_sweep_transform(sweep: &Sweep, time: f32) -> Result<Transform> {
     sweep_transform(*sweep, time)
 }
 
+/// Computes the time of impact between two swept proxies.
 pub fn time_of_impact(input: TimeOfImpactInput) -> Result<TimeOfImpactOutput> {
     input.sweep_a.validate()?;
     input.sweep_b.validate()?;
@@ -787,6 +910,7 @@ pub fn time_of_impact(input: TimeOfImpactInput) -> Result<TimeOfImpactOutput> {
     }))
 }
 
+/// Solves displacement against a mutable set of collision planes.
 pub fn solve_planes(
     target_delta: impl Into<Vec3>,
     planes: &mut [CollisionPlane],
@@ -817,6 +941,7 @@ pub fn solve_planes(
     Ok(PlaneSolverResult::from_raw(raw))
 }
 
+/// Clips a vector against collision planes.
 pub fn clip_vector(vector: impl Into<Vec3>, planes: &[CollisionPlane]) -> Result<Vec3> {
     let vector = vector.into().validate()?;
     if planes.is_empty() || planes.len() > i32::MAX as usize {
@@ -840,6 +965,7 @@ pub fn clip_vector(vector: impl Into<Vec3>, planes: &[CollisionPlane]) -> Result
     }))
 }
 
+/// Tests whether a transformed sphere overlaps a shape proxy.
 pub fn overlap_sphere(sphere: &Sphere, transform: Transform, proxy: &ShapeProxy) -> Result<bool> {
     sphere.validate()?;
     overlap(proxy, transform, |proxy, transform| unsafe {
@@ -847,6 +973,7 @@ pub fn overlap_sphere(sphere: &Sphere, transform: Transform, proxy: &ShapeProxy)
     })
 }
 
+/// Tests whether a transformed capsule overlaps a shape proxy.
 pub fn overlap_capsule(
     capsule: &Capsule,
     transform: Transform,
@@ -858,12 +985,14 @@ pub fn overlap_capsule(
     })
 }
 
+/// Tests whether a transformed hull overlaps a shape proxy.
 pub fn overlap_hull(hull: &Hull, transform: Transform, proxy: &ShapeProxy) -> Result<bool> {
     overlap(proxy, transform, |proxy, transform| unsafe {
         ffi::b3OverlapHull(hull.as_ptr(), transform, proxy)
     })
 }
 
+/// Tests whether a transformed and scaled mesh overlaps a shape proxy.
 pub fn overlap_mesh(
     mesh: &MeshData,
     scale: impl Into<Vec3>,
@@ -879,6 +1008,7 @@ pub fn overlap_mesh(
     })
 }
 
+/// Tests whether a transformed height field overlaps a shape proxy.
 pub fn overlap_height_field(
     height_field: &HeightField,
     transform: Transform,
@@ -889,6 +1019,7 @@ pub fn overlap_height_field(
     })
 }
 
+/// Tests whether a transformed compound overlaps a shape proxy.
 pub fn overlap_compound(
     compound: &Compound,
     transform: Transform,
@@ -899,6 +1030,7 @@ pub fn overlap_compound(
     })
 }
 
+/// Casts a ray against a sphere.
 pub fn ray_cast_sphere(sphere: &Sphere, input: RayCastInput) -> Result<CastOutput> {
     sphere.validate()?;
     ray_cast(input, |input| unsafe {
@@ -906,6 +1038,7 @@ pub fn ray_cast_sphere(sphere: &Sphere, input: RayCastInput) -> Result<CastOutpu
     })
 }
 
+/// Casts a ray against a hollow sphere shell.
 pub fn ray_cast_hollow_sphere(sphere: &Sphere, input: RayCastInput) -> Result<CastOutput> {
     sphere.validate()?;
     ray_cast(input, |input| unsafe {
@@ -913,6 +1046,7 @@ pub fn ray_cast_hollow_sphere(sphere: &Sphere, input: RayCastInput) -> Result<Ca
     })
 }
 
+/// Casts a ray against a capsule.
 pub fn ray_cast_capsule(capsule: &Capsule, input: RayCastInput) -> Result<CastOutput> {
     capsule.validate()?;
     ray_cast(input, |input| unsafe {
@@ -920,12 +1054,14 @@ pub fn ray_cast_capsule(capsule: &Capsule, input: RayCastInput) -> Result<CastOu
     })
 }
 
+/// Casts a ray against a convex hull.
 pub fn ray_cast_hull(hull: &Hull, input: RayCastInput) -> Result<CastOutput> {
     ray_cast(input, |input| unsafe {
         ffi::b3RayCastHull(hull.as_ptr(), input)
     })
 }
 
+/// Casts a ray against a scaled mesh.
 pub fn ray_cast_mesh(
     mesh: &MeshData,
     scale: impl Into<Vec3>,
@@ -940,6 +1076,7 @@ pub fn ray_cast_mesh(
     })
 }
 
+/// Casts a ray against a height field.
 pub fn ray_cast_height_field(
     height_field: &HeightField,
     input: RayCastInput,
@@ -949,12 +1086,14 @@ pub fn ray_cast_height_field(
     })
 }
 
+/// Casts a ray against a compound.
 pub fn ray_cast_compound(compound: &Compound, input: RayCastInput) -> Result<CastOutput> {
     ray_cast(input, |input| unsafe {
         ffi::b3RayCastCompound(compound.as_ptr(), input)
     })
 }
 
+/// Sweeps a proxy against a sphere.
 pub fn shape_cast_sphere(sphere: &Sphere, input: ShapeCastInput) -> Result<CastOutput> {
     sphere.validate()?;
     shape_cast(input, |input| unsafe {
@@ -962,6 +1101,7 @@ pub fn shape_cast_sphere(sphere: &Sphere, input: ShapeCastInput) -> Result<CastO
     })
 }
 
+/// Sweeps a proxy against a capsule.
 pub fn shape_cast_capsule(capsule: &Capsule, input: ShapeCastInput) -> Result<CastOutput> {
     capsule.validate()?;
     shape_cast(input, |input| unsafe {
@@ -969,12 +1109,14 @@ pub fn shape_cast_capsule(capsule: &Capsule, input: ShapeCastInput) -> Result<Ca
     })
 }
 
+/// Sweeps a proxy against a convex hull.
 pub fn shape_cast_hull(hull: &Hull, input: ShapeCastInput) -> Result<CastOutput> {
     shape_cast(input, |input| unsafe {
         ffi::b3ShapeCastHull(hull.as_ptr(), input)
     })
 }
 
+/// Sweeps a proxy against a scaled mesh.
 pub fn shape_cast_mesh(
     mesh: &MeshData,
     scale: impl Into<Vec3>,
@@ -989,6 +1131,7 @@ pub fn shape_cast_mesh(
     })
 }
 
+/// Sweeps a proxy against a height field.
 pub fn shape_cast_height_field(
     height_field: &HeightField,
     input: ShapeCastInput,
@@ -998,12 +1141,14 @@ pub fn shape_cast_height_field(
     })
 }
 
+/// Sweeps a proxy against a compound.
 pub fn shape_cast_compound(compound: &Compound, input: ShapeCastInput) -> Result<CastOutput> {
     shape_cast(input, |input| unsafe {
         ffi::b3ShapeCastCompound(compound.as_ptr(), input)
     })
 }
 
+/// Computes a local manifold for two spheres.
 pub fn collide_spheres(
     a: &Sphere,
     b: &Sphere,
@@ -1022,6 +1167,7 @@ pub fn collide_spheres(
     })
 }
 
+/// Computes a local manifold for a capsule and a sphere.
 pub fn collide_capsule_and_sphere(
     capsule_a: &Capsule,
     sphere_b: &Sphere,
@@ -1040,6 +1186,7 @@ pub fn collide_capsule_and_sphere(
     })
 }
 
+/// Computes a local manifold for a hull and a sphere.
 pub fn collide_hull_and_sphere(
     hull_a: &Hull,
     sphere_b: &Sphere,
@@ -1059,6 +1206,7 @@ pub fn collide_hull_and_sphere(
     })
 }
 
+/// Computes a local manifold for two capsules.
 pub fn collide_capsules(
     a: &Capsule,
     b: &Capsule,
@@ -1077,6 +1225,7 @@ pub fn collide_capsules(
     })
 }
 
+/// Computes a local manifold for a hull and a capsule.
 pub fn collide_hull_and_capsule(
     hull_a: &Hull,
     capsule_b: &Capsule,
@@ -1096,6 +1245,7 @@ pub fn collide_hull_and_capsule(
     })
 }
 
+/// Computes a local manifold for two hulls.
 pub fn collide_hulls(
     hull_a: &Hull,
     hull_b: &Hull,
@@ -1114,6 +1264,7 @@ pub fn collide_hulls(
     })
 }
 
+/// Computes a local manifold for a capsule and a triangle.
 pub fn collide_capsule_and_triangle(
     capsule_a: &Capsule,
     triangle_b: [Vec3; 3],
@@ -1133,6 +1284,7 @@ pub fn collide_capsule_and_triangle(
     })
 }
 
+/// Computes a local manifold for a hull and a triangle.
 pub fn collide_hull_and_triangle(
     hull_a: &Hull,
     triangle_b: [Vec3; 3],
@@ -1157,6 +1309,7 @@ pub fn collide_hull_and_triangle(
     })
 }
 
+/// Computes a local manifold for a sphere and a triangle.
 pub fn collide_sphere_and_triangle(
     sphere_a: &Sphere,
     triangle_b: [Vec3; 3],

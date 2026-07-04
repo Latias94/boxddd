@@ -14,12 +14,15 @@ type PreSolveFn = dyn Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 's
 type MaterialMixFn = dyn Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Material data passed to a friction or restitution mixing callback.
 pub struct MaterialMixInput {
+    /// The coefficient currently supplied by Box3D for the material.
     pub coefficient: f32,
+    /// User-defined material id stored on the source surface material.
     pub user_material_id: u64,
 }
-
 impl MaterialMixInput {
+    /// Creates a material mixing callback input.
     #[inline]
     pub const fn new(coefficient: f32, user_material_id: u64) -> Self {
         Self {
@@ -203,6 +206,11 @@ unsafe extern "C" fn pre_solve_trampoline(
 }
 
 impl World {
+    /// Registers a custom contact filter callback.
+    ///
+    /// The callback returns `true` to allow a pair to collide. Panics if the
+    /// callback cannot be registered; use `try_set_custom_filter` to handle
+    /// errors explicitly.
     pub fn set_custom_filter<F>(&mut self, callback: F)
     where
         F: Fn(ShapeId, ShapeId) -> bool + Send + Sync + 'static,
@@ -211,6 +219,9 @@ impl World {
             .expect("failed to register Box3D custom filter callback");
     }
 
+    /// Tries to register a custom contact filter callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_set_custom_filter<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(ShapeId, ShapeId) -> bool + Send + Sync + 'static,
@@ -243,11 +254,16 @@ impl World {
         }
     }
 
+    /// Clears the custom contact filter callback.
+    ///
+    /// Panics if Box3D rejects the operation; use `try_clear_custom_filter` for
+    /// fallible code paths.
     pub fn clear_custom_filter(&mut self) {
         self.try_clear_custom_filter()
             .expect("failed to clear Box3D custom filter callback");
     }
 
+    /// Tries to clear the custom contact filter callback.
     pub fn try_clear_custom_filter(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -259,6 +275,10 @@ impl World {
         Ok(())
     }
 
+    /// Registers a pre-solve callback.
+    ///
+    /// The callback returns `true` to keep the contact enabled for the current
+    /// step. Panics if the callback cannot be registered.
     pub fn set_pre_solve<F>(&mut self, callback: F)
     where
         F: Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 'static,
@@ -267,6 +287,9 @@ impl World {
             .expect("failed to register Box3D pre-solve callback");
     }
 
+    /// Tries to register a pre-solve callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_set_pre_solve<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 'static,
@@ -299,11 +322,15 @@ impl World {
         }
     }
 
+    /// Clears the pre-solve callback.
+    ///
+    /// Panics if Box3D rejects the operation.
     pub fn clear_pre_solve(&mut self) {
         self.try_clear_pre_solve()
             .expect("failed to clear Box3D pre-solve callback");
     }
 
+    /// Tries to clear the pre-solve callback.
     pub fn try_clear_pre_solve(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -315,6 +342,9 @@ impl World {
         Ok(())
     }
 
+    /// Registers a friction mixing callback.
+    ///
+    /// Panics if the callback cannot be registered.
     pub fn set_friction_callback<F>(&mut self, callback: F)
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -323,6 +353,7 @@ impl World {
             .expect("failed to register Box3D friction callback");
     }
 
+    /// Tries to register a friction mixing callback.
     pub fn try_set_friction_callback<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -355,11 +386,15 @@ impl World {
         }
     }
 
+    /// Clears the friction mixing callback.
+    ///
+    /// Panics if Box3D rejects the operation.
     pub fn clear_friction_callback(&mut self) {
         self.try_clear_friction_callback()
             .expect("failed to clear Box3D friction callback");
     }
 
+    /// Tries to clear the friction mixing callback.
     pub fn try_clear_friction_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -373,6 +408,9 @@ impl World {
         Ok(())
     }
 
+    /// Registers a restitution mixing callback.
+    ///
+    /// Panics if the callback cannot be registered.
     pub fn set_restitution_callback<F>(&mut self, callback: F)
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -381,6 +419,7 @@ impl World {
             .expect("failed to register Box3D restitution callback");
     }
 
+    /// Tries to register a restitution mixing callback.
     pub fn try_set_restitution_callback<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -413,11 +452,15 @@ impl World {
         }
     }
 
+    /// Clears the restitution mixing callback.
+    ///
+    /// Panics if Box3D rejects the operation.
     pub fn clear_restitution_callback(&mut self) {
         self.try_clear_restitution_callback()
             .expect("failed to clear Box3D restitution callback");
     }
 
+    /// Tries to clear the restitution mixing callback.
     pub fn try_clear_restitution_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();

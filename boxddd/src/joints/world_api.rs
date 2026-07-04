@@ -1,6 +1,7 @@
 use super::*;
 
 impl World {
+    /// Tries to create a parallel joint.
     pub fn try_create_parallel_joint(&mut self, def: ParallelJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -8,11 +9,13 @@ impl World {
         })
     }
 
+    /// Creates a parallel joint or panics if creation fails.
     pub fn create_parallel_joint(&mut self, def: ParallelJointDef) -> JointId {
         self.try_create_parallel_joint(def)
             .expect("Box3D failed to create parallel joint")
     }
 
+    /// Tries to create a distance joint.
     pub fn try_create_distance_joint(&mut self, def: DistanceJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -20,11 +23,13 @@ impl World {
         })
     }
 
+    /// Creates a distance joint or panics if creation fails.
     pub fn create_distance_joint(&mut self, def: DistanceJointDef) -> JointId {
         self.try_create_distance_joint(def)
             .expect("Box3D failed to create distance joint")
     }
 
+    /// Tries to create a motor joint.
     pub fn try_create_motor_joint(&mut self, def: MotorJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -32,11 +37,13 @@ impl World {
         })
     }
 
+    /// Creates a motor joint or panics if creation fails.
     pub fn create_motor_joint(&mut self, def: MotorJointDef) -> JointId {
         self.try_create_motor_joint(def)
             .expect("Box3D failed to create motor joint")
     }
 
+    /// Tries to create a filter joint.
     pub fn try_create_filter_joint(&mut self, def: FilterJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -44,11 +51,13 @@ impl World {
         })
     }
 
+    /// Creates a filter joint or panics if creation fails.
     pub fn create_filter_joint(&mut self, def: FilterJointDef) -> JointId {
         self.try_create_filter_joint(def)
             .expect("Box3D failed to create filter joint")
     }
 
+    /// Tries to create a prismatic joint.
     pub fn try_create_prismatic_joint(&mut self, def: PrismaticJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -56,11 +65,13 @@ impl World {
         })
     }
 
+    /// Creates a prismatic joint or panics if creation fails.
     pub fn create_prismatic_joint(&mut self, def: PrismaticJointDef) -> JointId {
         self.try_create_prismatic_joint(def)
             .expect("Box3D failed to create prismatic joint")
     }
 
+    /// Tries to create a revolute joint.
     pub fn try_create_revolute_joint(&mut self, def: RevoluteJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -68,11 +79,13 @@ impl World {
         })
     }
 
+    /// Creates a revolute joint or panics if creation fails.
     pub fn create_revolute_joint(&mut self, def: RevoluteJointDef) -> JointId {
         self.try_create_revolute_joint(def)
             .expect("Box3D failed to create revolute joint")
     }
 
+    /// Tries to create a spherical joint.
     pub fn try_create_spherical_joint(&mut self, def: SphericalJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -80,11 +93,13 @@ impl World {
         })
     }
 
+    /// Creates a spherical joint or panics if creation fails.
     pub fn create_spherical_joint(&mut self, def: SphericalJointDef) -> JointId {
         self.try_create_spherical_joint(def)
             .expect("Box3D failed to create spherical joint")
     }
 
+    /// Tries to create a weld joint.
     pub fn try_create_weld_joint(&mut self, def: WeldJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -92,11 +107,13 @@ impl World {
         })
     }
 
+    /// Creates a weld joint or panics if creation fails.
     pub fn create_weld_joint(&mut self, def: WeldJointDef) -> JointId {
         self.try_create_weld_joint(def)
             .expect("Box3D failed to create weld joint")
     }
 
+    /// Tries to create a wheel joint.
     pub fn try_create_wheel_joint(&mut self, def: WheelJointDef) -> Result<JointId> {
         def.validate()?;
         self.create_joint(def.raw().base, |world| unsafe {
@@ -104,6 +121,7 @@ impl World {
         })
     }
 
+    /// Creates a wheel joint or panics if creation fails.
     pub fn create_wheel_joint(&mut self, def: WheelJointDef) -> JointId {
         self.try_create_wheel_joint(def)
             .expect("Box3D failed to create wheel joint")
@@ -126,27 +144,32 @@ impl World {
         joint_id_from_raw(create(self.raw()))
     }
 
+    /// Tries to destroy a joint.
     pub fn try_destroy_joint(&mut self, joint_id: JointId, wake_attached: bool) -> Result<()> {
         let _guard = lock_joint_checked(self, joint_id)?;
         unsafe { ffi::b3DestroyJoint(joint_id.into_raw(), wake_attached) };
         Ok(())
     }
 
+    /// Destroys a joint or panics if the handle is invalid.
     pub fn destroy_joint(&mut self, joint_id: JointId, wake_attached: bool) {
         self.try_destroy_joint(joint_id, wake_attached)
             .expect("invalid JointId");
     }
 
+    /// Returns the type of a joint.
     pub fn try_joint_type(&self, joint_id: JointId) -> Result<JointType> {
         let _guard = lock_joint_checked(self, joint_id)?;
         JointType::from_raw(unsafe { ffi::b3Joint_GetType(joint_id.into_raw()) })
             .ok_or(Error::WrongJointType)
     }
 
+    /// Returns the joint type or panics if the handle is invalid.
     pub fn joint_type(&self, joint_id: JointId) -> JointType {
         self.try_joint_type(joint_id).expect("invalid JointId")
     }
 
+    /// Returns body A attached to a joint.
     pub fn try_joint_body_a(&self, joint_id: JointId) -> Result<BodyId> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(BodyId::from_raw(unsafe {
@@ -154,6 +177,7 @@ impl World {
         }))
     }
 
+    /// Returns body B attached to a joint.
     pub fn try_joint_body_b(&self, joint_id: JointId) -> Result<BodyId> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(BodyId::from_raw(unsafe {
@@ -161,6 +185,7 @@ impl World {
         }))
     }
 
+    /// Tries to set local frame A on a joint.
     pub fn try_set_joint_local_frame_a(
         &mut self,
         joint_id: JointId,
@@ -172,6 +197,7 @@ impl World {
         Ok(())
     }
 
+    /// Returns local frame A from a joint.
     pub fn try_joint_local_frame_a(&self, joint_id: JointId) -> Result<Transform> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(Transform::from_raw(unsafe {
@@ -179,6 +205,7 @@ impl World {
         }))
     }
 
+    /// Tries to set local frame B on a joint.
     pub fn try_set_joint_local_frame_b(
         &mut self,
         joint_id: JointId,
@@ -190,6 +217,7 @@ impl World {
         Ok(())
     }
 
+    /// Returns local frame B from a joint.
     pub fn try_joint_local_frame_b(&self, joint_id: JointId) -> Result<Transform> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(Transform::from_raw(unsafe {
@@ -197,6 +225,7 @@ impl World {
         }))
     }
 
+    /// Tries to set whether attached bodies may collide.
     pub fn try_set_joint_collide_connected(
         &mut self,
         joint_id: JointId,
@@ -207,17 +236,20 @@ impl World {
         Ok(())
     }
 
+    /// Returns whether attached bodies may collide.
     pub fn try_joint_collide_connected(&self, joint_id: JointId) -> Result<bool> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetCollideConnected(joint_id.into_raw()) })
     }
 
+    /// Tries to wake the bodies attached to a joint.
     pub fn try_wake_joint_bodies(&mut self, joint_id: JointId) -> Result<()> {
         let _guard = lock_joint_checked(self, joint_id)?;
         unsafe { ffi::b3Joint_WakeBodies(joint_id.into_raw()) };
         Ok(())
     }
 
+    /// Returns the constraint force of a joint.
     pub fn try_joint_constraint_force(&self, joint_id: JointId) -> Result<Vec3> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(Vec3::from_raw(unsafe {
@@ -225,6 +257,7 @@ impl World {
         }))
     }
 
+    /// Returns the constraint torque of a joint.
     pub fn try_joint_constraint_torque(&self, joint_id: JointId) -> Result<Vec3> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(Vec3::from_raw(unsafe {
@@ -232,16 +265,19 @@ impl World {
         }))
     }
 
+    /// Returns the linear separation of a joint.
     pub fn try_joint_linear_separation(&self, joint_id: JointId) -> Result<f32> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetLinearSeparation(joint_id.into_raw()) })
     }
 
+    /// Returns the angular separation of a joint.
     pub fn try_joint_angular_separation(&self, joint_id: JointId) -> Result<f32> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetAngularSeparation(joint_id.into_raw()) })
     }
 
+    /// Tries to set generic constraint tuning on a joint.
     pub fn try_set_joint_constraint_tuning(
         &mut self,
         joint_id: JointId,
@@ -259,6 +295,7 @@ impl World {
         Ok(())
     }
 
+    /// Returns the constraint tuning of a joint.
     pub fn try_joint_constraint_tuning(&self, joint_id: JointId) -> Result<JointTuning> {
         let _guard = lock_joint_checked(self, joint_id)?;
         let mut hertz = 0.0;
@@ -269,6 +306,7 @@ impl World {
         Ok(JointTuning::new(hertz, damping_ratio))
     }
 
+    /// Tries to set the force threshold on a joint.
     pub fn try_set_joint_force_threshold(
         &mut self,
         joint_id: JointId,
@@ -280,11 +318,13 @@ impl World {
         Ok(())
     }
 
+    /// Returns the force threshold of a joint.
     pub fn try_joint_force_threshold(&self, joint_id: JointId) -> Result<f32> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetForceThreshold(joint_id.into_raw()) })
     }
 
+    /// Tries to set the torque threshold on a joint.
     pub fn try_set_joint_torque_threshold(
         &mut self,
         joint_id: JointId,
@@ -296,6 +336,7 @@ impl World {
         Ok(())
     }
 
+    /// Returns the torque threshold of a joint.
     pub fn try_joint_torque_threshold(&self, joint_id: JointId) -> Result<f32> {
         let _guard = lock_joint_checked(self, joint_id)?;
         Ok(unsafe { ffi::b3Joint_GetTorqueThreshold(joint_id.into_raw()) })

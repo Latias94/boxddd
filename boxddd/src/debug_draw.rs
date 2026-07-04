@@ -10,100 +10,152 @@ use std::ffi::{CStr, c_void};
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Packed RGB color used by Box3D debug drawing.
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct HexColor(u32);
 
 impl HexColor {
+    /// Black.
     pub const BLACK: Self = Self::from_rgb_u32(0x000000);
+    /// White.
     pub const WHITE: Self = Self::from_rgb_u32(0xffffff);
+    /// Red.
     pub const RED: Self = Self::from_rgb_u32(0xff0000);
+    /// Green.
     pub const GREEN: Self = Self::from_rgb_u32(0x00ff00);
+    /// Blue.
     pub const BLUE: Self = Self::from_rgb_u32(0x0000ff);
 
+    /// Creates a color from red, green, and blue components.
     #[inline]
     pub const fn from_rgb(red: u8, green: u8, blue: u8) -> Self {
         Self(((red as u32) << 16) | ((green as u32) << 8) | blue as u32)
     }
 
+    /// Creates a color from a packed `0xRRGGBB` value.
     #[inline]
     pub const fn from_rgb_u32(rgb: u32) -> Self {
         Self(rgb & 0x00ff_ffff)
     }
 
+    /// Converts a raw Box3D color into `HexColor`.
     #[inline]
     pub const fn from_raw(raw: ffi::b3HexColor) -> Self {
         Self::from_rgb_u32(raw as u32)
     }
 
+    /// Returns this color as a packed `0xRRGGBB` value.
     #[inline]
     pub const fn rgb_u32(self) -> u32 {
         self.0
     }
 
+    /// Converts this color into the raw Box3D color type.
     #[inline]
     pub const fn into_raw(self) -> ffi::b3HexColor {
         self.0 as ffi::b3HexColor
     }
 }
 
+/// Opaque debug shape handle managed by Box3D callbacks.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct DebugShape {
+    /// Shape associated with the result.
     pub shape_id: ShapeId,
+    /// Shape type reported by Box3D, when available.
     pub shape_type: Option<ShapeType>,
 }
 
+/// Debug draw command emitted by Box3D.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum DebugDrawCommand {
+    /// Draw a shape outline.
     Shape {
+        /// Optional shape handle associated with the draw command.
         shape: Option<DebugShape>,
+        /// World transform of the shape.
         transform: WorldTransform,
+        /// Shape color.
         color: HexColor,
     },
+    /// Draw a line segment.
     Segment {
+        /// First endpoint.
         p1: Pos,
+        /// Second endpoint.
         p2: Pos,
+        /// Segment color.
         color: HexColor,
     },
+    /// Draw a transform basis.
     Transform(WorldTransform),
+    /// Draw a point marker.
     Point {
+        /// Point position.
         position: Pos,
+        /// Point size in debug-draw units.
         size: f32,
+        /// Point color.
         color: HexColor,
     },
+    /// Draw a sphere.
     Sphere {
+        /// Sphere center.
         center: Pos,
+        /// Sphere radius.
         radius: f32,
+        /// Sphere color.
         color: HexColor,
+        /// Sphere alpha.
         alpha: f32,
     },
+    /// Draw a capsule.
     Capsule {
+        /// First capsule endpoint.
         p1: Pos,
+        /// Second capsule endpoint.
         p2: Pos,
+        /// Capsule radius.
         radius: f32,
+        /// Capsule color.
         color: HexColor,
+        /// Capsule alpha.
         alpha: f32,
     },
+    /// Draw an AABB.
     Bounds {
+        /// Bounds to draw.
         aabb: Aabb,
+        /// Bounds color.
         color: HexColor,
     },
+    /// Draw an oriented box.
     Box {
+        /// Box half extents.
         extents: Vec3,
+        /// Box world transform.
         transform: WorldTransform,
+        /// Box color.
         color: HexColor,
     },
+    /// Draw text.
     String {
+        /// Text position.
         position: Pos,
+        /// Text content.
         text: String,
+        /// Text color.
         color: HexColor,
     },
 }
 
+/// Trait implemented by debug draw sinks.
 pub trait DebugDraw {
+    /// Draws a shape outline.
     fn draw_shape(
         &mut self,
         _shape: Option<DebugShape>,
@@ -113,36 +165,63 @@ pub trait DebugDraw {
         true
     }
 
+    /// Draws a line segment.
     fn draw_segment(&mut self, _p1: Pos, _p2: Pos, _color: HexColor) {}
+    /// Draws a transform basis.
     fn draw_transform(&mut self, _transform: WorldTransform) {}
+    /// Draws a point marker.
     fn draw_point(&mut self, _position: Pos, _size: f32, _color: HexColor) {}
+    /// Draws a sphere.
     fn draw_sphere(&mut self, _center: Pos, _radius: f32, _color: HexColor, _alpha: f32) {}
+    /// Draws a capsule.
     fn draw_capsule(&mut self, _p1: Pos, _p2: Pos, _radius: f32, _color: HexColor, _alpha: f32) {}
+    /// Draws an AABB.
     fn draw_bounds(&mut self, _aabb: Aabb, _color: HexColor) {}
+    /// Draws an oriented box.
     fn draw_box(&mut self, _extents: Vec3, _transform: WorldTransform, _color: HexColor) {}
+    /// Draws text.
     fn draw_string(&mut self, _position: Pos, _text: &str, _color: HexColor) {}
 }
 
+/// Options passed to Box3D debug drawing.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug)]
 pub struct DebugDrawOptions {
+    /// Bounds limiting debug drawing.
     pub drawing_bounds: Aabb,
+    /// Collision mask used by the query.
     pub mask_bits: u64,
+    /// Scale applied to force visualizations.
     pub force_scale: f32,
+    /// Scale applied to joint visualizations.
     pub joint_scale: f32,
+    /// Whether shape outlines are drawn.
     pub draw_shapes: bool,
+    /// Whether joints are drawn.
     pub draw_joints: bool,
+    /// Whether joint extra details are drawn.
     pub draw_joint_extras: bool,
+    /// Whether AABBs are drawn.
     pub draw_bounds: bool,
+    /// Whether mass data is drawn.
     pub draw_mass: bool,
+    /// Whether body names are drawn.
     pub draw_body_names: bool,
+    /// Whether contacts are drawn.
     pub draw_contacts: bool,
+    /// Anchor display mode used by Box3D.
     pub draw_anchor_a: i32,
+    /// Whether graph-color debug coloring is drawn.
     pub draw_graph_colors: bool,
+    /// Whether contact feature ids are drawn.
     pub draw_contact_features: bool,
+    /// Whether contact normals are drawn.
     pub draw_contact_normals: bool,
+    /// Whether contact forces are drawn.
     pub draw_contact_forces: bool,
+    /// Whether friction forces are drawn.
     pub draw_friction_forces: bool,
+    /// Whether solver islands are drawn.
     pub draw_islands: bool,
 }
 
@@ -566,11 +645,13 @@ pub(crate) fn with_debug_draw(
 }
 
 impl World {
+    /// Collects debug draw commands or panics if Box3D rejects the draw.
     pub fn debug_draw_collect(&mut self, options: DebugDrawOptions) -> Vec<DebugDrawCommand> {
         self.try_debug_draw_collect(options)
             .expect("Box3D debug draw failed")
     }
 
+    /// Tries to collect debug draw commands.
     pub fn try_debug_draw_collect(
         &mut self,
         options: DebugDrawOptions,
@@ -580,6 +661,7 @@ impl World {
         Ok(commands)
     }
 
+    /// Collects debug draw commands into `out` or panics if Box3D rejects the draw.
     pub fn debug_draw_collect_into(
         &mut self,
         out: &mut Vec<DebugDrawCommand>,
@@ -589,6 +671,7 @@ impl World {
             .expect("Box3D debug draw failed");
     }
 
+    /// Tries to collect debug draw commands into `out`.
     pub fn try_debug_draw_collect_into(
         &mut self,
         out: &mut Vec<DebugDrawCommand>,
@@ -600,11 +683,13 @@ impl World {
         Ok(())
     }
 
+    /// Runs debug drawing or panics if Box3D rejects the draw.
     pub fn debug_draw(&mut self, drawer: &mut impl DebugDraw, options: DebugDrawOptions) {
         self.try_debug_draw(drawer, options)
             .expect("Box3D debug draw failed");
     }
 
+    /// Tries to run debug drawing with a custom sink.
     pub fn try_debug_draw(
         &mut self,
         drawer: &mut impl DebugDraw,

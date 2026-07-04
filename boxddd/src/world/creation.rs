@@ -1,6 +1,7 @@
 use super::*;
 
 impl World {
+    /// Tries to create a body in this world.
     pub fn try_create_body(&mut self, def: BodyDef) -> Result<BodyId> {
         callback_state::check_not_in_callback()?;
         def.validate()?;
@@ -13,11 +14,13 @@ impl World {
         }
     }
 
+    /// Creates a body or panics if Box3D rejects the definition.
     pub fn create_body(&mut self, def: BodyDef) -> BodyId {
         self.try_create_body(def)
             .expect("Box3D failed to create body")
     }
 
+    /// Tries to attach a sphere shape to a body.
     pub fn try_create_sphere_shape(
         &mut self,
         body_id: BodyId,
@@ -36,6 +39,7 @@ impl World {
         }
     }
 
+    /// Creates a sphere shape or panics if Box3D rejects it.
     pub fn create_sphere_shape(
         &mut self,
         body_id: BodyId,
@@ -46,6 +50,7 @@ impl World {
             .expect("Box3D failed to create sphere shape")
     }
 
+    /// Tries to attach a box-hull shape to a body.
     pub fn try_create_hull_shape(
         &mut self,
         body_id: BodyId,
@@ -64,6 +69,7 @@ impl World {
         }
     }
 
+    /// Creates a box-hull shape or panics if Box3D rejects it.
     pub fn create_hull_shape(
         &mut self,
         body_id: BodyId,
@@ -74,6 +80,7 @@ impl World {
             .expect("Box3D failed to create hull shape")
     }
 
+    /// Tries to attach a capsule shape to a body.
     pub fn try_create_capsule_shape(
         &mut self,
         body_id: BodyId,
@@ -89,6 +96,7 @@ impl World {
         shape_id_from_raw(raw)
     }
 
+    /// Creates a capsule shape or panics if Box3D rejects it.
     pub fn create_capsule_shape(
         &mut self,
         body_id: BodyId,
@@ -99,6 +107,7 @@ impl World {
             .expect("Box3D failed to create capsule shape")
     }
 
+    /// Tries to attach an owned convex hull resource to a body.
     pub fn try_create_created_hull_shape(
         &mut self,
         body_id: BodyId,
@@ -112,6 +121,7 @@ impl World {
         shape_id_from_raw(raw)
     }
 
+    /// Tries to attach a transformed owned convex hull resource to a body.
     pub fn try_create_transformed_hull_shape(
         &mut self,
         body_id: BodyId,
@@ -138,6 +148,7 @@ impl World {
         shape_id_from_raw(raw)
     }
 
+    /// Tries to attach a triangle mesh shape to a static body.
     pub fn try_create_mesh_shape(
         &mut self,
         body_id: BodyId,
@@ -163,6 +174,7 @@ impl World {
         Ok(shape_id)
     }
 
+    /// Tries to attach a height-field shape to a static body.
     pub fn try_create_height_field_shape(
         &mut self,
         body_id: BodyId,
@@ -190,6 +202,7 @@ impl World {
         Ok(shape_id)
     }
 
+    /// Tries to attach a compound shape to a static body.
     pub fn try_create_compound_shape(
         &mut self,
         body_id: BodyId,

@@ -20,6 +20,7 @@ use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+/// Configuration used when creating a Box3D world.
 #[derive(Clone, Debug)]
 pub struct WorldDef {
     raw: ffi::b3WorldDef,
@@ -36,16 +37,19 @@ impl Default for WorldDef {
 }
 
 impl WorldDef {
+    /// Starts a builder with Box3D defaults.
     #[inline]
     pub fn builder() -> WorldDefBuilder {
         WorldDefBuilder::new()
     }
 
+    /// Returns the underlying Box3D FFI value.
     #[inline]
     pub fn raw(&self) -> &ffi::b3WorldDef {
         &self.raw
     }
 
+    /// Validates the value before it is passed to Box3D.
     pub fn validate(&self) -> Result<()> {
         #[cfg(target_arch = "wasm32")]
         if self.raw.workerCount > 1 || self.task_system.is_some() {
@@ -67,12 +71,14 @@ impl WorldDef {
     }
 }
 
+/// Builder for `WorldDef`.
 #[derive(Clone, Debug)]
 pub struct WorldDefBuilder {
     def: WorldDef,
 }
 
 impl WorldDefBuilder {
+    /// Creates a new value with default settings.
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -80,24 +86,28 @@ impl WorldDefBuilder {
         }
     }
 
+    /// Sets the gravity vector used by the world, usually in meters per second squared.
     #[inline]
     pub fn gravity(mut self, gravity: impl Into<Vec3>) -> Self {
         self.def.raw.gravity = gravity.into().into_raw();
         self
     }
 
+    /// Sets the number of worker slots Box3D may use while stepping the world.
     #[inline]
     pub fn worker_count(mut self, worker_count: u32) -> Self {
         self.def.raw.workerCount = worker_count.max(1);
         self
     }
 
+    /// Installs the task-system adapter used by Box3D during `World::step`.
     #[inline]
     pub fn task_system(mut self, task_system: TaskSystem) -> Self {
         self.def.task_system = Some(task_system);
         self
     }
 
+    /// Finishes the builder and returns the configured value.
     #[inline]
     pub fn build(self) -> WorldDef {
         self.def
@@ -110,6 +120,7 @@ impl Default for WorldDefBuilder {
     }
 }
 
+/// Configuration for applying an explosion impulse in a world.
 #[derive(Clone, Debug)]
 pub struct ExplosionDef {
     raw: ffi::b3ExplosionDef,
@@ -124,16 +135,19 @@ impl Default for ExplosionDef {
 }
 
 impl ExplosionDef {
+    /// Starts a builder with Box3D defaults.
     #[inline]
     pub fn builder() -> ExplosionDefBuilder {
         ExplosionDefBuilder::new()
     }
 
+    /// Returns the underlying Box3D FFI value.
     #[inline]
     pub fn raw(&self) -> &ffi::b3ExplosionDef {
         &self.raw
     }
 
+    /// Validates the value before it is passed to Box3D.
     pub fn validate(&self) -> Result<()> {
         Pos::from_raw(self.raw.position).validate()?;
         if self.raw.radius.is_finite()
@@ -149,12 +163,14 @@ impl ExplosionDef {
     }
 }
 
+/// Builder for `ExplosionDef`.
 #[derive(Clone, Debug)]
 pub struct ExplosionDefBuilder {
     def: ExplosionDef,
 }
 
 impl ExplosionDefBuilder {
+    /// Creates a new value with default settings.
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -162,36 +178,42 @@ impl ExplosionDefBuilder {
         }
     }
 
+    /// Sets the collision mask bits matched by the query.
     #[inline]
     pub fn mask_bits(mut self, mask_bits: u64) -> Self {
         self.def.raw.maskBits = mask_bits;
         self
     }
 
+    /// Sets the world-space center of the explosion.
     #[inline]
     pub fn position(mut self, position: impl Into<Pos>) -> Self {
         self.def.raw.position = position.into().into_raw();
         self
     }
 
+    /// Sets the explosion radius.
     #[inline]
     pub fn radius(mut self, radius: f32) -> Self {
         self.def.raw.radius = radius;
         self
     }
 
+    /// Sets how quickly the explosion impulse decays over distance.
     #[inline]
     pub fn falloff(mut self, falloff: f32) -> Self {
         self.def.raw.falloff = falloff;
         self
     }
 
+    /// Sets the impulse applied per affected surface area.
     #[inline]
     pub fn impulse_per_area(mut self, impulse_per_area: f32) -> Self {
         self.def.raw.impulsePerArea = impulse_per_area;
         self
     }
 
+    /// Finishes the builder and returns the configured value.
     #[inline]
     pub fn build(self) -> ExplosionDef {
         self.def
@@ -204,6 +226,7 @@ impl Default for ExplosionDefBuilder {
     }
 }
 
+/// Owning handle for a Box3D world.
 #[derive(Debug)]
 pub struct World {
     raw: ffi::b3WorldId,
@@ -227,6 +250,7 @@ mod runtime;
 mod shape_api;
 
 impl World {
+    /// Creates a new value with default settings.
     pub fn new(def: WorldDef) -> Result<Self> {
         callback_state::check_not_in_callback()?;
         def.validate()?;
@@ -264,11 +288,13 @@ impl World {
         }
     }
 
+    /// Returns the underlying Box3D FFI value.
     #[inline]
     pub fn raw(&self) -> ffi::b3WorldId {
         self.raw
     }
 
+    /// Returns whether the Box3D handle is still valid.
     #[inline]
     pub fn is_valid(&self) -> bool {
         let _guard = box3d_lock::lock();
@@ -430,11 +456,13 @@ impl Drop for World {
     }
 }
 
+/// Returns the Box3D runtime version.
 #[inline]
 pub fn version() -> Version {
     Version::from_raw(unsafe { ffi::b3GetVersion() })
 }
 
+/// Returns the number of bytes currently allocated by Box3D.
 #[inline]
 pub fn allocated_byte_count() -> i32 {
     callback_state::assert_not_in_callback();
@@ -442,6 +470,7 @@ pub fn allocated_byte_count() -> i32 {
     unsafe { ffi::b3GetByteCount() }
 }
 
+/// Returns whether the linked Box3D library uses double precision.
 #[inline]
 pub fn is_double_precision() -> bool {
     unsafe { ffi::b3IsDoublePrecision() }

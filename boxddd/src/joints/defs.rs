@@ -1,19 +1,30 @@
 use super::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Native Box3D joint family reported for a joint handle.
 pub enum JointType {
+    /// A parallel joint that keeps two body frames parallel with optional spring torque.
     Parallel,
+    /// A distance joint that constrains the distance between two body frames.
     Distance,
+    /// A filter joint that disables collision between the connected bodies.
     Filter,
+    /// A motor joint that drives relative linear and angular velocity.
     Motor,
+    /// A prismatic joint that allows translation along one axis.
     Prismatic,
+    /// A revolute joint that allows rotation around one axis.
     Revolute,
+    /// A spherical joint that allows ball-and-socket rotation.
     Spherical,
+    /// A weld joint that locks relative translation and rotation.
     Weld,
+    /// A wheel joint with suspension, spin motor, and steering controls.
     Wheel,
 }
 
 impl JointType {
+    /// Converts a raw Box3D joint type value into the safe Rust enum.
     pub const fn from_raw(raw: ffi::b3JointType) -> Option<Self> {
         match raw {
             ffi::b3JointType_b3_parallelJoint => Some(Self::Parallel),
@@ -31,13 +42,17 @@ impl JointType {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
+/// Frequency and damping parameters shared by Box3D joint constraints.
 pub struct JointTuning {
+    /// Constraint frequency in hertz.
     pub hertz: f32,
+    /// Non-negative damping ratio for the constraint response.
     pub damping_ratio: f32,
 }
 
 impl JointTuning {
     #[inline]
+    /// Creates a tuning value from a frequency and damping ratio.
     pub const fn new(hertz: f32, damping_ratio: f32) -> Self {
         Self {
             hertz,
@@ -55,11 +70,13 @@ macro_rules! impl_joint_def_common {
     ($ty:ident, $raw:ty) => {
         impl $ty {
             #[inline]
+            /// Returns the raw Box3D definition backing this builder.
             pub fn raw(&self) -> &$raw {
                 &self.raw
             }
 
             #[inline]
+            /// Sets the two bodies connected by the joint.
             pub fn body_ids(mut self, body_a: BodyId, body_b: BodyId) -> Self {
                 self.raw.base.bodyIdA = body_a.into_raw();
                 self.raw.base.bodyIdB = body_b.into_raw();
@@ -67,36 +84,42 @@ macro_rules! impl_joint_def_common {
             }
 
             #[inline]
+            /// Sets the local constraint frame on body A.
             pub fn local_frame_a(mut self, frame: Transform) -> Self {
                 self.raw.base.localFrameA = frame.into_raw();
                 self
             }
 
             #[inline]
+            /// Sets the local constraint frame on body B.
             pub fn local_frame_b(mut self, frame: Transform) -> Self {
                 self.raw.base.localFrameB = frame.into_raw();
                 self
             }
 
             #[inline]
+            /// Controls whether the connected bodies may collide with each other.
             pub fn collide_connected(mut self, collide_connected: bool) -> Self {
                 self.raw.base.collideConnected = collide_connected;
                 self
             }
 
             #[inline]
+            /// Sets the force threshold used by Box3D constraint diagnostics.
             pub fn force_threshold(mut self, threshold: f32) -> Self {
                 self.raw.base.forceThreshold = threshold;
                 self
             }
 
             #[inline]
+            /// Sets the torque threshold used by Box3D constraint diagnostics.
             pub fn torque_threshold(mut self, threshold: f32) -> Self {
                 self.raw.base.torqueThreshold = threshold;
                 self
             }
 
             #[inline]
+            /// Sets the common constraint frequency and damping ratio.
             pub fn constraint_tuning(mut self, tuning: JointTuning) -> Self {
                 self.raw.base.constraintHertz = tuning.hertz;
                 self.raw.base.constraintDampingRatio = tuning.damping_ratio;
@@ -104,6 +127,7 @@ macro_rules! impl_joint_def_common {
             }
 
             #[inline]
+            /// Sets the scale used by native debug drawing for this joint.
             pub fn draw_scale(mut self, draw_scale: f32) -> Self {
                 self.raw.base.drawScale = draw_scale;
                 self
@@ -125,6 +149,7 @@ macro_rules! impl_joint_def_common {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D parallel joint.
 pub struct ParallelJointDef {
     raw: ffi::b3ParallelJointDef,
 }
@@ -140,10 +165,12 @@ impl Default for ParallelJointDef {
 impl_joint_def_common!(ParallelJointDef, ffi::b3ParallelJointDef);
 
 impl ParallelJointDef {
+    /// Creates a parallel joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Sets the parallel spring frequency, damping ratio, and maximum torque.
     pub fn spring(mut self, hertz: f32, damping_ratio: f32, max_torque: f32) -> Self {
         self.raw.hertz = hertz;
         self.raw.dampingRatio = damping_ratio;
@@ -160,6 +187,7 @@ impl ParallelJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D distance joint.
 pub struct DistanceJointDef {
     raw: ffi::b3DistanceJointDef,
 }
@@ -175,15 +203,18 @@ impl Default for DistanceJointDef {
 impl_joint_def_common!(DistanceJointDef, ffi::b3DistanceJointDef);
 
 impl DistanceJointDef {
+    /// Creates a distance joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Sets the target distance between the joint anchors.
     pub fn length(mut self, length: f32) -> Self {
         self.raw.length = length;
         self
     }
 
+    /// Enables or disables the distance spring and sets its tuning.
     pub fn spring(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSpring = enabled;
         self.raw.hertz = hertz;
@@ -191,12 +222,14 @@ impl DistanceJointDef {
         self
     }
 
+    /// Sets the lower and upper spring force range.
     pub fn spring_force_range(mut self, lower: f32, upper: f32) -> Self {
         self.raw.lowerSpringForce = lower;
         self.raw.upperSpringForce = upper;
         self
     }
 
+    /// Enables or disables the distance limits and sets their length range.
     pub fn limit(mut self, enabled: bool, min_length: f32, max_length: f32) -> Self {
         self.raw.enableLimit = enabled;
         self.raw.minLength = min_length;
@@ -204,6 +237,7 @@ impl DistanceJointDef {
         self
     }
 
+    /// Enables or disables the distance motor and sets speed and maximum force.
     pub fn motor(mut self, enabled: bool, speed: f32, max_force: f32) -> Self {
         self.raw.enableMotor = enabled;
         self.raw.motorSpeed = speed;
@@ -225,6 +259,7 @@ impl DistanceJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D motor joint.
 pub struct MotorJointDef {
     raw: ffi::b3MotorJointDef,
 }
@@ -240,25 +275,30 @@ impl Default for MotorJointDef {
 impl_joint_def_common!(MotorJointDef, ffi::b3MotorJointDef);
 
 impl MotorJointDef {
+    /// Creates a motor joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Sets the desired relative linear velocity.
     pub fn linear_velocity(mut self, velocity: impl Into<Vec3>) -> Self {
         self.raw.linearVelocity = velocity.into().into_raw();
         self
     }
 
+    /// Sets the desired relative angular velocity.
     pub fn angular_velocity(mut self, velocity: impl Into<Vec3>) -> Self {
         self.raw.angularVelocity = velocity.into().into_raw();
         self
     }
 
+    /// Sets the maximum force applied to reach the target linear velocity.
     pub fn max_velocity_force(mut self, force: f32) -> Self {
         self.raw.maxVelocityForce = force;
         self
     }
 
+    /// Sets the maximum torque applied to reach the target angular velocity.
     pub fn max_velocity_torque(mut self, torque: f32) -> Self {
         self.raw.maxVelocityTorque = torque;
         self
@@ -280,6 +320,7 @@ impl MotorJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D filter joint.
 pub struct FilterJointDef {
     raw: ffi::b3FilterJointDef,
 }
@@ -295,6 +336,7 @@ impl Default for FilterJointDef {
 impl_joint_def_common!(FilterJointDef, ffi::b3FilterJointDef);
 
 impl FilterJointDef {
+    /// Creates a filter joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
@@ -305,6 +347,7 @@ impl FilterJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D prismatic joint.
 pub struct PrismaticJointDef {
     raw: ffi::b3PrismaticJointDef,
 }
@@ -320,10 +363,12 @@ impl Default for PrismaticJointDef {
 impl_joint_def_common!(PrismaticJointDef, ffi::b3PrismaticJointDef);
 
 impl PrismaticJointDef {
+    /// Creates a prismatic joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Enables or disables the translation spring and sets its tuning.
     pub fn spring(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSpring = enabled;
         self.raw.hertz = hertz;
@@ -331,11 +376,13 @@ impl PrismaticJointDef {
         self
     }
 
+    /// Sets the target translation along the prismatic axis.
     pub fn target_translation(mut self, target: f32) -> Self {
         self.raw.targetTranslation = target;
         self
     }
 
+    /// Enables or disables translation limits and sets their range.
     pub fn limit(mut self, enabled: bool, lower: f32, upper: f32) -> Self {
         self.raw.enableLimit = enabled;
         self.raw.lowerTranslation = lower;
@@ -343,6 +390,7 @@ impl PrismaticJointDef {
         self
     }
 
+    /// Enables or disables the translation motor and sets speed and maximum force.
     pub fn motor(mut self, enabled: bool, speed: f32, max_force: f32) -> Self {
         self.raw.enableMotor = enabled;
         self.raw.motorSpeed = speed;
@@ -362,6 +410,7 @@ impl PrismaticJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D revolute joint.
 pub struct RevoluteJointDef {
     raw: ffi::b3RevoluteJointDef,
 }
@@ -377,10 +426,12 @@ impl Default for RevoluteJointDef {
 impl_joint_def_common!(RevoluteJointDef, ffi::b3RevoluteJointDef);
 
 impl RevoluteJointDef {
+    /// Creates a revolute joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Enables or disables the angular spring and sets its tuning.
     pub fn spring(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSpring = enabled;
         self.raw.hertz = hertz;
@@ -388,11 +439,13 @@ impl RevoluteJointDef {
         self
     }
 
+    /// Sets the target angle for the angular spring.
     pub fn target_angle(mut self, target_angle: f32) -> Self {
         self.raw.targetAngle = target_angle;
         self
     }
 
+    /// Enables or disables angular limits and sets their angle range.
     pub fn limit(mut self, enabled: bool, lower: f32, upper: f32) -> Self {
         self.raw.enableLimit = enabled;
         self.raw.lowerAngle = lower;
@@ -400,6 +453,7 @@ impl RevoluteJointDef {
         self
     }
 
+    /// Enables or disables the angular motor and sets speed and maximum torque.
     pub fn motor(mut self, enabled: bool, speed: f32, max_torque: f32) -> Self {
         self.raw.enableMotor = enabled;
         self.raw.motorSpeed = speed;
@@ -419,6 +473,7 @@ impl RevoluteJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D spherical joint.
 pub struct SphericalJointDef {
     raw: ffi::b3SphericalJointDef,
 }
@@ -434,10 +489,12 @@ impl Default for SphericalJointDef {
 impl_joint_def_common!(SphericalJointDef, ffi::b3SphericalJointDef);
 
 impl SphericalJointDef {
+    /// Creates a spherical joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Enables or disables the rotational spring and sets its tuning.
     pub fn spring(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSpring = enabled;
         self.raw.hertz = hertz;
@@ -445,17 +502,20 @@ impl SphericalJointDef {
         self
     }
 
+    /// Sets the target relative rotation for the spring.
     pub fn target_rotation(mut self, rotation: Quat) -> Self {
         self.raw.targetRotation = rotation.into_raw();
         self
     }
 
+    /// Enables or disables the cone limit and sets its maximum angle.
     pub fn cone_limit(mut self, enabled: bool, angle: f32) -> Self {
         self.raw.enableConeLimit = enabled;
         self.raw.coneAngle = angle;
         self
     }
 
+    /// Enables or disables the twist limit and sets its angle range.
     pub fn twist_limit(mut self, enabled: bool, lower: f32, upper: f32) -> Self {
         self.raw.enableTwistLimit = enabled;
         self.raw.lowerTwistAngle = lower;
@@ -463,6 +523,7 @@ impl SphericalJointDef {
         self
     }
 
+    /// Enables or disables the angular motor and sets velocity and maximum torque.
     pub fn motor(mut self, enabled: bool, velocity: impl Into<Vec3>, max_torque: f32) -> Self {
         self.raw.enableMotor = enabled;
         self.raw.motorVelocity = velocity.into().into_raw();
@@ -485,6 +546,7 @@ impl SphericalJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D weld joint.
 pub struct WeldJointDef {
     raw: ffi::b3WeldJointDef,
 }
@@ -500,16 +562,19 @@ impl Default for WeldJointDef {
 impl_joint_def_common!(WeldJointDef, ffi::b3WeldJointDef);
 
 impl WeldJointDef {
+    /// Creates a weld joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Sets the linear weld spring frequency and damping ratio.
     pub fn linear_tuning(mut self, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.linearHertz = hertz;
         self.raw.linearDampingRatio = damping_ratio;
         self
     }
 
+    /// Sets the angular weld spring frequency and damping ratio.
     pub fn angular_tuning(mut self, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.angularHertz = hertz;
         self.raw.angularDampingRatio = damping_ratio;
@@ -526,6 +591,7 @@ impl WeldJointDef {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Builder for a Box3D wheel joint.
 pub struct WheelJointDef {
     raw: ffi::b3WheelJointDef,
 }
@@ -541,10 +607,12 @@ impl Default for WheelJointDef {
 impl_joint_def_common!(WheelJointDef, ffi::b3WheelJointDef);
 
 impl WheelJointDef {
+    /// Creates a wheel joint definition for two bodies.
     pub fn new(body_a: BodyId, body_b: BodyId) -> Self {
         Self::default().body_ids(body_a, body_b)
     }
 
+    /// Enables or disables suspension springing and sets its tuning.
     pub fn suspension(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSuspensionSpring = enabled;
         self.raw.suspensionHertz = hertz;
@@ -552,6 +620,7 @@ impl WheelJointDef {
         self
     }
 
+    /// Enables or disables suspension limits and sets their translation range.
     pub fn suspension_limit(mut self, enabled: bool, lower: f32, upper: f32) -> Self {
         self.raw.enableSuspensionLimit = enabled;
         self.raw.lowerSuspensionLimit = lower;
@@ -559,6 +628,7 @@ impl WheelJointDef {
         self
     }
 
+    /// Enables or disables the wheel spin motor and sets speed and maximum torque.
     pub fn spin_motor(mut self, enabled: bool, speed: f32, max_torque: f32) -> Self {
         self.raw.enableSpinMotor = enabled;
         self.raw.spinSpeed = speed;
@@ -566,6 +636,7 @@ impl WheelJointDef {
         self
     }
 
+    /// Enables or disables steering and sets steering spring tuning.
     pub fn steering(mut self, enabled: bool, hertz: f32, damping_ratio: f32) -> Self {
         self.raw.enableSteering = enabled;
         self.raw.steeringHertz = hertz;
@@ -573,6 +644,7 @@ impl WheelJointDef {
         self
     }
 
+    /// Enables or disables steering limits and sets their angle range.
     pub fn steering_limit(mut self, enabled: bool, lower: f32, upper: f32) -> Self {
         self.raw.enableSteeringLimit = enabled;
         self.raw.lowerSteeringLimit = lower;
@@ -580,6 +652,7 @@ impl WheelJointDef {
         self
     }
 
+    /// Sets the target steering angle and maximum steering torque.
     pub fn target_steering(mut self, angle: f32, max_torque: f32) -> Self {
         self.raw.targetSteeringAngle = angle;
         self.raw.maxSteeringTorque = max_torque;

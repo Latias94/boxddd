@@ -9,14 +9,18 @@ use crate::world::World;
 use boxddd_sys::ffi;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+/// Broad-phase traversal statistics returned by Box3D queries.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct TreeStats {
+    /// Number of broad-phase tree nodes visited.
     pub node_visits: i32,
+    /// Number of broad-phase tree leaves visited.
     pub leaf_visits: i32,
 }
 
 impl TreeStats {
+    /// Converts raw Box3D data into the safe value type.
     #[inline]
     pub const fn from_raw(raw: ffi::b3TreeStats) -> Self {
         Self {
@@ -26,29 +30,37 @@ impl TreeStats {
     }
 }
 
+/// Collision filter applied to world queries and casts.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct QueryFilter {
+    /// Category bits assigned to the query.
     pub category_bits: u64,
+    /// Mask bits used to accept candidate shapes.
     pub mask_bits: u64,
+    /// User-defined query identifier recorded by Box3D replay.
     pub id: u64,
 }
 
 impl QueryFilter {
+    /// Creates a new value with default settings.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the category bits assigned to the query.
     pub fn category_bits(mut self, category_bits: u64) -> Self {
         self.category_bits = category_bits;
         self
     }
 
+    /// Sets the mask bits used to accept candidate shapes.
     pub fn mask_bits(mut self, mask_bits: u64) -> Self {
         self.mask_bits = mask_bits;
         self
     }
 
+    /// Sets the user-defined query id used by recording and replay diagnostics.
     pub fn id(mut self, id: u64) -> Self {
         self.id = id;
         self
@@ -75,54 +87,85 @@ impl Default for QueryFilter {
     }
 }
 
+/// Shape reported by an overlap query.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct QueryHit {
+    /// Shape that overlapped the query volume.
     pub shape_id: ShapeId,
 }
 
+/// Hit reported by a ray or shape cast callback.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RayHit {
+    /// Shape hit by the cast.
     pub shape_id: ShapeId,
+    /// World-space point of initial intersection.
     pub point: Pos,
+    /// Surface normal at the intersection point.
     pub normal: Vec3,
+    /// Fraction along the cast translation at the intersection point.
     pub fraction: f32,
+    /// Shape or triangle material id reported by Box3D.
     pub user_material_id: u64,
+    /// Triangle index for mesh or height-field hits, or `-1` otherwise.
     pub triangle_index: i32,
+    /// Child shape index for compound hits, or `-1` otherwise.
     pub child_index: i32,
 }
 
+/// Closest hit reported by [`World::cast_ray_closest`].
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RayClosestHit {
+    /// Shape hit by the ray.
     pub shape_id: ShapeId,
+    /// World-space point of initial intersection.
     pub point: Pos,
+    /// Surface normal at the intersection point.
     pub normal: Vec3,
+    /// Fraction along the ray translation at the intersection point.
     pub fraction: f32,
+    /// Shape or triangle material id reported by Box3D.
     pub user_material_id: u64,
+    /// Triangle index for mesh or height-field hits, or `-1` otherwise.
     pub triangle_index: i32,
+    /// Child shape index for compound hits, or `-1` otherwise.
     pub child_index: i32,
+    /// Number of broad-phase tree nodes visited.
     pub node_visits: i32,
+    /// Number of broad-phase tree leaves visited.
     pub leaf_visits: i32,
 }
 
+/// Closest point result for a body-scoped query.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BodyClosestPoint {
+    /// Closest world-space point on the body.
     pub point: Vec3,
+    /// Distance from the query point to the body.
     pub distance: f32,
 }
 
+/// Hit reported by a body-scoped cast.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BodyCastHit {
+    /// Shape on the body hit by the cast.
     pub shape_id: ShapeId,
+    /// World-space point of initial intersection.
     pub point: Pos,
+    /// Surface normal at the intersection point.
     pub normal: Vec3,
+    /// Fraction along the cast translation at the intersection point.
     pub fraction: f32,
+    /// Shape or triangle material id reported by Box3D.
     pub user_material_id: u64,
+    /// Triangle index for mesh or height-field hits, or `-1` otherwise.
     pub triangle_index: i32,
+    /// Narrow-phase iteration count reported by Box3D.
     pub iterations: i32,
 }
 
@@ -141,15 +184,23 @@ impl BodyCastHit {
     }
 }
 
+/// Result returned by a ray cast against a single shape.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ShapeRayHit {
+    /// World-space point of initial intersection.
     pub point: Pos,
+    /// Surface normal at the intersection point.
     pub normal: Vec3,
+    /// Fraction along the cast translation at the intersection point.
     pub fraction: f32,
+    /// Triangle index for mesh or height-field hits, or `-1` otherwise.
     pub triangle_index: i32,
+    /// Child shape index for compound hits, or `-1` otherwise.
     pub child_index: i32,
+    /// Material slot index reported by the hit, when applicable.
     pub material_index: i32,
+    /// Narrow-phase iteration count reported by Box3D.
     pub iterations: i32,
 }
 
@@ -168,11 +219,15 @@ impl ShapeRayHit {
     }
 }
 
+/// Contact plane gathered for a capsule character mover.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MoverPlane {
+    /// Shape that produced the plane.
     pub shape_id: ShapeId,
+    /// Plane that constrains the mover at the queried position.
     pub plane: Plane,
+    /// World-space contact point reported by Box3D.
     pub point: Vec3,
 }
 
@@ -188,12 +243,14 @@ impl MoverPlane {
 }
 
 impl World {
+    /// Collects every shape whose bounds overlap `aabb`.
     pub fn overlap_aabb(&self, aabb: Aabb, filter: QueryFilter) -> Result<Vec<QueryHit>> {
         let mut out = Vec::new();
         self.overlap_aabb_into(aabb, filter, &mut out)?;
         Ok(out)
     }
 
+    /// Writes every shape whose bounds overlap `aabb` into `out`, clearing it first.
     pub fn overlap_aabb_into(
         &self,
         aabb: Aabb,
@@ -207,6 +264,9 @@ impl World {
         })
     }
 
+    /// Visits shapes whose bounds overlap `aabb`.
+    ///
+    /// Returning `false` from `visitor` terminates traversal early.
     pub fn visit_overlap_aabb<F>(
         &self,
         aabb: Aabb,
@@ -248,6 +308,7 @@ impl World {
         }
     }
 
+    /// Collects shapes overlapping `proxy` placed at `origin`.
     pub fn overlap_shape(
         &self,
         origin: impl Into<Pos>,
@@ -259,6 +320,7 @@ impl World {
         Ok(out)
     }
 
+    /// Writes shapes overlapping `proxy` placed at `origin` into `out`, clearing it first.
     pub fn overlap_shape_into(
         &self,
         origin: impl Into<Pos>,
@@ -273,6 +335,9 @@ impl World {
         })
     }
 
+    /// Visits shapes overlapping `proxy` placed at `origin`.
+    ///
+    /// Returning `false` from `visitor` terminates traversal early.
     pub fn visit_overlap_shape<F>(
         &self,
         origin: impl Into<Pos>,
@@ -317,6 +382,7 @@ impl World {
         }
     }
 
+    /// Collects hits from a ray cast through the world.
     pub fn cast_ray(
         &self,
         origin: impl Into<Pos>,
@@ -328,6 +394,7 @@ impl World {
         Ok(out)
     }
 
+    /// Writes ray-cast hits into `out`, clearing it first.
     pub fn cast_ray_into(
         &self,
         origin: impl Into<Pos>,
@@ -342,6 +409,11 @@ impl World {
         })
     }
 
+    /// Visits hits from a ray cast through the world.
+    ///
+    /// The callback follows Box3D ray-cast semantics: return `-1.0` to ignore the hit and continue,
+    /// `0.0` to terminate, the hit fraction to clip the ray for closest-hit behavior, or `1.0` to
+    /// continue without clipping. Non-finite returns are treated as termination.
     pub fn visit_cast_ray<F>(
         &self,
         origin: impl Into<Pos>,
@@ -386,6 +458,10 @@ impl World {
         }
     }
 
+    /// Returns the closest hit from a ray cast through the world.
+    ///
+    /// This is the Box3D convenience path for closest-hit queries. It does not provide a callback
+    /// for custom per-hit filtering.
     pub fn cast_ray_closest(
         &self,
         origin: impl Into<Pos>,
@@ -422,6 +498,7 @@ impl World {
         }
     }
 
+    /// Collects hits from sweeping a shape proxy through the world.
     pub fn cast_shape(
         &self,
         origin: impl Into<Pos>,
@@ -433,6 +510,7 @@ impl World {
         Ok(out)
     }
 
+    /// Writes shape-cast hits into `out`, clearing it first.
     pub fn cast_shape_into(
         &self,
         origin: impl Into<Pos>,
@@ -447,6 +525,9 @@ impl World {
         })
     }
 
+    /// Visits hits from sweeping a shape proxy through the world.
+    ///
+    /// The callback uses the same control return values as [`Self::visit_cast_ray`].
     pub fn visit_cast_shape<F>(
         &self,
         origin: impl Into<Pos>,
@@ -493,6 +574,11 @@ impl World {
         }
     }
 
+    /// Casts a capsule-shaped character mover through the world.
+    ///
+    /// Returns the safe travel fraction in `[0, 1]`. Use [`Self::collide_mover`] at the final
+    /// position to gather contact planes; Box3D's mover cast is for swept motion, not contact
+    /// inspection.
     pub fn cast_mover(
         &self,
         origin: impl Into<Pos>,
@@ -519,6 +605,7 @@ impl World {
         })
     }
 
+    /// Collects contact planes for a capsule mover at `origin`.
     pub fn collide_mover(
         &self,
         origin: impl Into<Pos>,
@@ -530,6 +617,7 @@ impl World {
         Ok(out)
     }
 
+    /// Writes mover contact planes into `out`, clearing it first.
     pub fn collide_mover_into(
         &self,
         origin: impl Into<Pos>,
@@ -544,6 +632,9 @@ impl World {
         })
     }
 
+    /// Visits contact planes for a capsule mover at `origin`.
+    ///
+    /// Returning `false` from `visitor` stops plane collection early.
     pub fn visit_collide_mover<F>(
         &self,
         origin: impl Into<Pos>,

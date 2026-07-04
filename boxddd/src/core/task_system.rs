@@ -10,18 +10,19 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread::{self, JoinHandle};
 
-/// A safe Box3D task-system adapter used by [`crate::WorldDefBuilder`].
+/// Safe task-system adapter installed on a Box3D world definition.
 ///
 /// Box3D calls `enqueueTask` during `b3World_Step` and later calls `finishTask`
 /// for every non-null task handle returned by enqueue. `finishTask` must block
-/// until that task has completed.
+/// until that task has completed; schedulers that cannot provide this blocking
+/// guarantee must not be installed through this adapter.
 #[derive(Clone, Debug)]
 pub struct TaskSystem {
     inner: Arc<TaskSystemInner>,
 }
 
 impl TaskSystem {
-    /// Runs each Box3D task on a dedicated blocking OS thread.
+    /// Runs each Box3D task on a dedicated blocking operating-system thread.
     ///
     /// This scheduler is intentionally conservative: it contains panics,
     /// returns them as [`Error::CallbackPanicked`] from `World::try_step`, and
@@ -32,10 +33,10 @@ impl TaskSystem {
         Self::new(FaultMode::None)
     }
 
-    /// Attempts to create the blocking-thread scheduler.
+    /// Tries to create the blocking-thread scheduler.
     ///
-    /// Browser and WASI targets do not expose this scheduler because Box3D's
-    /// `finishTask` callback must block until child tasks complete.
+    /// Browser and WASI targets do not expose this scheduler because Box3D requires
+    /// `finishTask` to block until child tasks complete.
     #[inline]
     pub fn try_blocking_threads() -> crate::Result<Self> {
         #[cfg(target_arch = "wasm32")]
@@ -110,10 +111,15 @@ impl TaskSystem {
 /// Snapshot of a [`TaskSystem`]'s task counters.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TaskSystemStats {
+    /// Number of tasks enqueued.
     pub enqueued: usize,
+    /// Number of tasks started.
     pub started: usize,
+    /// Number of tasks completed.
     pub completed: usize,
+    /// Number of `finishTask` callbacks observed.
     pub finished: usize,
+    /// Number of task callbacks that panicked.
     pub panicked: bool,
 }
 

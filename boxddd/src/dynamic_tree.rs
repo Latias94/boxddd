@@ -13,17 +13,26 @@ use std::rc::Rc;
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Stable handle for a proxy stored in a [`DynamicTree`].
+///
+/// The generation component prevents accidentally reusing a stale handle after a proxy has been
+/// destroyed and another proxy has reused the same Box3D proxy index.
 pub struct DynamicTreeProxyId {
     index: i32,
     generation: u64,
 }
 
 impl DynamicTreeProxyId {
+    /// Returns the Box3D proxy index portion of this handle.
     #[inline]
     pub const fn index(self) -> i32 {
         self.index
     }
 
+    /// Returns the generation paired with the native proxy index.
+    ///
+    /// A mismatched generation means the handle refers to a proxy that has already been removed
+    /// or whose index has been recycled by Box3D.
     #[inline]
     pub const fn generation(self) -> u64 {
         self.generation
@@ -42,20 +51,28 @@ impl DynamicTreeProxyId {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Snapshot of a proxy tracked by a [`DynamicTree`].
 pub struct DynamicTreeProxy {
+    /// Current axis-aligned bounds for the proxy.
     pub aabb: Aabb,
+    /// Category bits used by query and cast filters.
     pub category_bits: u64,
+    /// Caller-owned payload returned by query and cast callbacks.
     pub user_data: u64,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Category filter used by dynamic tree queries and casts.
 pub struct DynamicTreeFilter {
+    /// Category bit mask to test against candidate proxies.
     pub mask_bits: u64,
+    /// When true, every bit in `mask_bits` must be present on the proxy category.
     pub require_all_bits: bool,
 }
 
 impl DynamicTreeFilter {
+    /// Creates a filter that accepts proxies sharing any bit in `mask_bits`.
     #[inline]
     pub const fn new(mask_bits: u64) -> Self {
         Self {
@@ -64,6 +81,7 @@ impl DynamicTreeFilter {
         }
     }
 
+    /// Sets whether matching requires all mask bits instead of any shared bit.
     #[inline]
     pub const fn require_all_bits(mut self, require_all_bits: bool) -> Self {
         self.require_all_bits = require_all_bits;
@@ -82,48 +100,71 @@ impl Default for DynamicTreeFilter {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Result item produced by an AABB query.
 pub struct DynamicTreeHit {
+    /// Proxy that matched the query.
     pub proxy_id: DynamicTreeProxyId,
+    /// Caller-owned payload stored on the proxy.
     pub user_data: u64,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Candidate passed to a closest-point query callback.
 pub struct DynamicTreeClosestHit {
+    /// Current squared distance bound reported by Box3D for this candidate.
     pub min_distance_squared: f32,
+    /// Proxy being visited.
     pub proxy_id: DynamicTreeProxyId,
+    /// Caller-owned payload stored on the proxy.
     pub user_data: u64,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Summary returned by a closest-point query.
 pub struct DynamicTreeClosestResult {
+    /// Traversal statistics reported by Box3D.
     pub stats: TreeStats,
+    /// Final squared distance bound after all callback updates.
     pub min_distance_squared: f32,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Candidate passed to a dynamic-tree ray-cast callback.
 pub struct DynamicTreeRayCastHit {
+    /// Ray input clipped to the current candidate interval.
     pub input: RayCastInput,
+    /// Proxy being visited.
     pub proxy_id: DynamicTreeProxyId,
+    /// Caller-owned payload stored on the proxy.
     pub user_data: u64,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Candidate passed to a dynamic-tree box-cast callback.
 pub struct DynamicTreeBoxCastHit {
+    /// Box-cast input clipped to the current candidate interval.
     pub input: BoxCastInput,
+    /// Proxy being visited.
     pub proxy_id: DynamicTreeProxyId,
+    /// Caller-owned payload stored on the proxy.
     pub user_data: u64,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Callback control value for dynamic-tree ray and box casts.
 pub enum DynamicTreeCastControl {
+    /// Continue traversal without changing the current maximum fraction.
     Continue,
+    /// Clip future traversal to the supplied fraction.
     Clip(f32),
+    /// Skip the current hit while continuing traversal.
     Skip,
+    /// Stop traversal immediately.
     Terminate,
 }
 
@@ -149,6 +190,11 @@ struct ProxyEntry {
     proxy: DynamicTreeProxy,
 }
 
+/// Standalone Box3D dynamic AABB tree.
+///
+/// `DynamicTree` owns the native tree and releases it on drop. It is intentionally neither `Send`
+/// nor `Sync` because callbacks enter Rust through raw context pointers and Box3D access is
+/// serialized by the crate-wide Box3D lock.
 pub struct DynamicTree {
     raw: ffi::b3DynamicTree,
     proxies: BTreeMap<i32, ProxyEntry>,
@@ -158,10 +204,12 @@ pub struct DynamicTree {
 }
 
 impl DynamicTree {
+    /// Creates an empty dynamic tree.
     pub fn new() -> Result<Self> {
         Self::with_capacity(0)
     }
 
+    /// Creates an empty dynamic tree with an initial proxy capacity hint.
     pub fn with_capacity(proxy_capacity: usize) -> Result<Self> {
         if proxy_capacity > i32::MAX as usize / 2 {
             return Err(Error::InvalidArgument);
@@ -182,10 +230,12 @@ impl DynamicTree {
         })
     }
 
+    /// Inserts a proxy with default category bits and caller-owned `user_data`.
     pub fn create_proxy(&mut self, aabb: Aabb, user_data: u64) -> Result<DynamicTreeProxyId> {
         self.create_proxy_with_category_bits(aabb, u64::MAX, user_data)
     }
 
+    /// Inserts a proxy with explicit category bits and caller-owned `user_data`.
     pub fn create_proxy_with_category_bits(
         &mut self,
         aabb: Aabb,
@@ -216,6 +266,7 @@ impl DynamicTree {
         Ok(DynamicTreeProxyId::from_raw_parts(proxy_id, generation))
     }
 
+    /// Removes a proxy from the tree.
     pub fn destroy_proxy(&mut self, proxy_id: DynamicTreeProxyId) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let proxy_index = self.proxy_index(proxy_id)?;
@@ -228,6 +279,7 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Moves an existing proxy to a new AABB.
     pub fn move_proxy(&mut self, proxy_id: DynamicTreeProxyId, aabb: Aabb) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let proxy_index = self.proxy_index(proxy_id)?;
@@ -242,6 +294,10 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Enlarges an existing proxy AABB without rebuilding the tree.
+    ///
+    /// The new AABB must strictly contain the current one; call [`Self::rebuild`] before
+    /// [`Self::validate_no_enlarged`] if enlarged nodes should be eliminated.
     pub fn enlarge_proxy(&mut self, proxy_id: DynamicTreeProxyId, aabb: Aabb) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let proxy_index = self.proxy_index(proxy_id)?;
@@ -266,6 +322,7 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Replaces the category bits for a proxy.
     pub fn set_category_bits(
         &mut self,
         proxy_id: DynamicTreeProxyId,
@@ -283,6 +340,7 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Returns the category bits currently stored by Box3D for a proxy.
     pub fn category_bits(&mut self, proxy_id: DynamicTreeProxyId) -> Result<u64> {
         callback_state::check_not_in_callback()?;
         let proxy_index = self.proxy_index(proxy_id)?;
@@ -290,15 +348,18 @@ impl DynamicTree {
         Ok(unsafe { ffi::b3DynamicTree_GetCategoryBits(&mut self.raw, proxy_index) })
     }
 
+    /// Returns the Rust-side snapshot for a live proxy.
     pub fn proxy(&self, proxy_id: DynamicTreeProxyId) -> Result<DynamicTreeProxy> {
         callback_state::check_not_in_callback()?;
         Ok(self.proxy_entry(proxy_id)?.proxy)
     }
 
+    /// Returns true when `proxy_id` still refers to a live proxy in this tree.
     pub fn contains_proxy(&self, proxy_id: DynamicTreeProxyId) -> bool {
         self.proxy_entry(proxy_id).is_ok()
     }
 
+    /// Returns the number of live proxies stored in the native tree.
     pub fn proxy_count(&self) -> Result<usize> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -306,6 +367,7 @@ impl DynamicTree {
         usize::try_from(count).map_err(|_| Error::InvalidArgument)
     }
 
+    /// Returns the native heap memory currently owned by the tree, in bytes.
     pub fn byte_count(&self) -> Result<usize> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -313,12 +375,14 @@ impl DynamicTree {
         usize::try_from(count).map_err(|_| Error::InvalidArgument)
     }
 
+    /// Returns the current height of the native AABB tree.
     pub fn height(&self) -> Result<i32> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
         Ok(unsafe { ffi::b3DynamicTree_GetHeight(&self.raw) })
     }
 
+    /// Returns the tree area ratio reported by Box3D.
     pub fn area_ratio(&self) -> Result<f32> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -330,6 +394,7 @@ impl DynamicTree {
         }
     }
 
+    /// Returns the root AABB, or `None` when the tree has no proxies.
     pub fn root_bounds(&self) -> Result<Option<Aabb>> {
         callback_state::check_not_in_callback()?;
         if self.proxies.is_empty() {
@@ -340,6 +405,7 @@ impl DynamicTree {
         Ok(Some(aabb.validate()?))
     }
 
+    /// Rebuilds the native tree and returns the number of boxes sorted by Box3D.
     pub fn rebuild(&mut self, full_build: bool) -> Result<usize> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -348,6 +414,7 @@ impl DynamicTree {
         usize::try_from(count).map_err(|_| Error::InvalidArgument)
     }
 
+    /// Runs Box3D's internal dynamic-tree validation checks.
     pub fn validate(&self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -355,6 +422,10 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Runs Box3D validation that asserts no enlarged nodes remain.
+    ///
+    /// This returns [`Error::InvalidArgument`] if [`Self::enlarge_proxy`] has been called and the
+    /// tree has not subsequently been rebuilt.
     pub fn validate_no_enlarged(&self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         if self.has_enlarged_nodes {
@@ -365,12 +436,14 @@ impl DynamicTree {
         Ok(())
     }
 
+    /// Collects all proxies whose bounds overlap `aabb` and pass `filter`.
     pub fn query(&self, aabb: Aabb, filter: DynamicTreeFilter) -> Result<Vec<DynamicTreeHit>> {
         let mut out = Vec::new();
         self.query_into(aabb, filter, &mut out)?;
         Ok(out)
     }
 
+    /// Writes all AABB query hits into `out`, clearing it first.
     pub fn query_into(
         &self,
         aabb: Aabb,
@@ -384,6 +457,9 @@ impl DynamicTree {
         })
     }
 
+    /// Visits proxies whose bounds overlap `aabb` and pass `filter`.
+    ///
+    /// Returning `false` from `visitor` stops traversal early.
     pub fn visit_query<F>(
         &self,
         aabb: Aabb,
@@ -426,6 +502,10 @@ impl DynamicTree {
         }
     }
 
+    /// Visits closest-query candidates near `point`.
+    ///
+    /// The callback returns the next squared distance bound. Non-finite or negative callback
+    /// results are ignored and leave the existing bound unchanged.
     pub fn visit_query_closest<F>(
         &self,
         point: impl Into<Vec3>,
@@ -477,6 +557,7 @@ impl DynamicTree {
         }
     }
 
+    /// Alias for [`Self::visit_query_closest`].
     pub fn query_closest<F>(
         &self,
         point: impl Into<Vec3>,
@@ -490,6 +571,9 @@ impl DynamicTree {
         self.visit_query_closest(point, filter, min_distance_squared, visitor)
     }
 
+    /// Visits proxies intersected by a ray cast through the tree.
+    ///
+    /// The callback controls traversal by returning [`DynamicTreeCastControl`].
     pub fn visit_ray_cast<F>(
         &self,
         input: RayCastInput,
@@ -539,6 +623,7 @@ impl DynamicTree {
         }
     }
 
+    /// Alias for [`Self::visit_ray_cast`].
     pub fn ray_cast<F>(
         &self,
         input: RayCastInput,
@@ -551,6 +636,9 @@ impl DynamicTree {
         self.visit_ray_cast(input, filter, visitor)
     }
 
+    /// Visits proxies intersected by a swept AABB cast through the tree.
+    ///
+    /// The callback controls traversal by returning [`DynamicTreeCastControl`].
     pub fn visit_box_cast<F>(
         &self,
         input: BoxCastInput,
@@ -596,6 +684,7 @@ impl DynamicTree {
         }
     }
 
+    /// Alias for [`Self::visit_box_cast`].
     pub fn box_cast<F>(
         &self,
         input: BoxCastInput,

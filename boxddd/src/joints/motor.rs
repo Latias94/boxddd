@@ -1,6 +1,7 @@
 use super::*;
 
 impl World {
+    /// Tries to set the linear velocity on a motor joint.
     pub fn try_set_motor_joint_linear_velocity(
         &mut self,
         joint_id: JointId,
@@ -14,12 +15,14 @@ impl World {
         })
     }
 
+    /// Returns the linear velocity of a motor joint.
     pub fn try_motor_joint_linear_velocity(&self, joint_id: JointId) -> Result<Vec3> {
         family_method!(self, joint_id, JointType::Motor, {
             Vec3::from_raw(unsafe { ffi::b3MotorJoint_GetLinearVelocity(joint_id.into_raw()) })
         })
     }
 
+    /// Tries to set the angular velocity on a motor joint.
     pub fn try_set_motor_joint_angular_velocity(
         &mut self,
         joint_id: JointId,
@@ -33,12 +36,14 @@ impl World {
         })
     }
 
+    /// Returns the angular velocity of a motor joint.
     pub fn try_motor_joint_angular_velocity(&self, joint_id: JointId) -> Result<Vec3> {
         family_method!(self, joint_id, JointType::Motor, {
             Vec3::from_raw(unsafe { ffi::b3MotorJoint_GetAngularVelocity(joint_id.into_raw()) })
         })
     }
 
+    /// Tries to set the max velocity force on a motor joint.
     pub fn try_set_motor_joint_max_velocity_force(
         &mut self,
         joint_id: JointId,
@@ -50,12 +55,14 @@ impl World {
         })
     }
 
+    /// Returns the max velocity force of a motor joint.
     pub fn try_motor_joint_max_velocity_force(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetMaxVelocityForce(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the max velocity torque on a motor joint.
     pub fn try_set_motor_joint_max_velocity_torque(
         &mut self,
         joint_id: JointId,
@@ -67,12 +74,14 @@ impl World {
         })
     }
 
+    /// Returns the max velocity torque of a motor joint.
     pub fn try_motor_joint_max_velocity_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetMaxVelocityTorque(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the linear hertz on a motor joint.
     pub fn try_set_motor_joint_linear_hertz(
         &mut self,
         joint_id: JointId,
@@ -84,12 +93,14 @@ impl World {
         })
     }
 
+    /// Returns the linear hertz of a motor joint.
     pub fn try_motor_joint_linear_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetLinearHertz(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the linear damping ratio on a motor joint.
     pub fn try_set_motor_joint_linear_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -101,12 +112,14 @@ impl World {
         })
     }
 
+    /// Returns the linear damping ratio of a motor joint.
     pub fn try_motor_joint_linear_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetLinearDampingRatio(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the angular hertz on a motor joint.
     pub fn try_set_motor_joint_angular_hertz(
         &mut self,
         joint_id: JointId,
@@ -118,12 +131,14 @@ impl World {
         })
     }
 
+    /// Returns the angular hertz of a motor joint.
     pub fn try_motor_joint_angular_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetAngularHertz(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the angular damping ratio on a motor joint.
     pub fn try_set_motor_joint_angular_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -135,12 +150,14 @@ impl World {
         })
     }
 
+    /// Returns the angular damping ratio of a motor joint.
     pub fn try_motor_joint_angular_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetAngularDampingRatio(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the max spring force on a motor joint.
     pub fn try_set_motor_joint_max_spring_force(
         &mut self,
         joint_id: JointId,
@@ -152,12 +169,14 @@ impl World {
         })
     }
 
+    /// Returns the max spring force of a motor joint.
     pub fn try_motor_joint_max_spring_force(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetMaxSpringForce(joint_id.into_raw()) }
         })
     }
 
+    /// Tries to set the max spring torque on a motor joint.
     pub fn try_set_motor_joint_max_spring_torque(
         &mut self,
         joint_id: JointId,
@@ -169,6 +188,7 @@ impl World {
         })
     }
 
+    /// Returns the max spring torque of a motor joint.
     pub fn try_motor_joint_max_spring_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Motor, {
             unsafe { ffi::b3MotorJoint_GetMaxSpringTorque(joint_id.into_raw()) }
