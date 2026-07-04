@@ -31,6 +31,7 @@ than a single workspace smoke test:
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
 - explicit headless Bevy testbed scene validation through `bevy_boxddd/tests/testbed.rs`
+- static GitHub Pages validation that checks linked assets and mirrors the Bevy testbed scene registry
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
 - no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
@@ -57,6 +58,7 @@ cargo nextest run -p boxddd --features "mint glam nalgebra cgmath serde" --test 
 cargo check -p bevy_boxddd --examples
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 cargo nextest run -p bevy_boxddd --test testbed
+cargo run -p xtask -- validate-pages
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
@@ -78,6 +80,20 @@ That test constructs every registry scene with `TimePlugin`, steps physics, and
 checks body, shape, joint, query, interaction, and lifecycle invariants without
 creating a renderer window. Screenshots remain local documentation artifacts
 until there is a renderer path stable enough for unattended CI.
+
+## Pages Static Site
+
+The GitHub Pages site under `docs/pages` is a static demo hub, not a live WASM
+runtime. It links users to the native Bevy testbed command, crate docs, and the
+current scene catalog. The catalog must mirror `SCENE_REGISTRY` in
+`bevy_boxddd/examples/testbed_3d/scenes.rs`.
+
+```bash
+cargo run -p xtask -- validate-pages
+```
+
+The Pages workflow validates that static contract and uploads only
+`docs/pages`. Release and crates.io publishing workflows remain separate.
 
 ## Rustdoc Coverage
 

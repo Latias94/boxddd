@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boxddd - Box3D Rust Bindings</title>
+  <meta name="description" content="boxddd is a Rust binding workspace for Box3D with safe core APIs, Bevy integration, and native 3D teaching examples.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c1117;
+      --band: #111820;
+      --panel: #151f2a;
+      --line: #2d3945;
+      --text: #eef4f8;
+      --muted: #9fb0bf;
+      --blue: #6aa7ff;
+      --teal: #7bd6c4;
+      --amber: #f4c95d;
+      --green: #8fd17c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+      gap: 34px;
+      align-items: center;
+      min-height: 84vh;
+      padding: 56px 0 36px;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--amber);
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(48px, 8vw, 88px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 660px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 19px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .button.primary {
+      border-color: #3f6ea6;
+      background: #1d3a5f;
+    }
+
+    .preview {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101721;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.34);
+    }
+
+    section {
+      padding: 44px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      min-height: 148px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .tag {
+      display: inline-flex;
+      margin-bottom: 12px;
+      padding: 2px 8px;
+      border: 1px solid #3c5962;
+      border-radius: 999px;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .command {
+      overflow-x: auto;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #080c11;
+      color: #dbe7ef;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    .status div {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--band);
+    }
+
+    footer {
+      padding: 28px 0 52px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+
+    @media (max-width: 860px) {
+      header {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">Rust bindings for Box3D</p>
+        <h1>boxddd</h1>
+        <p class="lead">Safe Rust APIs for Box3D 0.1.0, plus a native Bevy 0.19 teaching testbed for 3D bodies, colliders, joints, queries, events, debug draw, and interaction.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/Latias94/boxddd">Repository</a>
+          <a class="button" href="https://crates.io/crates/boxddd">Crates.io</a>
+          <a class="button" href="https://docs.rs/boxddd">Docs.rs</a>
+          <a class="button" href="https://github.com/Latias94/boxdd">boxdd 2D sibling</a>
+        </div>
+      </div>
+      <img class="preview" src="assets/testbed-preview.svg" alt="Preview of the boxddd Bevy testbed with stacked bodies, a pick ray, and a joint chain.">
+    </header>
+
+    <section>
+      <h2>Run The Native Testbed</h2>
+      <p class="muted">The supported visual entry point is a native Bevy window. Browser live demos are future work while WASM provider packaging matures.</p>
+      <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
+    </section>
+
+    <section>
+      <h2>Crates</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="tag">ffi</span>
+          <h3>boxddd-sys</h3>
+          <p class="muted">Vendored Box3D C API, pregenerated bindings, and reproducible native builds.</p>
+        </article>
+        <article class="card">
+          <span class="tag">core</span>
+          <h3>boxddd</h3>
+          <p class="muted">Safe world, body, shape, joint, query, event, debug draw, recording, and math interop APIs.</p>
+        </article>
+        <article class="card">
+          <span class="tag">bevy</span>
+          <h3>bevy_boxddd</h3>
+          <p class="muted">Bevy ECS authoring, fixed-step simulation, debug gizmos, physics picking, and teaching examples.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Sample Gallery</h2>
+      <p class="muted">This catalog mirrors the Bevy testbed scene registry and is validated in CI.</p>
+      <div id="sample-grid" class="grid" aria-live="polite"></div>
+    </section>
+
+    <section>
+      <h2>Support Snapshot</h2>
+      <div class="status">
+        <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
+        <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
+        <div><strong>WASM</strong><br><span class="muted">Core compile/provider paths exist; live browser apps are not supported yet.</span></div>
+        <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
+      </div>
+    </section>
+
+    <footer>
+      <span>MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.</span>
+    </footer>
+  </main>
+
+  <script>
+    const grid = document.querySelector("#sample-grid");
+
+    fetch("sample-catalog.json")
+      .then((response) => response.json())
+      .then((samples) => {
+        grid.replaceChildren(...samples.map((sample) => {
+          const card = document.createElement("article");
+          card.className = "card";
+
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = sample.category;
+
+          const title = document.createElement("h3");
+          title.textContent = sample.name;
+
+          const description = document.createElement("p");
+          description.className = "muted";
+          description.textContent = sample.description;
+
+          card.append(tag, title, description);
+          return card;
+        }));
+      })
+      .catch(() => {
+        grid.textContent = "Sample catalog failed to load.";
+      });
+  </script>
+</body>
+</html>

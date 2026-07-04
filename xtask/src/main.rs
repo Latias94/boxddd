@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
@@ -13,6 +14,22 @@ const PROVIDER_MODULE: &str = "box3d-sys-v0";
 const TARGET: &str = "wasm32-unknown-unknown";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
+struct PageSample {
+    id: String,
+    category: String,
+    name: String,
+    description: String,
+}
+
+#[derive(Default)]
+struct PageSampleBuilder {
+    id: Option<String>,
+    category: Option<String>,
+    name: Option<String>,
+    description: Option<String>,
+}
 
 fn main() {
     if let Err(err) = run() {
@@ -37,6 +54,7 @@ fn run() -> Result<()> {
             Ok(())
         }
         "provider-smoke" => run_provider_smoke(),
+        "validate-pages" => validate_pages(),
         "help" | "-h" | "--help" => {
             print_help();
             Ok(())
@@ -47,7 +65,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
     );
 }
 
@@ -60,6 +78,247 @@ fn project_root() -> PathBuf {
 
 fn provider_smoke_dir() -> PathBuf {
     project_root().join("target").join("boxddd-provider-smoke")
+}
+
+fn validate_pages() -> Result<()> {
+    let root = project_root();
+    let pages_dir = root.join("docs").join("pages");
+    let index = ensure_file(&pages_dir.join("index.html"), "Pages index")?;
+    let catalog = ensure_file(
+        &pages_dir.join("sample-catalog.json"),
+        "Pages sample catalog",
+    )?;
+
+    let catalog_json = fs::read_to_string(&catalog)?;
+    let catalog_samples: Vec<PageSample> = serde_json::from_str(&catalog_json)?;
+    validate_sample_catalog(&catalog_samples)?;
+
+    let registry_samples = read_testbed_registry(&root)?;
+    if catalog_samples != registry_samples {
+        return Err(format!(
+            "docs/pages/sample-catalog.json is out of sync with bevy_boxddd/examples/testbed_3d/scenes.rs ({} catalog entries, {} registry entries)",
+            catalog_samples.len(),
+            registry_samples.len()
+        )
+        .into());
+    }
+
+    let html = fs::read_to_string(index)?;
+    validate_html_links(&pages_dir, &html)?;
+
+    eprintln!(
+        "Validated Pages site: {} ({} samples)",
+        pages_dir.display(),
+        catalog_samples.len()
+    );
+    Ok(())
+}
+
+fn ensure_file(path: &Path, label: &str) -> Result<PathBuf> {
+    if path.is_file() {
+        Ok(path.to_path_buf())
+    } else {
+        Err(format!("{label} is missing: {}", path.display()).into())
+    }
+}
+
+fn validate_sample_catalog(samples: &[PageSample]) -> Result<()> {
+    if samples.is_empty() {
+        return Err("sample catalog must contain at least one entry".into());
+    }
+
+    let mut seen = BTreeSet::new();
+    for sample in samples {
+        validate_sample_field(sample, "id", &sample.id)?;
+        validate_sample_field(sample, "category", &sample.category)?;
+        validate_sample_field(sample, "name", &sample.name)?;
+        validate_sample_field(sample, "description", &sample.description)?;
+
+        if !is_slug(&sample.id) {
+            return Err(format!("sample id `{}` must be a lowercase ASCII slug", sample.id).into());
+        }
+        if !seen.insert(sample.id.as_str()) {
+            return Err(format!("duplicate sample id `{}`", sample.id).into());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_sample_field(sample: &PageSample, field: &str, value: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        Err(format!("sample `{}` has an empty `{field}` field", sample.id).into())
+    } else {
+        Ok(())
+    }
+}
+
+fn is_slug(value: &str) -> bool {
+    !value.is_empty()
+        && !value.starts_with('-')
+        && !value.ends_with('-')
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+}
+
+fn read_testbed_registry(root: &Path) -> Result<Vec<PageSample>> {
+    let scenes = root
+        .join("bevy_boxddd")
+        .join("examples")
+        .join("testbed_3d")
+        .join("scenes.rs");
+    let source = fs::read_to_string(&scenes)?;
+    let mut samples = Vec::new();
+    let mut current: Option<PageSampleBuilder> = None;
+    let mut in_registry = false;
+
+    for line in source.lines() {
+        if line.contains("pub const SCENE_REGISTRY") {
+            in_registry = true;
+            continue;
+        }
+        if !in_registry {
+            continue;
+        }
+
+        let trimmed = line.trim();
+        if trimmed == "];" {
+            break;
+        }
+        if trimmed.starts_with("TestbedSceneMetadata {") {
+            current = Some(PageSampleBuilder::default());
+            continue;
+        }
+        if trimmed == "}," {
+            let builder = current.take().ok_or_else(|| {
+                format!(
+                    "unexpected registry entry terminator in {}",
+                    scenes.display()
+                )
+            })?;
+            samples.push(builder.build()?);
+            continue;
+        }
+
+        let Some(builder) = current.as_mut() else {
+            continue;
+        };
+        if let Some(value) = extract_string_field(trimmed, "id") {
+            builder.id = Some(value);
+        } else if let Some(value) = extract_string_field(trimmed, "category") {
+            builder.category = Some(value);
+        } else if let Some(value) = extract_string_field(trimmed, "name") {
+            builder.name = Some(value);
+        } else if let Some(value) = extract_string_field(trimmed, "description") {
+            builder.description = Some(value);
+        }
+    }
+
+    validate_sample_catalog(&samples)?;
+    Ok(samples)
+}
+
+impl PageSampleBuilder {
+    fn build(self) -> Result<PageSample> {
+        Ok(PageSample {
+            id: required_registry_field(self.id, "id")?,
+            category: required_registry_field(self.category, "category")?,
+            name: required_registry_field(self.name, "name")?,
+            description: required_registry_field(self.description, "description")?,
+        })
+    }
+}
+
+fn required_registry_field(value: Option<String>, field: &str) -> Result<String> {
+    value.ok_or_else(|| format!("SCENE_REGISTRY entry is missing `{field}`").into())
+}
+
+fn extract_string_field(line: &str, field: &str) -> Option<String> {
+    let needle = format!("{field}: \"");
+    let start = line.find(&needle)? + needle.len();
+    let tail = &line[start..];
+    let end = tail.find('"')?;
+    Some(tail[..end].to_string())
+}
+
+fn validate_html_links(pages_dir: &Path, html: &str) -> Result<()> {
+    let pages_root = fs::canonicalize(pages_dir)?;
+    validate_attr_links(pages_dir, &pages_root, html, "href")?;
+    validate_attr_links(pages_dir, &pages_root, html, "src")?;
+    validate_fetch_links(pages_dir, &pages_root, html, "\"")?;
+    validate_fetch_links(pages_dir, &pages_root, html, "'")?;
+    Ok(())
+}
+
+fn validate_attr_links(pages_dir: &Path, pages_root: &Path, html: &str, attr: &str) -> Result<()> {
+    let needle = format!("{attr}=\"");
+    let mut remainder = html;
+    while let Some(index) = remainder.find(&needle) {
+        let after = &remainder[index + needle.len()..];
+        let end = after
+            .find('"')
+            .ok_or_else(|| format!("unterminated `{attr}` attribute in docs/pages/index.html"))?;
+        validate_local_link(pages_dir, pages_root, &after[..end])?;
+        remainder = &after[end + 1..];
+    }
+    Ok(())
+}
+
+fn validate_fetch_links(
+    pages_dir: &Path,
+    pages_root: &Path,
+    html: &str,
+    quote: &str,
+) -> Result<()> {
+    let needle = format!("fetch({quote}");
+    let mut remainder = html;
+    while let Some(index) = remainder.find(&needle) {
+        let after = &remainder[index + needle.len()..];
+        let end = after
+            .find(quote)
+            .ok_or("unterminated fetch() URL in docs/pages/index.html")?;
+        validate_local_link(pages_dir, pages_root, &after[..end])?;
+        remainder = &after[end + quote.len()..];
+    }
+    Ok(())
+}
+
+fn validate_local_link(pages_dir: &Path, pages_root: &Path, value: &str) -> Result<()> {
+    if is_external_or_fragment(value) {
+        return Ok(());
+    }
+
+    let local = strip_url_suffix(value);
+    if local.is_empty() {
+        return Ok(());
+    }
+
+    let target = pages_dir.join(local);
+    if !target.exists() {
+        return Err(format!("docs/pages/index.html links missing local asset `{value}`").into());
+    }
+
+    let canonical = fs::canonicalize(&target)?;
+    if !canonical.starts_with(pages_root) {
+        return Err(format!("docs/pages/index.html link escapes docs/pages: `{value}`").into());
+    }
+
+    Ok(())
+}
+
+fn is_external_or_fragment(value: &str) -> bool {
+    value.starts_with("http://")
+        || value.starts_with("https://")
+        || value.starts_with("mailto:")
+        || value.starts_with('#')
+        || value.starts_with("javascript:")
+}
+
+fn strip_url_suffix(value: &str) -> &str {
+    let query = value.find('?').unwrap_or(value.len());
+    let fragment = value.find('#').unwrap_or(value.len());
+    &value[..query.min(fragment)]
 }
 
 fn build_provider_smoke_app() -> Result<PathBuf> {

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "falling-stack",
+    "category": "Basics",
+    "name": "Falling Stack",
+    "description": "Dynamic boxes falling onto a static floor."
+  },
+  {
+    "id": "advanced-colliders",
+    "category": "Colliders",
+    "name": "Advanced Colliders",
+    "description": "Mesh, height-field, compound, sphere, and hull colliders."
+  },
+  {
+    "id": "body-controls",
+    "category": "Bodies",
+    "name": "Body Controls",
+    "description": "Body settings, force, impulse, kinematic motion, and gravity scale."
+  },
+  {
+    "id": "continuous-collision",
+    "category": "Collision",
+    "name": "Continuous Collision",
+    "description": "Bullet-style fast bodies colliding with thin obstacles."
+  },
+  {
+    "id": "character-mover",
+    "category": "Character",
+    "name": "Character Mover",
+    "description": "Capsule mover casts and obstacle probes."
+  },
+  {
+    "id": "materials",
+    "category": "Materials",
+    "name": "Materials",
+    "description": "Friction and restitution variants shown with dynamic shapes."
+  },
+  {
+    "id": "joints",
+    "category": "Joints",
+    "name": "Joints",
+    "description": "Public joint variants authored as Bevy entities."
+  },
+  {
+    "id": "contacts",
+    "category": "Events",
+    "name": "Contacts And Sensors",
+    "description": "Contact and sensor messages emitted from the physics step."
+  },
+  {
+    "id": "ray-picking",
+    "category": "Queries",
+    "name": "Ray Picking",
+    "description": "Camera rays resolved through Box3D world queries."
+  },
+  {
+    "id": "debug-draw",
+    "category": "Debug",
+    "name": "Debug Draw",
+    "description": "Native Box3D debug draw commands rendered through Bevy gizmos."
+  },
+  {
+    "id": "domino-run",
+    "category": "Stacking",
+    "name": "Domino Run",
+    "description": "A curved line of dynamic dominoes started by a moving sphere."
+  },
+  {
+    "id": "arch-stack",
+    "category": "Stacking",
+    "name": "Arch Stack",
+    "description": "Dynamic blocks arranged as a simple arch over static pillars."
+  },
+  {
+    "id": "wind-field",
+    "category": "Forces",
+    "name": "Wind Field",
+    "description": "Continuous external forces push light bodies through obstacles."
+  },
+  {
+    "id": "ragdoll-chain",
+    "category": "Joints",
+    "name": "Ragdoll Chain",
+    "description": "A lightweight joint chain made from capsule bodies."
+  }
+]

@@ -48,6 +48,8 @@ extern functions import from the stable module name `box3d-sys-v0`.
 The provider smoke is intentionally headless. It proves the import-provider
 architecture before adding Bevy Web, canvas setup, renderer state, input, or
 cross-module callback APIs.
+The GitHub Pages site is only a static demo hub for native example discovery;
+it is not a browser runtime smoke or a supported live WASM demo.
 
 Prerequisites:
 

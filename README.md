@@ -3,6 +3,7 @@
 [![CI](https://github.com/Latias94/boxddd/actions/workflows/ci.yml/badge.svg)](https://github.com/Latias94/boxddd/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/boxddd.svg)](https://crates.io/crates/boxddd)
 [![Docs.rs](https://docs.rs/boxddd/badge.svg)](https://docs.rs/boxddd)
+[![Demo Hub](https://img.shields.io/badge/demo-hub-2ea44f.svg)](https://latias94.github.io/boxddd/)
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](#license)
 
 `boxddd` is a Rust binding workspace for [Box3D](https://github.com/erincatto/box3d), Erin Catto's 3D physics engine announced in [Announcing Box3D](https://box2d.org/posts/2026/06/announcing-box3d/).
@@ -138,6 +139,7 @@ cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example tes
 ```
 
 See [`bevy_boxddd/README.md`](bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
+The static demo hub at <https://latias94.github.io/boxddd/> mirrors the maintained Bevy testbed scene registry.
 
 ## Examples
 
