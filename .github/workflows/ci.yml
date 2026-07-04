@@ -447,7 +447,7 @@ jobs:
             echo "::error::binding regeneration unexpectedly succeeded without the bindgen feature"
             exit 1
           fi
-          grep -F 'BOXDDD_SYS_FORCE_BINDGEN=1 requires the `bindgen` feature' regen-without-bindgen.log
+          grep -F "BOXDDD_SYS_FORCE_BINDGEN=1 requires the \`bindgen\` feature" regen-without-bindgen.log
 
   windows-gnu:
     name: Windows GNU link check
