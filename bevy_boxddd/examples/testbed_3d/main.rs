@@ -15,6 +15,21 @@ use scenes::{ALL_SCENES, MoverProbe, TestbedEntity, TestbedScene, spawn_scene};
 #[derive(Component, Debug)]
 pub(crate) struct TestbedCamera;
 
+#[derive(Copy, Clone, Debug)]
+struct TestbedLaunch {
+    scene: TestbedScene,
+    scene_switching_enabled: bool,
+}
+
+impl Default for TestbedLaunch {
+    fn default() -> Self {
+        Self {
+            scene: TestbedScene::FallingStack,
+            scene_switching_enabled: true,
+        }
+    }
+}
+
 impl TestbedState {
     fn scene(&self) -> TestbedScene {
         ALL_SCENES[self.scene_index]
@@ -22,8 +37,12 @@ impl TestbedState {
 }
 
 fn main() {
+    let launch = TestbedLaunch::from_environment();
     App::new()
-        .insert_resource(TestbedState::default())
+        .insert_resource(TestbedState::launch(
+            launch.scene.index(),
+            launch.scene_switching_enabled,
+        ))
         .insert_resource(BoxdddDebugDrawSettings {
             enabled: false,
             options: boxddd::DebugDrawOptions::default(),
@@ -48,6 +67,97 @@ fn main() {
         )
         .add_systems(PostUpdate, finish_single_step)
         .run();
+}
+
+impl TestbedLaunch {
+    fn from_environment() -> Self {
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self::from_browser()
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self::from_args(std::env::args().skip(1))
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn from_browser() -> Self {
+        let Some(location) = web_sys::window().map(|window| window.location()) else {
+            return Self::default();
+        };
+
+        let scene_id = location
+            .search()
+            .ok()
+            .and_then(|search| query_param(&search, "scene"))
+            .or_else(|| {
+                location
+                    .pathname()
+                    .ok()
+                    .and_then(|path| scene_id_from_path(&path).map(ToOwned::to_owned))
+            });
+
+        scene_id
+            .as_deref()
+            .and_then(TestbedScene::from_id)
+            .map(|scene| Self {
+                scene,
+                scene_switching_enabled: false,
+            })
+            .unwrap_or_default()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn from_args(args: impl IntoIterator<Item = String>) -> Self {
+        let mut args = args.into_iter();
+        let mut scene_id = None;
+        let mut scene_switching_enabled = true;
+
+        while let Some(arg) = args.next() {
+            if arg == "--single-scene" {
+                scene_switching_enabled = false;
+            } else if arg == "--testbed" {
+                scene_switching_enabled = true;
+            } else if arg == "--scene" {
+                scene_id = args.next();
+                scene_switching_enabled = false;
+            } else if let Some(value) = arg.strip_prefix("--scene=") {
+                scene_id = Some(value.to_string());
+                scene_switching_enabled = false;
+            }
+        }
+
+        scene_id
+            .as_deref()
+            .and_then(TestbedScene::from_id)
+            .map(|scene| Self {
+                scene,
+                scene_switching_enabled,
+            })
+            .unwrap_or_default()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn query_param(search: &str, key: &str) -> Option<String> {
+    search
+        .trim_start_matches('?')
+        .split('&')
+        .filter_map(|part| part.split_once('='))
+        .find_map(|(name, value)| (name == key && !value.is_empty()).then(|| value.to_string()))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn scene_id_from_path(path: &str) -> Option<&str> {
+    let mut parts = path.split('/');
+    while let Some(part) = parts.next() {
+        if part == "examples" {
+            return parts.next().filter(|scene| !scene.is_empty());
+        }
+    }
+    None
 }
 
 fn setup_view(mut commands: Commands, state: Res<TestbedState>) {
@@ -88,23 +198,26 @@ fn handle_input(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mut requested_scene = None;
-    for (index, key) in [
-        KeyCode::Digit1,
-        KeyCode::Digit2,
-        KeyCode::Digit3,
-        KeyCode::Digit4,
-        KeyCode::Digit5,
-        KeyCode::Digit6,
-        KeyCode::Digit7,
-        KeyCode::Digit8,
-        KeyCode::Digit9,
-        KeyCode::Digit0,
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        if keys.just_pressed(key) {
-            requested_scene = Some(index);
+
+    if state.scene_switching_enabled {
+        for (index, key) in [
+            KeyCode::Digit1,
+            KeyCode::Digit2,
+            KeyCode::Digit3,
+            KeyCode::Digit4,
+            KeyCode::Digit5,
+            KeyCode::Digit6,
+            KeyCode::Digit7,
+            KeyCode::Digit8,
+            KeyCode::Digit9,
+            KeyCode::Digit0,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if keys.just_pressed(key) {
+                requested_scene = Some(index);
+            }
         }
     }
 

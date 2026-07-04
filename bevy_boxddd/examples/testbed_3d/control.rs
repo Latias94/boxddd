@@ -98,6 +98,7 @@ impl Default for DebugDrawPreset {
 #[derive(Resource, Debug)]
 pub struct TestbedState {
     pub scene_index: usize,
+    pub scene_switching_enabled: bool,
     pub paused: bool,
     pub debug_preset: DebugDrawPreset,
     pub gravity_enabled: bool,
@@ -114,6 +115,7 @@ impl Default for TestbedState {
     fn default() -> Self {
         Self {
             scene_index: 0,
+            scene_switching_enabled: true,
             paused: false,
             debug_preset: DebugDrawPreset::default(),
             gravity_enabled: true,
@@ -129,6 +131,14 @@ impl Default for TestbedState {
 }
 
 impl TestbedState {
+    pub fn launch(scene_index: usize, scene_switching_enabled: bool) -> Self {
+        Self {
+            scene_index,
+            scene_switching_enabled,
+            ..Self::default()
+        }
+    }
+
     pub fn clamp_controls(&mut self) {
         self.sub_step_count = self.sub_step_count.clamp(MIN_SUB_STEPS, MAX_SUB_STEPS);
         self.hertz = self.hertz.clamp(MIN_HERTZ, MAX_HERTZ);

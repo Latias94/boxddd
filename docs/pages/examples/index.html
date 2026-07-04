@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boxddd Bevy Examples</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Direct Bevy Web examples for boxddd.">
+  <style>
+:root {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0f0f12;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #84cc16;
+  --danger: #f87171;
+}
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--foreground); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.shell { display: grid; grid-template-rows: auto minmax(0, 1fr); width: 100%; height: 100%; }
+.topbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(9, 9, 11, 0.94); padding: 14px 18px; }
+.topbar h1 { margin: 4px 0 0; font-size: 20px; line-height: 1.2; letter-spacing: 0; }
+.topbar p { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.topbar p span, .eyebrow { color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 14px; }
+#bevy-app { position: relative; min-width: 0; min-height: 0; background: #020617; }
+#bevy-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+#bevy-status { position: absolute; left: 18px; bottom: 18px; max-width: min(560px, calc(100% - 36px)); border: 1px solid var(--border); border-radius: 8px; background: rgba(15, 15, 18, 0.94); padding: 12px 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+#bevy-status strong { display: block; margin-bottom: 4px; color: var(--foreground); font-size: 15px; }
+#bevy-status[data-state="error"] strong { color: var(--danger); }
+#bevy-status[data-state="running"] { opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.directory { min-height: 100%; }
+.directory-main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 54px 0; }
+.directory-main h1 { margin: 0; font-size: clamp(34px, 6vw, 58px); line-height: 1; letter-spacing: 0; }
+.lead { max-width: 720px; color: var(--muted); font-size: 17px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 28px; }
+.card { display: grid; min-height: 150px; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); padding: 16px; }
+.card:hover { border-color: #52525b; text-decoration: none; }
+.card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.card strong { font-size: 18px; }
+.card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="directory">
+    <header class="topbar">
+      <a href="../">boxddd Examples</a>
+      <nav>
+        <a href="https://github.com/Latias94/boxddd">GitHub</a>
+        <a href="https://docs.rs/boxddd">Docs.rs</a>
+      </nav>
+    </header>
+    <main class="directory-main">
+      <p class="eyebrow">Bevy Web examples</p>
+      <h1>Run a Box3D scene</h1>
+      <p class="lead">Each entry opens a dedicated Bevy + egui WASM page backed by the same Box3D provider runtime.</p>
+      <section class="card-grid">
+        <a class="card" href="falling-stack/"><span>Basics</span><strong>Falling Stack</strong><small>Dynamic boxes falling onto a static floor.</small></a>
+        <a class="card" href="advanced-colliders/"><span>Colliders</span><strong>Advanced Colliders</strong><small>Mesh, height-field, compound, sphere, and hull colliders.</small></a>
+        <a class="card" href="body-controls/"><span>Bodies</span><strong>Body Controls</strong><small>Body settings, force, impulse, kinematic motion, and gravity scale.</small></a>
+        <a class="card" href="continuous-collision/"><span>Collision</span><strong>Continuous Collision</strong><small>Bullet-style fast bodies colliding with thin obstacles.</small></a>
+        <a class="card" href="character-mover/"><span>Character</span><strong>Character Mover</strong><small>Capsule mover casts and obstacle probes.</small></a>
+        <a class="card" href="materials/"><span>Materials</span><strong>Materials</strong><small>Friction and restitution variants shown with dynamic shapes.</small></a>
+        <a class="card" href="joints/"><span>Joints</span><strong>Joints</strong><small>Public joint variants authored as Bevy entities.</small></a>
+        <a class="card" href="contacts/"><span>Events</span><strong>Contacts And Sensors</strong><small>Contact and sensor messages emitted from the physics step.</small></a>
+        <a class="card" href="ray-picking/"><span>Queries</span><strong>Ray Picking</strong><small>Camera rays resolved through Box3D world queries.</small></a>
+        <a class="card" href="debug-draw/"><span>Debug</span><strong>Debug Draw</strong><small>Native Box3D debug draw commands rendered through Bevy gizmos.</small></a>
+        <a class="card" href="domino-run/"><span>Stacking</span><strong>Domino Run</strong><small>A curved line of dynamic dominoes started by a moving sphere.</small></a>
+        <a class="card" href="arch-stack/"><span>Stacking</span><strong>Arch Stack</strong><small>Dynamic blocks arranged as a simple arch over static pillars.</small></a>
+        <a class="card" href="wind-field/"><span>Forces</span><strong>Wind Field</strong><small>Continuous external forces push light bodies through obstacles.</small></a>
+        <a class="card" href="ragdoll-chain/"><span>Joints</span><strong>Ragdoll Chain</strong><small>A lightweight joint chain made from capsule bodies.</small></a>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

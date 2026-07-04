@@ -5,277 +5,328 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>boxddd Examples - Box3D Rust Bindings</title>
   <link rel="icon" href="data:,">
-  <meta name="description" content="Example gallery for boxddd, the Rust binding workspace for Box3D with safe core APIs, Bevy integration, and live WASM probes.">
+  <meta name="description" content="Direct Bevy Web examples, native commands, and WASM provider probes for boxddd.">
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0c1117;
-      --band: #111820;
-      --panel: #151f2a;
-      --line: #2d3945;
-      --text: #eef4f8;
-      --muted: #9fb0bf;
-      --blue: #6aa7ff;
-      --teal: #7bd6c4;
-      --amber: #f4c95d;
-      --green: #8fd17c;
-      --red: #ff8a8a;
+      --background: #09090b;
+      --foreground: #fafafa;
+      --card: #0f0f12;
+      --popover: #111114;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --input: #18181b;
+      --accent: #84cc16;
+      --accent-foreground: #111827;
+      --blue: #60a5fa;
+      --orange: #fb923c;
+      --red: #f87171;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--background);
+      color: var(--foreground);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.55;
     }
 
     a {
-      color: var(--teal);
+      color: inherit;
       text-decoration: none;
     }
 
     a:hover {
       text-decoration: underline;
+      text-underline-offset: 4px;
     }
 
-    main {
-      width: min(1120px, calc(100% - 32px));
+    code,
+    .command {
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 9, 11, 0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .topbar-inner,
+    .hero,
+    .layout,
+    .support,
+    footer {
+      width: min(1220px, calc(100% - 32px));
       margin: 0 auto;
     }
 
-    header {
+    .topbar-inner {
       display: flex;
-      flex-direction: column;
+      min-height: 58px;
+      align-items: center;
+      justify-content: space-between;
       gap: 18px;
-      padding: 32px 0 28px;
     }
 
-    .header-main {
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 750;
+    }
+
+    .brand-mark {
+      display: inline-grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .topbar nav {
       display: flex;
       flex-wrap: wrap;
-      gap: 18px;
-      align-items: flex-end;
-      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hero {
+      padding: 56px 0 28px;
     }
 
     .eyebrow {
       margin: 0 0 12px;
-      color: var(--amber);
-      font-size: 14px;
-      font-weight: 700;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 750;
       text-transform: uppercase;
     }
 
-    h1 {
-      margin: 0;
-      font-size: clamp(38px, 6vw, 60px);
-      line-height: 1;
-      letter-spacing: 0;
-    }
-
-    h2 {
-      margin: 0 0 16px;
-      font-size: 28px;
-      letter-spacing: 0;
-    }
-
+    h1,
+    h2,
     h3 {
-      margin: 0 0 8px;
-      font-size: 18px;
+      margin: 0;
       letter-spacing: 0;
+      line-height: 1.15;
     }
+
+    h1 {
+      max-width: 820px;
+      font-size: clamp(38px, 7vw, 70px);
+      line-height: 0.98;
+    }
+
+    h2 { font-size: 26px; }
+
+    h3 { font-size: 17px; }
 
     .lead {
       max-width: 820px;
-      margin: 12px 0 0;
+      margin: 16px 0 0;
       color: var(--muted);
       font-size: 17px;
     }
 
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 0;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 0 15px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      color: var(--text);
-      font-weight: 650;
-    }
-
-    .button.primary {
-      border-color: #3f6ea6;
-      background: #1d3a5f;
-    }
-
-    section {
-      padding: 36px 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .tag {
-      display: inline-flex;
-      margin-bottom: 12px;
-      padding: 2px 8px;
-      border: 1px solid #3c5962;
-      border-radius: 999px;
-      color: var(--teal);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .command {
-      overflow-x: auto;
-      padding: 15px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #080c11;
-      color: #dbe7ef;
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-
-    .toolbar {
+    .hero-actions,
+    .toolbar,
+    .filter-row,
+    .card-actions,
+    .wasm-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-      margin: 20px 0;
     }
 
-    .field {
-      min-height: 40px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
+    .hero-actions {
+      margin-top: 22px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      background: #0b1118;
-      color: var(--text);
+      background: var(--card);
+      color: var(--foreground);
+      padding: 0 13px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .button.primary {
+      border-color: transparent;
+      background: var(--accent);
+      color: var(--accent-foreground);
+    }
+
+    .button[aria-pressed="true"],
+    .button.active {
+      border-color: #3f6212;
+      background: #1a2e05;
+      color: #bef264;
+    }
+
+    .button:disabled {
+      cursor: wait;
+      opacity: 0.62;
+    }
+
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .featured,
+    .sample-card,
+    .wasm-stage,
+    .wasm-copy,
+    .support-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .featured {
+      display: grid;
+      gap: 10px;
+      min-height: 170px;
+      padding: 16px;
+    }
+
+    .featured span,
+    .badge {
+      width: fit-content;
+      border: 1px solid #365314;
+      border-radius: 999px;
+      background: #1a2e05;
+      color: #bef264;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .featured p,
+    .sample-card p,
+    .muted {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 26px;
+      padding: 24px 0 46px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 78px;
+      align-self: start;
+      max-height: calc(100vh - 96px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--popover);
+      padding: 12px;
+    }
+
+    .sidebar strong {
+      display: block;
+      margin: 4px 0 10px;
+      font-size: 13px;
+    }
+
+    .sidebar nav {
+      display: grid;
+      gap: 4px;
+    }
+
+    .sidebar a {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 7px 9px;
+      font-size: 14px;
+    }
+
+    .sidebar a:hover {
+      background: #18181b;
+      color: var(--foreground);
+      text-decoration: none;
+    }
+
+    .examples-head {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .toolbar {
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .search {
+      min-height: 40px;
+      width: min(100%, 360px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--input);
+      color: var(--foreground);
+      padding: 0 12px;
       font: inherit;
     }
 
-    .field.search {
-      flex: 1 1 260px;
+    .category-section {
+      scroll-margin-top: 84px;
+      margin-top: 28px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
     }
 
     .sample-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
+      gap: 12px;
     }
 
     .sample-card {
-      display: flex;
-      min-height: 360px;
-      flex-direction: column;
+      display: grid;
       gap: 12px;
+      min-height: 240px;
       padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
     }
-
-    .sample-preview {
-      position: relative;
-      height: 128px;
-      overflow: hidden;
-      border: 1px solid #2f3f4c;
-      border-radius: 8px;
-      background: #0a1017;
-    }
-
-    .sample-preview::before {
-      content: "";
-      position: absolute;
-      inset: 64% -10% -10%;
-      background: #18232c;
-      transform: skewY(-8deg);
-    }
-
-    .glyph {
-      position: absolute;
-      display: block;
-      border-radius: 5px;
-      background: var(--blue);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
-    }
-
-    .glyph.alt {
-      background: var(--teal);
-    }
-
-    .glyph.warn {
-      background: var(--amber);
-    }
-
-    .glyph.outline {
-      border: 2px solid var(--teal);
-      background: transparent;
-      box-shadow: none;
-    }
-
-    .preview-stack .glyph:nth-child(1) { width: 38px; height: 38px; left: 35%; top: 62px; }
-    .preview-stack .glyph:nth-child(2) { width: 38px; height: 38px; left: 45%; top: 42px; }
-    .preview-stack .glyph:nth-child(3) { width: 38px; height: 38px; left: 55%; top: 22px; }
-    .preview-collider .glyph:nth-child(1) { width: 90px; height: 30px; left: 16%; top: 74px; transform: rotate(-10deg); }
-    .preview-collider .glyph:nth-child(2) { width: 48px; height: 48px; left: 58%; top: 42px; border-radius: 50%; }
-    .preview-terrain .glyph:nth-child(1) { width: 220px; height: 40px; left: 8%; top: 74px; clip-path: polygon(0 65%, 20% 25%, 42% 55%, 58% 18%, 78% 62%, 100% 35%, 100% 100%, 0 100%); }
-    .preview-control .glyph:nth-child(1) { width: 42px; height: 42px; left: 25%; top: 42px; }
-    .preview-control .glyph:nth-child(2) { width: 88px; height: 5px; left: 44%; top: 62px; background: var(--amber); }
-    .preview-collision .glyph:nth-child(1) { width: 34px; height: 34px; left: 20%; top: 52px; border-radius: 50%; }
-    .preview-collision .glyph:nth-child(2) { width: 10px; height: 76px; left: 68%; top: 30px; background: var(--red); }
-    .preview-character .glyph:nth-child(1) { width: 34px; height: 66px; left: 40%; top: 34px; border-radius: 18px; }
-    .preview-character .glyph:nth-child(2) { width: 56px; height: 56px; left: 63%; top: 52px; }
-    .preview-material .glyph:nth-child(1) { width: 34px; height: 34px; left: 22%; top: 62px; border-radius: 50%; background: var(--green); }
-    .preview-material .glyph:nth-child(2) { width: 34px; height: 34px; left: 47%; top: 62px; border-radius: 50%; background: var(--amber); }
-    .preview-material .glyph:nth-child(3) { width: 34px; height: 34px; left: 72%; top: 62px; border-radius: 50%; background: var(--red); }
-    .preview-joint .glyph:nth-child(1) { width: 36px; height: 36px; left: 24%; top: 52px; border-radius: 50%; }
-    .preview-joint .glyph:nth-child(2) { width: 36px; height: 36px; left: 64%; top: 52px; border-radius: 50%; }
-    .preview-joint .glyph:nth-child(3) { width: 120px; height: 5px; left: 33%; top: 68px; background: var(--teal); box-shadow: none; }
-    .preview-event .glyph:nth-child(1) { width: 48px; height: 48px; left: 24%; top: 50px; border-radius: 50%; }
-    .preview-event .glyph:nth-child(2) { width: 48px; height: 48px; left: 50%; top: 50px; border-radius: 50%; background: var(--red); mix-blend-mode: screen; }
-    .preview-query .glyph:nth-child(1) { width: 190px; height: 4px; left: 18%; top: 66px; background: var(--amber); transform: rotate(18deg); box-shadow: none; }
-    .preview-query .glyph:nth-child(2) { width: 18px; height: 18px; left: 70%; top: 70px; border-radius: 50%; background: var(--amber); }
-    .preview-debug .glyph:nth-child(1) { width: 92px; height: 52px; left: 26%; top: 42px; }
-    .preview-debug .glyph:nth-child(2) { width: 126px; height: 78px; left: 20%; top: 30px; border-radius: 4px; }
-    .preview-force .glyph:nth-child(1) { width: 34px; height: 34px; left: 58%; top: 56px; border-radius: 50%; }
-    .preview-force .glyph:nth-child(2) { width: 96px; height: 5px; left: 20%; top: 72px; background: var(--teal); }
-    .preview-record .glyph:nth-child(1) { width: 34px; height: 34px; left: 20%; top: 58px; border-radius: 50%; }
-    .preview-record .glyph:nth-child(2) { width: 34px; height: 34px; left: 45%; top: 58px; border-radius: 50%; opacity: 0.7; }
-    .preview-record .glyph:nth-child(3) { width: 34px; height: 34px; left: 70%; top: 58px; border-radius: 50%; opacity: 0.4; }
-    .preview-thread .glyph:nth-child(1) { width: 46px; height: 34px; left: 16%; top: 48px; }
-    .preview-thread .glyph:nth-child(2) { width: 46px; height: 34px; left: 42%; top: 48px; background: var(--teal); }
-    .preview-thread .glyph:nth-child(3) { width: 46px; height: 34px; left: 68%; top: 48px; background: var(--amber); }
-    .preview-interop .glyph:nth-child(1) { width: 46px; height: 46px; left: 24%; top: 46px; transform: rotate(45deg); }
-    .preview-interop .glyph:nth-child(2) { width: 46px; height: 46px; left: 58%; top: 46px; border-radius: 50%; background: var(--teal); }
-    .preview-wasm .glyph:nth-child(1) { width: 90px; height: 52px; left: 22%; top: 42px; background: #2a5c95; }
-    .preview-wasm .glyph:nth-child(2) { width: 72px; height: 42px; left: 55%; top: 54px; background: var(--teal); }
-    .preview-testbed .glyph:nth-child(1) { width: 52px; height: 52px; left: 19%; top: 50px; }
-    .preview-testbed .glyph:nth-child(2) { width: 52px; height: 52px; left: 43%; top: 32px; background: var(--amber); }
-    .preview-testbed .glyph:nth-child(3) { width: 70px; height: 5px; left: 62%; top: 70px; background: var(--teal); }
-    .preview-error .glyph:nth-child(1) { width: 70px; height: 70px; left: 38%; top: 34px; background: var(--red); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-    .preview-tree .glyph:nth-child(1) { width: 160px; height: 86px; left: 21%; top: 28px; border-radius: 4px; }
-    .preview-tree .glyph:nth-child(2) { width: 70px; height: 38px; left: 30%; top: 52px; border-radius: 3px; }
-    .preview-tree .glyph:nth-child(3) { width: 48px; height: 28px; left: 58%; top: 62px; border-radius: 3px; }
 
     .sample-meta {
       display: flex;
@@ -284,154 +335,178 @@
       align-items: center;
     }
 
-    .pill {
-      display: inline-flex;
-      padding: 2px 8px;
-      border: 1px solid #354858;
-      border-radius: 999px;
+    .source {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    .display {
       color: var(--muted);
       font-size: 12px;
-      font-weight: 700;
     }
 
-    .sample-card .command {
-      margin-top: auto;
+    .command {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #050505;
+      color: #e4e4e7;
       padding: 10px;
       font-size: 12px;
+      white-space: nowrap;
     }
 
-    .web-panel {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
-      align-items: center;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--band);
+    .wasm-section,
+    .support {
+      border-top: 1px solid var(--border);
+      padding: 38px 0;
     }
 
-    .web-panel p {
-      max-width: 760px;
-      margin: 0;
-    }
-
-    .wasm-panel {
+    .wasm-inner {
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
-      gap: 18px;
-      align-items: stretch;
+      gap: 14px;
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
     }
 
     .wasm-stage {
-      min-height: 280px;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
+      min-height: 300px;
+      padding: 14px;
     }
 
     .wasm-stage canvas {
       display: block;
       width: 100%;
-      height: 240px;
-      border: 1px solid #2f3f4c;
+      height: 270px;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      background: #0a1017;
+      background: #020617;
     }
 
     .wasm-copy {
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--band);
-    }
-
-    .wasm-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    .wasm-actions .button {
-      flex: 1 1 145px;
-    }
-
-    .button:disabled {
-      cursor: wait;
-      opacity: 0.62;
-    }
-
-    .status {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 10px;
+      align-content: start;
+      gap: 14px;
+      padding: 18px;
     }
 
-    .status div {
+    .support-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .support-card {
       padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--band);
     }
 
     footer {
-      padding: 28px 0 52px;
+      border-top: 1px solid var(--border);
       color: var(--muted);
-      border-top: 1px solid var(--line);
+      padding: 28px 0 46px;
     }
 
     @media (max-width: 860px) {
-      .web-panel {
+      .layout,
+      .wasm-inner {
         grid-template-columns: 1fr;
       }
 
-      .wasm-panel {
-        grid-template-columns: 1fr;
+      .sidebar {
+        position: static;
+        max-height: none;
+      }
+
+      .topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 12px 0;
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <div class="header-main">
-        <div>
-          <p class="eyebrow">Box3D Rust example hub</p>
-          <h1>boxddd Examples</h1>
-          <p class="lead">A real Bevy + egui Web testbed, core WASM provider probes, native Bevy 3D scenes, and core Rust examples for learning how to integrate Box3D through boxddd.</p>
-        </div>
-        <div class="actions">
-          <a class="button primary" href="bevy-testbed/">Bevy Web</a>
-          <a class="button" href="#core-wasm">Core WASM</a>
-          <a class="button" href="#examples">All Examples</a>
-          <a class="button" href="https://github.com/Latias94/boxddd">Repository</a>
-          <a class="button" href="https://crates.io/crates/boxddd">Crates.io</a>
-          <a class="button" href="https://docs.rs/boxddd">Docs.rs</a>
-        </div>
-      </div>
-      <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
-    </header>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./"><span class="brand-mark">3D</span><span>boxddd Examples</span></a>
+      <nav aria-label="Project links">
+        <a href="https://box2d.org/documentation/md_box3d.html">Box3D</a>
+        <a href="https://github.com/Latias94/boxddd">GitHub</a>
+        <a href="https://docs.rs/boxddd">Docs.rs</a>
+        <a href="https://crates.io/crates/boxddd">Crates.io</a>
+      </nav>
+    </div>
+  </header>
 
-    <section id="bevy-web">
-      <h2>Bevy + egui Web Testbed</h2>
-      <div class="web-panel">
-        <p class="muted">This entry loads the actual Rust <code>bevy_boxddd/examples/testbed_3d</code> Bevy 0.19 application compiled to <code>wasm32-unknown-unknown</code>, including the egui scene browser, picking, scene controls, and Box3D provider runtime. Callback-heavy tools such as Box3D debug draw still report typed unsupported errors in provider mode.</p>
-        <a class="button primary" href="bevy-testbed/">Open Testbed</a>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Direct Bevy Web examples</p>
+      <h1>Open a Box3D scene from the examples page.</h1>
+      <p class="lead">The browser entries are real Bevy + egui WASM pages backed by the shared Box3D provider runtime. Native and core examples stay visible with the exact commands users can run locally.</p>
+      <div class="hero-actions">
+        <a class="button primary" href="examples/falling-stack/">Run Falling Stack</a>
+        <a class="button" href="#examples">Browse Examples</a>
+        <a class="button" href="#wasm-provider">Core WASM Probes</a>
+      </div>
+      <div class="featured-grid" aria-label="Featured examples">
+        <a class="featured" href="examples/falling-stack/">
+          <span>Bevy Web</span>
+          <h3>Falling Stack</h3>
+          <p>Dynamic cubes falling onto a static Box3D floor in a dedicated browser page.</p>
+        </a>
+        <a class="featured" href="examples/advanced-colliders/">
+          <span>Bevy Web</span>
+          <h3>Advanced Colliders</h3>
+          <p>Mesh, height-field, compound, sphere, and hull colliders in one scene.</p>
+        </a>
+        <a class="featured" href="examples/ray-picking/">
+          <span>Bevy Web</span>
+          <h3>Ray Picking</h3>
+          <p>Camera rays resolved through Box3D queries instead of mesh-only picking.</p>
+        </a>
       </div>
     </section>
 
-    <section id="core-wasm">
-      <h2>Core WASM Provider Probes</h2>
-      <div class="wasm-panel">
+    <section id="examples" class="layout">
+      <aside class="sidebar" aria-label="Example categories">
+        <strong>Categories</strong>
+        <nav id="category-nav"></nav>
+      </aside>
+      <div>
+        <div class="examples-head">
+          <div>
+            <p class="eyebrow">Example catalog</p>
+            <h2>All examples</h2>
+          </div>
+          <div class="toolbar">
+            <div class="filter-row" aria-label="Filter examples">
+              <button class="button active" type="button" data-source-filter="all">All</button>
+              <button class="button" type="button" data-source-filter="testbed-scene">Browser</button>
+              <button class="button" type="button" data-source-filter="bevy-example">Bevy native</button>
+              <button class="button" type="button" data-source-filter="core-example">Core</button>
+              <button class="button" type="button" data-source-filter="wasm-example">WASM</button>
+            </div>
+            <input id="sample-search" class="search" type="search" placeholder="Search examples" aria-label="Search examples">
+          </div>
+          <p id="sample-count" class="muted" aria-live="polite"></p>
+        </div>
+        <div id="sample-sections"></div>
+      </div>
+    </section>
+
+    <section id="wasm-provider" class="wasm-section">
+      <div class="wasm-inner">
         <div class="wasm-stage">
           <canvas id="wasm-canvas" width="640" height="360" aria-label="Core WASM provider probe visualization"></canvas>
         </div>
         <div class="wasm-copy">
-          <span class="tag">core wasm probe</span>
-          <h3 id="wasm-status">Ready to run</h3>
-          <p id="wasm-detail" class="muted">This smaller canvas is a core Box3D provider probe: it calls real Rust wasm and the Emscripten-built Box3D provider, then draws simple JavaScript diagnostics from returned metrics. It is not the Bevy/egui renderer.</p>
+          <span class="badge">Core WASM probe</span>
+          <h2 id="wasm-status">Ready to run</h2>
+          <p id="wasm-detail" class="muted">These probes call real Rust wasm plus the Emscripten-built Box3D provider and draw JavaScript diagnostics from returned metrics. They are not Bevy renderer screenshots.</p>
           <div class="wasm-actions" aria-label="Core WASM provider probe selector">
             <button class="button primary" type="button" data-wasm-demo="drop" aria-pressed="true">Falling body</button>
             <button class="button" type="button" data-wasm-demo="ray" aria-pressed="false">Ray query</button>
@@ -442,103 +517,178 @@
       </div>
     </section>
 
-    <section id="examples">
-      <h2>All Examples</h2>
-      <p class="muted">Filter core examples, Bevy examples, native testbed scenes, and WASM entries. Testbed scene entries are validated against the Rust scene registry in CI.</p>
-      <div class="toolbar">
-        <select id="source-filter" class="field" aria-label="Filter by source">
-          <option value="all">All examples</option>
-          <option value="core-example">Core examples</option>
-          <option value="bevy-example">Bevy examples</option>
-          <option value="testbed-scene">Testbed scenes</option>
-          <option value="wasm-example">WASM entries</option>
-        </select>
-        <input id="sample-search" class="field search" type="search" placeholder="Search examples" aria-label="Search examples">
-        <span id="sample-count" class="muted"></span>
-      </div>
-      <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
-    </section>
-
-    <section>
-      <h2>Support Snapshot</h2>
-      <div class="status">
-        <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
-        <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
-        <div><strong>WASM</strong><br><span class="muted">The site publishes the real Bevy + egui Web testbed and core provider probes.</span></div>
-        <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
+    <section class="support">
+      <p class="eyebrow">Support snapshot</p>
+      <h2>What the examples prove</h2>
+      <div class="support-grid">
+        <div class="support-card"><strong>Bevy Web</strong><br><span class="muted">Direct example pages share one Bevy + egui WASM bundle and select the scene from the URL.</span></div>
+        <div class="support-card"><strong>Native Desktop</strong><br><span class="muted">Windows, Linux, and macOS run the same Rust examples through CI checks.</span></div>
+        <div class="support-card"><strong>Core WASM</strong><br><span class="muted">Provider probes validate shared-memory calls into the Box3D C provider.</span></div>
+        <div class="support-card"><strong>Box3D</strong><br><span class="muted">The bindings target upstream Box3D v0.1.0.</span></div>
       </div>
     </section>
-
-    <footer>
-      <span>MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.</span>
-    </footer>
   </main>
 
+  <footer>
+    MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.
+  </footer>
+
   <script>
-    const grid = document.querySelector("#sample-grid");
-    const sourceFilter = document.querySelector("#source-filter");
+    const sections = document.querySelector("#sample-sections");
+    const categoryNav = document.querySelector("#category-nav");
     const search = document.querySelector("#sample-search");
     const count = document.querySelector("#sample-count");
+    const filterButtons = Array.from(document.querySelectorAll("[data-source-filter]"));
     let catalog = [];
+    let activeSource = "all";
 
-    function previewMarkup() {
-      return "<span class=\"glyph\"></span><span class=\"glyph alt\"></span><span class=\"glyph warn\"></span><span class=\"glyph outline\"></span>";
+    const sourceLabels = {
+      "core-example": "Core",
+      "bevy-example": "Bevy native",
+      "testbed-scene": "Bevy Web",
+      "wasm-example": "WASM",
+    };
+
+    function slug(value) {
+      return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+
+    function sampleHref(sample) {
+      if (sample.source === "testbed-scene") {
+        return `examples/${sample.id}/`;
+      }
+      if (sample.id === "wasm-provider-smoke") {
+        return "#wasm-provider";
+      }
+      return null;
+    }
+
+    function sampleStatus(sample) {
+      if (sample.source === "testbed-scene") {
+        return "Runs as a direct Bevy Web example page. The native command opens the same scene registry locally.";
+      }
+      return sample.status;
+    }
+
+    function copyCommand(command, button) {
+      navigator.clipboard?.writeText(command).then(() => {
+        const previous = button.textContent;
+        button.textContent = "Copied";
+        window.setTimeout(() => {
+          button.textContent = previous;
+        }, 1200);
+      }).catch(() => {
+        window.prompt("Copy command", command);
+      });
+    }
+
+    function sampleCard(sample) {
+      const card = document.createElement("article");
+      card.className = "sample-card";
+
+      const meta = document.createElement("div");
+      meta.className = "sample-meta";
+      const source = document.createElement("span");
+      source.className = "source";
+      source.textContent = sourceLabels[sample.source] || sample.source;
+      const display = document.createElement("span");
+      display.className = "display";
+      display.textContent = sample.display;
+      meta.append(source, display);
+
+      const title = document.createElement("h3");
+      title.textContent = sample.name;
+
+      const description = document.createElement("p");
+      description.textContent = sample.description;
+
+      const status = document.createElement("p");
+      status.textContent = sampleStatus(sample);
+
+      const command = document.createElement("div");
+      command.className = "command";
+      command.textContent = sample.command;
+
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+      const href = sampleHref(sample);
+      if (href) {
+        const run = document.createElement("a");
+        run.className = "button primary";
+        run.href = href;
+        run.textContent = sample.source === "testbed-scene" ? "Run" : "Open";
+        actions.append(run);
+      }
+      const copy = document.createElement("button");
+      copy.className = "button";
+      copy.type = "button";
+      copy.textContent = "Copy command";
+      copy.addEventListener("click", () => copyCommand(sample.command, copy));
+      actions.append(copy);
+
+      card.append(meta, title, description, status, command, actions);
+      return card;
     }
 
     function render(samples) {
-      count.textContent = `${samples.length} shown`;
-      grid.replaceChildren(...samples.map((sample) => {
-        const card = document.createElement("article");
-        card.className = "sample-card";
+      count.textContent = `${samples.length} examples shown`;
+      const grouped = new Map();
+      for (const sample of samples) {
+        const group = grouped.get(sample.category) || [];
+        group.push(sample);
+        grouped.set(sample.category, group);
+      }
 
-        const visual = document.createElement("div");
-        visual.className = `sample-preview preview-${sample.preview}`;
-        visual.setAttribute("aria-hidden", "true");
-        visual.innerHTML = previewMarkup();
+      categoryNav.replaceChildren(...Array.from(grouped, ([category, group]) => {
+        const link = document.createElement("a");
+        link.href = `#category-${slug(category)}`;
+        link.innerHTML = `<span>${category}</span><span>${group.length}</span>`;
+        return link;
+      }));
 
-        const meta = document.createElement("div");
-        meta.className = "sample-meta";
+      sections.replaceChildren(...Array.from(grouped, ([category, group]) => {
+        const section = document.createElement("section");
+        section.className = "category-section";
+        section.id = `category-${slug(category)}`;
 
-        const source = document.createElement("span");
-        source.className = "tag";
-        source.textContent = sample.source.replaceAll("-", " ");
+        const header = document.createElement("div");
+        header.className = "section-title";
+        const title = document.createElement("h2");
+        title.textContent = category;
+        const meta = document.createElement("span");
+        meta.className = "muted";
+        meta.textContent = `${group.length} examples`;
+        header.append(title, meta);
 
-        const display = document.createElement("span");
-        display.className = "pill";
-        display.textContent = sample.display;
-
-        meta.append(source, display);
-
-        const title = document.createElement("h3");
-        title.textContent = sample.name;
-
-        const description = document.createElement("p");
-        description.className = "muted";
-        description.textContent = sample.description;
-
-        const status = document.createElement("p");
-        status.className = "muted";
-        status.textContent = sample.status;
-
-        const command = document.createElement("div");
-        command.className = "command";
-        command.textContent = sample.command;
-
-        card.append(visual, meta, title, description, status, command);
-        return card;
+        const grid = document.createElement("div");
+        grid.className = "sample-grid";
+        grid.replaceChildren(...group.map(sampleCard));
+        section.append(header, grid);
+        return section;
       }));
     }
 
     function applyFilters() {
-      const selectedSource = sourceFilter.value;
       const query = search.value.trim().toLowerCase();
       const samples = catalog.filter((sample) => {
-        const sourceMatches = selectedSource === "all" || sample.source === selectedSource;
+        if (sample.id === "bevy-web-testbed") {
+          return false;
+        }
+        const sourceMatches = activeSource === "all" || sample.source === activeSource;
         const haystack = `${sample.category} ${sample.name} ${sample.description} ${sample.command}`.toLowerCase();
         return sourceMatches && (!query || haystack.includes(query));
       });
       render(samples);
     }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeSource = button.dataset.sourceFilter;
+        filterButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+        applyFilters();
+      });
+    });
+    search.addEventListener("input", applyFilters);
 
     fetch("sample-catalog.json")
       .then((response) => response.json())
@@ -547,11 +697,8 @@
         applyFilters();
       })
       .catch(() => {
-        grid.textContent = "Sample catalog failed to load.";
+        sections.textContent = "Sample catalog failed to load.";
       });
-
-    sourceFilter.addEventListener("change", applyFilters);
-    search.addEventListener("input", applyFilters);
   </script>
   <script type="module" src="wasm/live-smoke.js"></script>
 </body>

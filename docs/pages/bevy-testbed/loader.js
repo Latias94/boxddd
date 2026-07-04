@@ -1,4 +1,8 @@
 const statusPanel = document.querySelector("#bevy-status");
+const appRoot = document.querySelector("#bevy-app");
+const sceneId = appRoot?.dataset.sceneId || "";
+const sceneName = appRoot?.dataset.sceneName || "Bevy testbed";
+const isExamplePage = Boolean(sceneId);
 
 function setStatus(state, title, detail) {
   statusPanel.dataset.state = state;
@@ -25,7 +29,7 @@ async function main() {
     ]);
   const memory = new WebAssembly.Memory({ initial: 4096, maximum: 8192 });
 
-  setStatus("loading", "Loading Box3D provider", "Instantiating the Emscripten-built Box3D C module with shared memory.");
+  setStatus("loading", "Loading Box3D provider", `Preparing the shared Box3D C provider for ${sceneName}.`);
   const provider = await createProvider({
     wasmMemory: memory,
     locateFile: (path) => new URL(path, providerGenerated).href,
@@ -38,7 +42,7 @@ async function main() {
   }
 
   setBox3dProvider(provider);
-  setStatus("loading", "Loading Bevy + egui", "Starting the Rust testbed compiled from bevy_boxddd/examples/testbed_3d.");
+  setStatus("loading", `Loading ${sceneName}`, "Starting the Rust Bevy + egui wasm module.");
 
   await initBevyTestbed({
     module_or_path: generatedUrl("generated/bevy_boxddd_testbed_bg.wasm"),
@@ -46,11 +50,19 @@ async function main() {
   });
 
   window.BOXDDD_BEVY_TESTBED_READY = true;
-  setStatus("running", "Bevy testbed running", "The scene browser, egui controls, picking, and Box3D simulation are running in this canvas.");
+  window.BOXDDD_BEVY_EXAMPLE_READY = true;
+  window.BOXDDD_BEVY_SCENE_ID = sceneId;
+  setStatus(
+    "running",
+    `${sceneName} running`,
+    isExamplePage
+      ? "This dedicated example page is running the selected Box3D scene in Bevy."
+      : "The scene browser, egui controls, picking, and Box3D simulation are running in this canvas.",
+  );
 }
 
 main().catch((error) => {
   console.error(error);
   const message = error instanceof Error ? error.message : String(error);
-  setStatus("error", "Bevy Web testbed failed", message);
+  setStatus("error", `${sceneName} failed`, message);
 });

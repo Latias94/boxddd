@@ -30,7 +30,11 @@ pub(crate) fn draw_testbed_ui(
         .min_size(250.0)
         .resizable(true)
         .show(&mut root_ui, |ui| {
-            ui.heading("boxddd Testbed");
+            ui.heading(if state.scene_switching_enabled {
+                "boxddd Testbed"
+            } else {
+                SCENE_REGISTRY[state.scene_index].name
+            });
             ui.separator();
 
             ui.horizontal(|ui| {
@@ -55,34 +59,44 @@ pub(crate) fn draw_testbed_ui(
             });
 
             ui.separator();
-            ui.label(egui::RichText::new("Scenes").strong());
-            egui::ScrollArea::vertical()
-                .max_height(260.0)
-                .show(ui, |ui| {
-                    let mut current_category = None;
-                    for (index, metadata) in SCENE_REGISTRY.iter().enumerate() {
-                        if current_category != Some(metadata.category) {
-                            current_category = Some(metadata.category);
-                            ui.add_space(4.0);
-                            ui.label(
-                                egui::RichText::new(metadata.category)
-                                    .small()
-                                    .color(egui::Color32::GRAY),
-                            );
-                        }
+            if state.scene_switching_enabled {
+                ui.label(egui::RichText::new("Scenes").strong());
+                egui::ScrollArea::vertical()
+                    .max_height(260.0)
+                    .show(ui, |ui| {
+                        let mut current_category = None;
+                        for (index, metadata) in SCENE_REGISTRY.iter().enumerate() {
+                            if current_category != Some(metadata.category) {
+                                current_category = Some(metadata.category);
+                                ui.add_space(4.0);
+                                ui.label(
+                                    egui::RichText::new(metadata.category)
+                                        .small()
+                                        .color(egui::Color32::GRAY),
+                                );
+                            }
 
-                        if ui
-                            .selectable_label(state.scene_index == index, metadata.name)
-                            .clicked()
-                        {
-                            requested_scene = Some(index);
-                        }
+                            if ui
+                                .selectable_label(state.scene_index == index, metadata.name)
+                                .clicked()
+                            {
+                                requested_scene = Some(index);
+                            }
 
-                        if state.scene_index == index {
-                            ui.label(egui::RichText::new(metadata.description).small());
+                            if state.scene_index == index {
+                                ui.label(egui::RichText::new(metadata.description).small());
+                            }
                         }
-                    }
-                });
+                    });
+            } else {
+                let metadata = &SCENE_REGISTRY[state.scene_index];
+                ui.label(
+                    egui::RichText::new(metadata.category)
+                        .small()
+                        .color(egui::Color32::GRAY),
+                );
+                ui.label(metadata.description);
+            }
 
             ui.separator();
             ui.label(egui::RichText::new("World").strong());

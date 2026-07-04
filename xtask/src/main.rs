@@ -15,6 +15,7 @@ const TARGET: &str = "wasm32-unknown-unknown";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
 const PAGES_WASM_DIR: &str = "wasm/generated";
+const BEVY_EXAMPLES_DIR: &str = "examples";
 const BEVY_WEB_EXAMPLE: &str = "testbed_3d";
 const BEVY_WEB_OUT_DIR: &str = "bevy-testbed/generated";
 const BEVY_WEB_OUT_NAME: &str = "bevy_boxddd_testbed";
@@ -87,6 +88,7 @@ fn run() -> Result<()> {
         }
         "provider-smoke" => run_provider_smoke(),
         "build-pages-wasm" => build_pages_wasm(),
+        "generate-pages" => generate_pages(),
         "validate-pages" => validate_pages(),
         "help" | "-h" | "--help" => {
             print_help();
@@ -98,7 +100,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
     );
 }
 
@@ -125,6 +127,26 @@ fn pages_bevy_generated_dir() -> PathBuf {
         .join("docs")
         .join("pages")
         .join(BEVY_WEB_OUT_DIR)
+}
+
+fn pages_bevy_examples_dir() -> PathBuf {
+    project_root()
+        .join("docs")
+        .join("pages")
+        .join(BEVY_EXAMPLES_DIR)
+}
+
+fn generate_pages() -> Result<()> {
+    let root = project_root();
+    let pages_dir = root.join("docs").join("pages");
+    let registry_samples = read_testbed_registry(&root)?;
+    generate_bevy_example_pages(&pages_dir, &registry_samples)?;
+    eprintln!(
+        "Generated {} Bevy example pages under {}",
+        registry_samples.len(),
+        pages_bevy_examples_dir().display()
+    );
+    Ok(())
 }
 
 fn validate_pages() -> Result<()> {
@@ -162,9 +184,10 @@ fn validate_pages() -> Result<()> {
         )
         .into());
     }
+    validate_bevy_example_pages(&pages_dir, &registry_samples)?;
 
-    let html = fs::read_to_string(index)?;
-    validate_html_links(&pages_dir, &html)?;
+    let html = fs::read_to_string(&index)?;
+    validate_html_links(&index, &html)?;
 
     eprintln!(
         "Validated Pages site: {} ({} samples)",
@@ -172,6 +195,196 @@ fn validate_pages() -> Result<()> {
         catalog_samples.len()
     );
     Ok(())
+}
+
+fn generate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> Result<()> {
+    let examples_dir = pages_dir.join(BEVY_EXAMPLES_DIR);
+    fs::create_dir_all(&examples_dir)?;
+    let index = example_index_page(samples);
+    fs::write(examples_dir.join("index.html"), index)?;
+
+    for sample in samples {
+        let dir = examples_dir.join(&sample.id);
+        fs::create_dir_all(&dir)?;
+        fs::write(dir.join("index.html"), example_page(sample))?;
+    }
+
+    Ok(())
+}
+
+fn validate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> Result<()> {
+    let examples_dir = ensure_file(
+        &pages_dir.join(BEVY_EXAMPLES_DIR).join("index.html"),
+        "Bevy examples index",
+    )?;
+    let examples_html = fs::read_to_string(&examples_dir)?;
+    validate_html_links(&examples_dir, &examples_html)?;
+
+    for sample in samples {
+        let page = ensure_file(
+            &pages_dir
+                .join(BEVY_EXAMPLES_DIR)
+                .join(&sample.id)
+                .join("index.html"),
+            &format!("Bevy example page `{}`", sample.id),
+        )?;
+        let html = fs::read_to_string(&page)?;
+        if !html.contains(&format!("data-scene-id=\"{}\"", sample.id)) {
+            return Err(format!("{} is missing its scene id", page.display()).into());
+        }
+        if !html.contains(&escape_html(&sample.name)) {
+            return Err(format!("{} is missing its scene title", page.display()).into());
+        }
+        validate_html_links(&page, &html)?;
+    }
+
+    Ok(())
+}
+
+fn example_index_page(samples: &[RegistrySample]) -> String {
+    let links = samples
+        .iter()
+        .map(|sample| {
+            format!(
+                "        <a class=\"card\" href=\"{id}/\"><span>{category}</span><strong>{name}</strong><small>{description}</small></a>",
+                id = sample.id,
+                category = escape_html(&sample.category),
+                name = escape_html(&sample.name),
+                description = escape_html(&sample.description)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boxddd Bevy Examples</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Direct Bevy Web examples for boxddd.">
+  <style>{example_page_css}</style>
+</head>
+<body>
+  <div class="directory">
+    <header class="topbar">
+      <a href="../">boxddd Examples</a>
+      <nav>
+        <a href="https://github.com/Latias94/boxddd">GitHub</a>
+        <a href="https://docs.rs/boxddd">Docs.rs</a>
+      </nav>
+    </header>
+    <main class="directory-main">
+      <p class="eyebrow">Bevy Web examples</p>
+      <h1>Run a Box3D scene</h1>
+      <p class="lead">Each entry opens a dedicated Bevy + egui WASM page backed by the same Box3D provider runtime.</p>
+      <section class="card-grid">
+{links}
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+"#,
+        example_page_css = example_page_css(),
+        links = links
+    )
+}
+
+fn example_page(sample: &RegistrySample) -> String {
+    format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{name} - boxddd Bevy Example</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="{description}">
+  <style>{example_page_css}</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <a href="../../">boxddd Examples</a>
+        <h1>{name}</h1>
+        <p><span>{category}</span>{description}</p>
+      </div>
+      <nav>
+        <a href="../">All Bevy examples</a>
+        <a href="https://github.com/Latias94/boxddd/tree/main/bevy_boxddd/examples/testbed_3d">Source</a>
+      </nav>
+    </header>
+    <main id="bevy-app" data-scene-id="{id}" data-scene-name="{name}" data-scene-category="{category}">
+      <canvas id="bevy-canvas" tabindex="0"></canvas>
+      <div id="bevy-status" role="status" aria-live="polite">
+        <strong>Loading {name}</strong>
+        <span>Preparing the shared Box3D provider and the Rust Bevy wasm module.</span>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="../../bevy-testbed/loader.js"></script>
+</body>
+</html>
+"#,
+        id = sample.id,
+        name = escape_html(&sample.name),
+        category = escape_html(&sample.category),
+        description = escape_html(&sample.description),
+        example_page_css = example_page_css()
+    )
+}
+
+fn example_page_css() -> &'static str {
+    r#"
+:root {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0f0f12;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #84cc16;
+  --danger: #f87171;
+}
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--foreground); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.shell { display: grid; grid-template-rows: auto minmax(0, 1fr); width: 100%; height: 100%; }
+.topbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(9, 9, 11, 0.94); padding: 14px 18px; }
+.topbar h1 { margin: 4px 0 0; font-size: 20px; line-height: 1.2; letter-spacing: 0; }
+.topbar p { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.topbar p span, .eyebrow { color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 14px; }
+#bevy-app { position: relative; min-width: 0; min-height: 0; background: #020617; }
+#bevy-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+#bevy-status { position: absolute; left: 18px; bottom: 18px; max-width: min(560px, calc(100% - 36px)); border: 1px solid var(--border); border-radius: 8px; background: rgba(15, 15, 18, 0.94); padding: 12px 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+#bevy-status strong { display: block; margin-bottom: 4px; color: var(--foreground); font-size: 15px; }
+#bevy-status[data-state="error"] strong { color: var(--danger); }
+#bevy-status[data-state="running"] { opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.directory { min-height: 100%; }
+.directory-main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 54px 0; }
+.directory-main h1 { margin: 0; font-size: clamp(34px, 6vw, 58px); line-height: 1; letter-spacing: 0; }
+.lead { max-width: 720px; color: var(--muted); font-size: 17px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 28px; }
+.card { display: grid; min-height: 150px; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); padding: 16px; }
+.card:hover { border-color: #52525b; text-decoration: none; }
+.card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.card strong { font-size: 18px; }
+.card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+"#
+}
+
+fn escape_html(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn ensure_file(path: &Path, label: &str) -> Result<PathBuf> {
@@ -394,31 +607,42 @@ fn extract_string_field(line: &str, field: &str) -> Option<String> {
     Some(tail[..end].to_string())
 }
 
-fn validate_html_links(pages_dir: &Path, html: &str) -> Result<()> {
-    let pages_root = fs::canonicalize(pages_dir)?;
-    validate_attr_links(pages_dir, &pages_root, html, "href")?;
-    validate_attr_links(pages_dir, &pages_root, html, "src")?;
-    validate_fetch_links(pages_dir, &pages_root, html, "\"")?;
-    validate_fetch_links(pages_dir, &pages_root, html, "'")?;
+fn validate_html_links(html_file: &Path, html: &str) -> Result<()> {
+    let pages_dir = project_root().join("docs").join("pages");
+    let pages_root = fs::canonicalize(&pages_dir)?;
+    let base_dir = html_file
+        .parent()
+        .ok_or_else(|| format!("{} has no parent directory", html_file.display()))?;
+    validate_attr_links(html_file, base_dir, &pages_root, html, "href")?;
+    validate_attr_links(html_file, base_dir, &pages_root, html, "src")?;
+    validate_fetch_links(html_file, base_dir, &pages_root, html, "\"")?;
+    validate_fetch_links(html_file, base_dir, &pages_root, html, "'")?;
     Ok(())
 }
 
-fn validate_attr_links(pages_dir: &Path, pages_root: &Path, html: &str, attr: &str) -> Result<()> {
+fn validate_attr_links(
+    html_file: &Path,
+    base_dir: &Path,
+    pages_root: &Path,
+    html: &str,
+    attr: &str,
+) -> Result<()> {
     let needle = format!("{attr}=\"");
     let mut remainder = html;
     while let Some(index) = remainder.find(&needle) {
         let after = &remainder[index + needle.len()..];
         let end = after
             .find('"')
-            .ok_or_else(|| format!("unterminated `{attr}` attribute in docs/pages/index.html"))?;
-        validate_local_link(pages_dir, pages_root, &after[..end])?;
+            .ok_or_else(|| format!("unterminated `{attr}` attribute in {}", html_file.display()))?;
+        validate_local_link(html_file, base_dir, pages_root, &after[..end])?;
         remainder = &after[end + 1..];
     }
     Ok(())
 }
 
 fn validate_fetch_links(
-    pages_dir: &Path,
+    html_file: &Path,
+    base_dir: &Path,
     pages_root: &Path,
     html: &str,
     quote: &str,
@@ -429,14 +653,19 @@ fn validate_fetch_links(
         let after = &remainder[index + needle.len()..];
         let end = after
             .find(quote)
-            .ok_or("unterminated fetch() URL in docs/pages/index.html")?;
-        validate_local_link(pages_dir, pages_root, &after[..end])?;
+            .ok_or_else(|| format!("unterminated fetch() URL in {}", html_file.display()))?;
+        validate_local_link(html_file, base_dir, pages_root, &after[..end])?;
         remainder = &after[end + quote.len()..];
     }
     Ok(())
 }
 
-fn validate_local_link(pages_dir: &Path, pages_root: &Path, value: &str) -> Result<()> {
+fn validate_local_link(
+    html_file: &Path,
+    base_dir: &Path,
+    pages_root: &Path,
+    value: &str,
+) -> Result<()> {
     if is_external_or_fragment(value) {
         return Ok(());
     }
@@ -446,14 +675,18 @@ fn validate_local_link(pages_dir: &Path, pages_root: &Path, value: &str) -> Resu
         return Ok(());
     }
 
-    let target = pages_dir.join(local);
+    let target = base_dir.join(local);
     if !target.exists() {
-        return Err(format!("docs/pages/index.html links missing local asset `{value}`").into());
+        return Err(format!(
+            "{} links missing local asset `{value}`",
+            html_file.display()
+        )
+        .into());
     }
 
     let canonical = fs::canonicalize(&target)?;
     if !canonical.starts_with(pages_root) {
-        return Err(format!("docs/pages/index.html link escapes docs/pages: `{value}`").into());
+        return Err(format!("{} link escapes docs/pages: `{value}`", html_file.display()).into());
     }
 
     Ok(())
@@ -759,6 +992,7 @@ fn run_provider_smoke() -> Result<()> {
 }
 
 fn build_pages_wasm() -> Result<()> {
+    generate_pages()?;
     let app_wasm = build_provider_smoke_app_for(BuildProfile::Release)?;
     let smoke_imports = collect_provider_imports(&app_wasm)?;
     let bevy_artifacts = build_bevy_web_app()?;

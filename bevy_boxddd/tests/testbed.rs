@@ -112,6 +112,8 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
     for (index, metadata) in SCENE_REGISTRY.iter().enumerate() {
         assert_eq!(metadata.scene, ALL_SCENES[index]);
         assert_eq!(metadata.scene.metadata().id, metadata.id);
+        assert_eq!(TestbedScene::from_id(metadata.id), Some(metadata.scene));
+        assert_eq!(metadata.scene.index(), index);
         assert!(!metadata.id.is_empty());
         assert!(!metadata.category.is_empty());
         assert!(!metadata.name.is_empty());

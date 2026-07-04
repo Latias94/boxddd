@@ -66,6 +66,20 @@ impl TestbedScene {
             .find(|metadata| metadata.scene == self)
             .expect("testbed scene metadata missing")
     }
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        SCENE_REGISTRY
+            .iter()
+            .find(|metadata| metadata.id == id)
+            .map(|metadata| metadata.scene)
+    }
+
+    pub fn index(self) -> usize {
+        ALL_SCENES
+            .iter()
+            .position(|scene| *scene == self)
+            .expect("testbed scene missing from ALL_SCENES")
+    }
 }
 
 pub const ALL_SCENES: [TestbedScene; 14] = [
