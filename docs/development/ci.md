@@ -41,7 +41,9 @@ than a single workspace smoke test:
 
 The workflow uses current Node-runtime action majors where they are available.
 For example, repository checkout uses `actions/checkout@v7` to avoid the Node 20
-deprecation warning emitted by older checkout releases.
+deprecation warning emitted by older checkout releases. Dependency caching pins
+`Swatinem/rust-cache@v2.9.1` rather than the floating `v2` tag so release
+preflight uses the currently published v2 action.
 
 ## Local Workspace Checks
 
@@ -112,11 +114,18 @@ done
 tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
 tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
 tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
+tar -tf "$core_crate" | grep -F '/examples/events.rs'
+tar -tf "$core_crate" | grep -F '/examples/body_controls.rs'
+tar -tf "$core_crate" | grep -F '/examples/continuous_collision.rs'
+tar -tf "$core_crate" | grep -F '/examples/character_mover.rs'
 tar -tf "$core_crate" | grep -F '/examples/mesh_height_field_query.rs'
 tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
 tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
 tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+tar -tf "$bevy_crate" | grep -F '/examples/advanced_colliders_3d.rs'
+tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
+tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/scenes.rs'
 ```
 
 ## Release Workflows

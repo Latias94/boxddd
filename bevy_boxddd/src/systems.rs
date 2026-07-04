@@ -1,7 +1,7 @@
 //! Fixed-update systems registered by [`crate::BoxdddPhysicsPlugin`].
 
 use crate::components::{
-    AngularVelocity, BoxdddBody, BoxdddJoint, BoxdddShape, Collider, ExternalForce,
+    AngularVelocity, BodySettings, BoxdddBody, BoxdddJoint, BoxdddShape, Collider, ExternalForce,
     ExternalImpulse, Joint, JointTarget, LinearVelocity, PhysicsMaterial, RigidBody,
     TransformSyncMode,
 };
@@ -16,7 +16,7 @@ use crate::resources::{
 };
 use bevy_ecs::hierarchy::ChildOf;
 use bevy_ecs::message::MessageWriter;
-use bevy_ecs::prelude::{Commands, Entity, NonSendMut, Query, Res, With, Without};
+use bevy_ecs::prelude::{Changed, Commands, Entity, NonSendMut, Query, Res, With, Without};
 use bevy_math::{Quat, Vec3};
 use bevy_time::{Fixed, Time};
 use bevy_transform::components::Transform;
@@ -37,6 +37,7 @@ pub fn create_missing_bodies(
         (
             Entity,
             &RigidBody,
+            Option<&BodySettings>,
             Option<&Transform>,
             Option<&LinearVelocity>,
             Option<&AngularVelocity>,
@@ -48,8 +49,26 @@ pub fn create_missing_bodies(
         return;
     }
 
-    for (entity, rigid_body, transform, linear_velocity, angular_velocity) in &bodies {
+    for (entity, rigid_body, body_settings, transform, linear_velocity, angular_velocity) in &bodies
+    {
+        let body_settings = body_settings.copied().unwrap_or_default();
+        if let Err(error) = body_settings.validate() {
+            report_error(
+                &settings,
+                &mut errors,
+                BoxdddErrorMessage {
+                    operation: BoxdddOperation::CreateBody,
+                    entity: Some(entity),
+                    error,
+                },
+            );
+            continue;
+        }
+
         let mut def = BodyDef::builder().body_type((*rigid_body).into());
+        def = def
+            .gravity_scale(body_settings.gravity_scale)
+            .bullet(body_settings.bullet);
 
         if let Some(transform) = transform {
             def = def
@@ -85,6 +104,27 @@ pub fn create_missing_bodies(
                 },
             ),
         }
+    }
+}
+
+/// Applies changed runtime body settings to native bodies.
+pub fn apply_body_settings(
+    mut context: NonSendMut<BoxdddPhysicsContext>,
+    settings: Res<BoxdddPhysicsSettings>,
+    mut errors: MessageWriter<BoxdddErrorMessage>,
+    bodies: Query<(Entity, &BoxdddBody, &BodySettings), Changed<BodySettings>>,
+) {
+    if context.world().is_none() {
+        return;
+    }
+
+    for (entity, body, body_settings) in &bodies {
+        let result = apply_body_settings_to_world(
+            context.world_mut().expect("checked above"),
+            body.0,
+            *body_settings,
+        );
+        apply_control_result(&settings, &mut errors, entity, result);
     }
 }
 
@@ -961,6 +1001,20 @@ fn apply_control_result(
             },
         );
     }
+}
+
+fn apply_body_settings_to_world(
+    world: &mut boxddd::World,
+    body_id: BodyId,
+    settings: BodySettings,
+) -> boxddd::Result<()> {
+    settings.validate()?;
+    world.try_set_body_gravity_scale(body_id, settings.gravity_scale)?;
+    world.try_set_body_linear_damping(body_id, settings.linear_damping)?;
+    world.try_set_body_angular_damping(body_id, settings.angular_damping)?;
+    world.try_enable_body_sleep(body_id, settings.sleep_enabled)?;
+    world.try_set_body_bullet(body_id, settings.bullet)?;
+    world.try_set_body_motion_locks(body_id, settings.motion_locks)
 }
 
 fn create_joint(

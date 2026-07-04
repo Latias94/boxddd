@@ -2,7 +2,7 @@
 
 use bevy_ecs::prelude::{Component, Entity};
 use bevy_math::Vec3;
-use boxddd::{BodyId, BodyType, Filter, JointId, ShapeDef, ShapeId, SurfaceMaterial};
+use boxddd::{BodyId, BodyType, Filter, JointId, MotionLocks, ShapeDef, ShapeId, SurfaceMaterial};
 
 /// Body type to create for an entity that participates in the physics world.
 #[derive(Component, Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -22,6 +22,56 @@ impl From<RigidBody> for BodyType {
             RigidBody::Static => BodyType::Static,
             RigidBody::Kinematic => BodyType::Kinematic,
             RigidBody::Dynamic => BodyType::Dynamic,
+        }
+    }
+}
+
+/// Runtime body tuning applied to the native Box3D body.
+///
+/// This component is optional. When it is present, the plugin validates it
+/// before body creation and reapplies changed values before each physics step.
+#[derive(Component, Copy, Clone, Debug, PartialEq)]
+pub struct BodySettings {
+    /// Gravity multiplier applied to this body.
+    pub gravity_scale: f32,
+    /// Linear damping applied by Box3D.
+    pub linear_damping: f32,
+    /// Angular damping applied by Box3D.
+    pub angular_damping: f32,
+    /// Whether the body is allowed to sleep.
+    pub sleep_enabled: bool,
+    /// Whether the body uses bullet-style continuous collision handling.
+    pub bullet: bool,
+    /// Per-axis translation and rotation locks.
+    pub motion_locks: MotionLocks,
+}
+
+impl BodySettings {
+    /// Creates settings that mark a body as a bullet for continuous collision.
+    pub fn bullet() -> Self {
+        Self {
+            bullet: true,
+            ..Default::default()
+        }
+    }
+
+    /// Validates finite tuning values before applying them.
+    pub fn validate(self) -> boxddd::Result<()> {
+        validate_scalar(self.gravity_scale)?;
+        validate_nonnegative_scalar(self.linear_damping)?;
+        validate_nonnegative_scalar(self.angular_damping)
+    }
+}
+
+impl Default for BodySettings {
+    fn default() -> Self {
+        Self {
+            gravity_scale: 1.0,
+            linear_damping: 0.0,
+            angular_damping: 0.0,
+            sleep_enabled: true,
+            bullet: false,
+            motion_locks: MotionLocks::new(false, false, false, false, false, false),
         }
     }
 }
@@ -585,6 +635,14 @@ impl ExternalImpulse {
 }
 
 fn validate_vec3(value: Vec3) -> boxddd::Result<()> {
+    if value.is_finite() {
+        Ok(())
+    } else {
+        Err(boxddd::Error::InvalidArgument)
+    }
+}
+
+fn validate_scalar(value: f32) -> boxddd::Result<()> {
     if value.is_finite() {
         Ok(())
     } else {

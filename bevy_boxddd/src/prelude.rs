@@ -1,7 +1,7 @@
 //! Common imports for Bevy applications using `bevy_boxddd`.
 
 pub use crate::{
-    AngularVelocity, BoxdddBody, BoxdddBodyMoveMessage, BoxdddContactBeginMessage,
+    AngularVelocity, BodySettings, BoxdddBody, BoxdddBodyMoveMessage, BoxdddContactBeginMessage,
     BoxdddContactEndMessage, BoxdddContactHitMessage, BoxdddDebugDrawCommands,
     BoxdddDebugDrawSettings, BoxdddErrorMessage, BoxdddJoint, BoxdddOperation,
     BoxdddPhysicsContext, BoxdddPhysicsPlugin, BoxdddPhysicsSettings, BoxdddSensorBeginMessage,

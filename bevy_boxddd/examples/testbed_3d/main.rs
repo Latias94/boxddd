@@ -4,7 +4,7 @@ mod support;
 
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
-use scenes::{ALL_SCENES, TestbedEntity, TestbedScene, spawn_scene};
+use scenes::{ALL_SCENES, MoverProbe, TestbedEntity, TestbedScene, spawn_scene};
 
 #[derive(Resource, Debug)]
 struct TestbedState {
@@ -48,6 +48,7 @@ fn main() {
                 apply_debug_draw_toggle,
                 apply_gravity_to_world,
                 draw_debug_gizmos,
+                draw_mover_probe,
                 draw_physics_pick,
             ),
         )
@@ -98,6 +99,10 @@ fn handle_input(
         KeyCode::Digit4,
         KeyCode::Digit5,
         KeyCode::Digit6,
+        KeyCode::Digit7,
+        KeyCode::Digit8,
+        KeyCode::Digit9,
+        KeyCode::Digit0,
     ]
     .into_iter()
     .enumerate()
@@ -190,4 +195,50 @@ fn draw_physics_pick(
 
     gizmos.sphere(hit.point, 0.08, Color::srgb(1.0, 0.95, 0.2));
     gizmos.ray(hit.point, hit.normal * 0.45, Color::srgb(0.2, 1.0, 0.35));
+}
+
+fn draw_mover_probe(
+    probes: Query<&MoverProbe>,
+    context: NonSend<BoxdddPhysicsContext>,
+    mut gizmos: Gizmos,
+) {
+    let Some(world) = context.world() else {
+        return;
+    };
+
+    for probe in &probes {
+        let mover = boxddd::Capsule::new(
+            to_boxddd_vec3(probe.point1),
+            to_boxddd_vec3(probe.point2),
+            probe.radius,
+        );
+        let Ok(fraction) = world.cast_mover(
+            to_boxddd_pos(probe.origin),
+            &mover,
+            to_boxddd_vec3(probe.delta),
+            boxddd::QueryFilter::default(),
+        ) else {
+            continue;
+        };
+        let safe_delta = probe.delta * fraction;
+        let start = probe.origin;
+        let requested_end = start + probe.delta;
+        let safe_end = start + safe_delta;
+
+        gizmos.line(start, requested_end, Color::srgb(0.45, 0.50, 0.58));
+        gizmos.line(start, safe_end, Color::srgb(0.2, 0.9, 0.45));
+        gizmos.sphere(
+            safe_end + Vec3::new(0.0, 0.8, 0.0),
+            probe.radius,
+            Color::srgb(0.2, 0.9, 0.45),
+        );
+    }
+}
+
+fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
+    boxddd::Vec3::new(value.x, value.y, value.z)
+}
+
+fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
+    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
 }

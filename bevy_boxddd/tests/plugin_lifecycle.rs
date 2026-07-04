@@ -130,6 +130,92 @@ fn bodies_and_simple_colliders_are_created_and_cleaned_up() {
 }
 
 #[test]
+fn body_settings_create_and_update_native_body_properties() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let initial_locks = boxddd::MotionLocks::new(false, true, false, true, false, true);
+    let entity = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            BodySettings {
+                gravity_scale: 0.25,
+                linear_damping: 0.2,
+                angular_damping: 0.3,
+                sleep_enabled: false,
+                bullet: true,
+                motion_locks: initial_locks,
+            },
+            Transform::from_xyz(0.0, 2.0, 0.0),
+        ))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+
+    let body_id = app.world().entity(entity).get::<BoxdddBody>().unwrap().id();
+    {
+        let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+        let world = context.world().unwrap();
+        assert_eq!(world.try_body_gravity_scale(body_id).unwrap(), 0.25);
+        assert_eq!(world.try_body_linear_damping(body_id).unwrap(), 0.2);
+        assert_eq!(world.try_body_angular_damping(body_id).unwrap(), 0.3);
+        assert!(!world.try_body_sleep_enabled(body_id).unwrap());
+        assert!(world.try_body_bullet(body_id).unwrap());
+        assert_eq!(world.try_body_motion_locks(body_id).unwrap(), initial_locks);
+    }
+
+    let updated_locks = boxddd::MotionLocks::new(true, false, true, false, true, false);
+    app.world_mut().entity_mut(entity).insert(BodySettings {
+        gravity_scale: 1.5,
+        linear_damping: 0.4,
+        angular_damping: 0.6,
+        sleep_enabled: true,
+        bullet: false,
+        motion_locks: updated_locks,
+    });
+    run_fixed_frames(&mut app, 2);
+
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let world = context.world().unwrap();
+    assert_eq!(world.try_body_gravity_scale(body_id).unwrap(), 1.5);
+    assert_eq!(world.try_body_linear_damping(body_id).unwrap(), 0.4);
+    assert_eq!(world.try_body_angular_damping(body_id).unwrap(), 0.6);
+    assert!(world.try_body_sleep_enabled(body_id).unwrap());
+    assert!(!world.try_body_bullet(body_id).unwrap());
+    assert_eq!(world.try_body_motion_locks(body_id).unwrap(), updated_locks);
+}
+
+#[test]
+fn invalid_body_settings_emit_error_without_creating_body() {
+    let mut app = physics_app(BoxdddPhysicsSettings::default());
+    let entity = app
+        .world_mut()
+        .spawn((
+            RigidBody::Dynamic,
+            BodySettings {
+                gravity_scale: f32::NAN,
+                ..Default::default()
+            },
+            Transform::from_xyz(0.0, 2.0, 0.0),
+        ))
+        .id();
+
+    run_fixed_frames(&mut app, 2);
+
+    assert!(app.world().entity(entity).get::<BoxdddBody>().is_none());
+
+    let messages = app
+        .world_mut()
+        .resource_mut::<Messages<BoxdddErrorMessage>>()
+        .drain()
+        .collect::<Vec<_>>();
+    assert!(messages.iter().any(|message| {
+        message.operation == BoxdddOperation::CreateBody
+            && message.entity == Some(entity)
+            && message.error == boxddd::Error::InvalidArgument
+    }));
+}
+
+#[test]
 fn removing_body_component_recreates_body_and_shape_without_stale_ids() {
     let mut app = physics_app(BoxdddPhysicsSettings::default());
     let entity = app

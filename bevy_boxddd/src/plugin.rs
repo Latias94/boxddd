@@ -10,9 +10,10 @@ use crate::messages::{
 };
 use crate::resources::{BoxdddErrorPolicy, BoxdddPhysicsContext, BoxdddPhysicsSettings};
 use crate::systems::{
-    apply_body_controls, cleanup_removed_bodies, cleanup_removed_colliders, cleanup_removed_joints,
-    create_missing_bodies, create_missing_joints, create_missing_shapes, publish_physics_messages,
-    step_world, sync_bevy_transforms_to_boxddd, sync_boxddd_transforms_to_bevy,
+    apply_body_controls, apply_body_settings, cleanup_removed_bodies, cleanup_removed_colliders,
+    cleanup_removed_joints, create_missing_bodies, create_missing_joints, create_missing_shapes,
+    publish_physics_messages, step_world, sync_bevy_transforms_to_boxddd,
+    sync_boxddd_transforms_to_bevy,
 };
 use bevy_app::{App, FixedUpdate, Plugin};
 use bevy_ecs::schedule::{ApplyDeferred, IntoScheduleConfigs};
@@ -82,6 +83,7 @@ impl Plugin for BoxdddPhysicsPlugin {
                 cleanup_removed_bodies,
                 create_missing_bodies,
                 ApplyDeferred,
+                apply_body_settings,
                 create_missing_shapes,
                 create_missing_joints,
                 apply_body_controls,

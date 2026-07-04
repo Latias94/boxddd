@@ -83,7 +83,7 @@ jobs:
         uses: taiki-e/install-action@nextest
 
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.9.1
         with:
           cache-bin: "false"
 
@@ -146,11 +146,18 @@ jobs:
           tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
           tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
           tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
+          tar -tf "$core_crate" | grep -F '/examples/events.rs'
+          tar -tf "$core_crate" | grep -F '/examples/body_controls.rs'
+          tar -tf "$core_crate" | grep -F '/examples/continuous_collision.rs'
+          tar -tf "$core_crate" | grep -F '/examples/character_mover.rs'
           tar -tf "$core_crate" | grep -F '/examples/mesh_height_field_query.rs'
           tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
           tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
           tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+          tar -tf "$bevy_crate" | grep -F '/examples/advanced_colliders_3d.rs'
+          tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
+          tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/scenes.rs'
 
   publish:
     name: publish
@@ -204,7 +211,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.95.0
 
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.9.1
         with:
           cache-bin: "false"
 

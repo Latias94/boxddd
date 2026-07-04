@@ -151,7 +151,7 @@ Start here:
 | Joints | `cargo run -p boxddd --example joints` | Joint creation and runtime reads |
 | Recording | `cargo run -p boxddd --example recording_replay` | Recording and replay validation |
 | Native debug viewer | `cargo run -p boxddd --example egui_debug_draw --features egui-example` | Consuming debug draw data in an app-owned renderer |
-| Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable visible 3D scenes |
+| Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable stacks, advanced colliders, body controls, continuous collision, character mover, materials, joints, contacts, picking, and debug draw scenes |
 
 The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.md) and [`bevy_boxddd/README.md`](bevy_boxddd/README.md).
 The mapping from official Box3D samples to Rust examples and deliberate deferrals lives in [`docs/upstream-parity/box3d-sample-matrix.md`](docs/upstream-parity/box3d-sample-matrix.md).

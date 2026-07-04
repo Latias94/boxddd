@@ -47,6 +47,7 @@ Child collider entities are plugin-owned shapes attached to the nearest parent e
 ## Components
 
 - `RigidBody`: `Static`, `Kinematic`, or `Dynamic`.
+- `BodySettings`: gravity scale, damping, sleeping, bullet CCD, and motion locks applied to the native body.
 - `Collider`: basic `cuboid`, `cube`, `sphere`, and `capsule_y` descriptors plus advanced mesh, height-field, compound, created-hull, and transformed-hull descriptors.
 - `PhysicsMaterial`: density, friction, restitution, sensor/contact flags, and Box3D filter data.
 - `JointTarget` + `Joint`: declarative joint authoring between two Bevy body entities.
@@ -104,11 +105,15 @@ official Box3D sample parity map in
 | `falling_stack_3d` | `cargo run -p bevy_boxddd --example falling_stack_3d` | Basic windowed stack with plugin-driven transforms. |
 | `contact_messages_3d` | `cargo run -p bevy_boxddd --example contact_messages_3d` | Reads contact messages and updates Bevy materials. |
 | `debug_gizmos_3d` | `cargo run -p bevy_boxddd --example debug_gizmos_3d` | App-authored collider gizmos without Box3D debug draw collection. |
-| `advanced_colliders_3d` | `cargo run -p bevy_boxddd --example advanced_colliders_3d` | Static mesh, height-field, compound, and hull-backed collider descriptors. |
-| `joint_gallery_3d` | `cargo run -p bevy_boxddd --example joint_gallery_3d` | Visible connected bodies using declarative joints. |
+| `advanced_colliders_3d` | `cargo run -p bevy_boxddd --example advanced_colliders_3d` | Static mesh, height-field, compound, hull-backed colliders, and dynamic bodies falling onto them. |
+| `joint_gallery_3d` | `cargo run -p bevy_boxddd --example joint_gallery_3d` | Visible connected bodies using every public declarative joint variant. |
 | `debug_draw_overlay_3d` | `cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d` | Box3D debug draw commands rendered through Bevy `Gizmos`. |
 | `physics_picking_3d` | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera/cursor ray mapped through Box3D queries, not mesh picking. |
-| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable teaching scenes for stacks, advanced colliders, joints, contacts, picking, and debug draw. |
+| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable teaching scenes for stacks, advanced colliders, body controls, continuous collision, character mover probes, materials, joints, contacts, picking, and debug draw. |
+
+The testbed scene keys are `1` falling stack, `2` advanced colliders, `3`
+body controls, `4` continuous collision, `5` character mover, `6` materials,
+`7` joints, `8` contacts, `9` ray picking, and `0` debug draw.
 
 ## Platform And Concurrency Boundaries
 
