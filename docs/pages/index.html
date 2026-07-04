@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>boxddd - Box3D Rust Bindings</title>
-  <meta name="description" content="boxddd is a Rust binding workspace for Box3D with safe core APIs, Bevy integration, and native 3D teaching examples.">
+  <title>boxddd Examples - Box3D Rust Bindings</title>
+  <meta name="description" content="Example gallery for boxddd, the Rust binding workspace for Box3D with safe core APIs, Bevy integration, and live WASM probes.">
   <style>
     :root {
       color-scheme: dark;
@@ -48,12 +48,18 @@
     }
 
     header {
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
-      gap: 34px;
-      align-items: center;
-      min-height: 84vh;
-      padding: 56px 0 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 32px 0 28px;
+    }
+
+    .header-main {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: flex-end;
+      justify-content: space-between;
     }
 
     .eyebrow {
@@ -66,8 +72,8 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(48px, 8vw, 88px);
-      line-height: 0.96;
+      font-size: clamp(38px, 6vw, 60px);
+      line-height: 1;
       letter-spacing: 0;
     }
 
@@ -84,17 +90,17 @@
     }
 
     .lead {
-      max-width: 660px;
-      margin: 22px 0 0;
+      max-width: 820px;
+      margin: 12px 0 0;
       color: var(--muted);
-      font-size: 19px;
+      font-size: 17px;
     }
 
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-top: 28px;
+      margin-top: 0;
     }
 
     .button {
@@ -115,31 +121,9 @@
       background: #1d3a5f;
     }
 
-    .preview {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #101721;
-      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.34);
-    }
-
     section {
-      padding: 44px 0;
+      padding: 36px 0;
       border-top: 1px solid var(--line);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 14px;
-    }
-
-    .card {
-      min-height: 148px;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
     }
 
     .tag {
@@ -382,11 +366,6 @@
     }
 
     @media (max-width: 860px) {
-      header {
-        grid-template-columns: 1fr;
-        min-height: 0;
-      }
-
       .wasm-panel {
         grid-template-columns: 1fr;
       }
@@ -396,63 +375,22 @@
 <body>
   <main>
     <header>
-      <div>
-        <p class="eyebrow">Rust bindings for Box3D</p>
-        <h1>boxddd</h1>
-        <p class="lead">Safe Rust APIs for Box3D 0.1.0, plus a native Bevy 0.19 teaching testbed for 3D bodies, colliders, joints, queries, events, debug draw, and interaction.</p>
+      <div class="header-main">
+        <div>
+          <p class="eyebrow">Box3D Rust example hub</p>
+          <h1>boxddd Examples</h1>
+          <p class="lead">Live WASM probes, native Bevy 3D scenes, and core Rust examples for learning how to integrate Box3D through boxddd.</p>
+        </div>
         <div class="actions">
-          <a class="button primary" href="https://github.com/Latias94/boxddd">Repository</a>
+          <a class="button primary" href="#live-wasm">Live WASM</a>
+          <a class="button" href="#examples">All Examples</a>
+          <a class="button" href="https://github.com/Latias94/boxddd">Repository</a>
           <a class="button" href="https://crates.io/crates/boxddd">Crates.io</a>
           <a class="button" href="https://docs.rs/boxddd">Docs.rs</a>
-          <a class="button" href="https://github.com/Latias94/boxdd">boxdd 2D sibling</a>
         </div>
       </div>
-      <img class="preview" src="assets/testbed-preview.svg" alt="Preview of the boxddd Bevy testbed with stacked bodies, a pick ray, and a joint chain.">
-    </header>
-
-    <section>
-      <h2>Examples On The Web</h2>
-      <p class="muted">Every maintained example is visible in the gallery below. Native Bevy examples are represented with web previews and exact run commands; core WASM entries include live browser probes while Bevy Web rendering is being promoted incrementally.</p>
       <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
-    </section>
-
-    <section>
-      <h2>Crates</h2>
-      <div class="grid">
-        <article class="card">
-          <span class="tag">ffi</span>
-          <h3>boxddd-sys</h3>
-          <p class="muted">Vendored Box3D C API, pregenerated bindings, and reproducible native builds.</p>
-        </article>
-        <article class="card">
-          <span class="tag">core</span>
-          <h3>boxddd</h3>
-          <p class="muted">Safe world, body, shape, joint, query, event, debug draw, recording, and math interop APIs.</p>
-        </article>
-        <article class="card">
-          <span class="tag">bevy</span>
-          <h3>bevy_boxddd</h3>
-          <p class="muted">Bevy ECS authoring, fixed-step simulation, debug gizmos, physics picking, and teaching examples.</p>
-        </article>
-      </div>
-    </section>
-
-    <section>
-      <h2>Sample Gallery</h2>
-      <p class="muted">This catalog covers core examples, Bevy examples, Bevy testbed scenes, and WASM smoke entries. Testbed scene entries are validated against the Rust scene registry in CI.</p>
-      <div class="toolbar">
-        <select id="source-filter" class="field" aria-label="Filter by source">
-          <option value="all">All examples</option>
-          <option value="core-example">Core examples</option>
-          <option value="bevy-example">Bevy examples</option>
-          <option value="testbed-scene">Testbed scenes</option>
-          <option value="wasm-example">WASM entries</option>
-        </select>
-        <input id="sample-search" class="field search" type="search" placeholder="Search examples" aria-label="Search examples">
-        <span id="sample-count" class="muted"></span>
-      </div>
-      <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
-    </section>
+    </header>
 
     <section id="live-wasm">
       <h2>Live WASM Examples</h2>
@@ -472,6 +410,23 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <section id="examples">
+      <h2>All Examples</h2>
+      <p class="muted">Filter core examples, Bevy examples, native testbed scenes, and WASM entries. Testbed scene entries are validated against the Rust scene registry in CI.</p>
+      <div class="toolbar">
+        <select id="source-filter" class="field" aria-label="Filter by source">
+          <option value="all">All examples</option>
+          <option value="core-example">Core examples</option>
+          <option value="bevy-example">Bevy examples</option>
+          <option value="testbed-scene">Testbed scenes</option>
+          <option value="wasm-example">WASM entries</option>
+        </select>
+        <input id="sample-search" class="field search" type="search" placeholder="Search examples" aria-label="Search examples">
+        <span id="sample-count" class="muted"></span>
+      </div>
+      <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
     </section>
 
     <section>
