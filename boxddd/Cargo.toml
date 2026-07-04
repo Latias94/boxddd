@@ -57,6 +57,22 @@ name = "compound_query"
 path = "examples/compound_query.rs"
 
 [[example]]
+name = "events"
+path = "examples/events.rs"
+
+[[example]]
+name = "body_controls"
+path = "examples/body_controls.rs"
+
+[[example]]
+name = "continuous_collision"
+path = "examples/continuous_collision.rs"
+
+[[example]]
+name = "character_mover"
+path = "examples/character_mover.rs"
+
+[[example]]
 name = "mesh_height_field_query"
 path = "examples/mesh_height_field_query.rs"
 

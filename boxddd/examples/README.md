@@ -10,6 +10,8 @@ need an engine/render-loop shape.
 
 - `hello_world.rs`: minimal world, static ground hull, dynamic box hull, stepping, and body position reads.
 - `error_handling.rs`: `anyhow::Context` at app boundaries plus recoverable `try_*` errors for invalid user/tooling input.
+- `events.rs`: sensor begin/end events, contact and hit events, and closure-scoped event views.
+- `body_controls.rs`: dynamic, kinematic, disabled/enabled, force, impulse, motion-lock, and transform-sync body APIs.
 - `shape_queries.rs`: world, body, and shape-scoped query APIs for editor tools, picking, and gameplay probes.
 - `compound_query.rs`: compound child AABB queries, reusable buffers, visitor early-stop, and owned byte transfer.
 - `mesh_height_field_query.rs`: mesh and height-field triangle queries for editor tooling and broad-phase probes.
@@ -21,7 +23,14 @@ need an engine/render-loop shape.
 - `compound_query.rs`: queries a compound resource without creating a world and demonstrates `CompoundBytes` ownership transfer.
 - `mesh_height_field_query.rs`: queries standalone mesh and height-field triangles with owned results and visitor callbacks.
 - `advanced_collision.rs`: uses standalone distance, shape-cast, local manifold, and plane solver helpers without creating a `World`.
+- `continuous_collision.rs`: uses shape-cast, time-of-impact, and bullet-body settings for fast-moving-shape diagnostics.
+- `character_mover.rs`: casts a capsule mover, gathers contact planes, solves correction, and clips velocity.
 - `dynamic_tree.rs`: owns a standalone broad-phase tree, creates proxies with category bits, runs overlap/closest/ray visitors, and moves proxies.
+
+## Events And Body Control
+
+- `events.rs`: reads sensor, contact, hit, and body-move events through owned snapshots and safe closure-scoped views.
+- `body_controls.rs`: demonstrates the body lifecycle knobs most engines expose to gameplay and editor tools.
 
 ## Joints
 
@@ -96,7 +105,11 @@ cargo run -p boxddd --example shape_queries
 cargo run -p boxddd --example compound_query
 cargo run -p boxddd --example mesh_height_field_query
 cargo run -p boxddd --example advanced_collision
+cargo run -p boxddd --example continuous_collision
+cargo run -p boxddd --example character_mover
 cargo run -p boxddd --example dynamic_tree
+cargo run -p boxddd --example events
+cargo run -p boxddd --example body_controls
 cargo run -p boxddd --example wasm_smoke
 cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay

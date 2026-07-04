@@ -141,8 +141,12 @@ Start here:
 |---|---|---|
 | Core hello world | `cargo run -p boxddd --example hello_world` | World creation, ground, dynamic body, stepping |
 | Error handling | `cargo run -p boxddd --example error_handling` | Recoverable `try_*` APIs |
+| Events | `cargo run -p boxddd --example events` | Sensor, contact, hit, and body-move event snapshots |
+| Body controls | `cargo run -p boxddd --example body_controls` | Body type changes, enable/disable, forces, impulses, and locks |
 | Shape queries | `cargo run -p boxddd --example shape_queries` | World, body, and shape-scoped query APIs |
 | Advanced collision | `cargo run -p boxddd --example advanced_collision` | Standalone distance, shape-cast, manifold, and plane helpers |
+| Continuous collision | `cargo run -p boxddd --example continuous_collision` | Shape-cast, time-of-impact, and bullet body diagnostics |
+| Character mover | `cargo run -p boxddd --example character_mover` | Capsule mover casts, contact planes, correction, and velocity clipping |
 | Dynamic tree | `cargo run -p boxddd --example dynamic_tree` | Standalone broad-phase tree lifecycle, filters, and visitor callbacks |
 | Joints | `cargo run -p boxddd --example joints` | Joint creation and runtime reads |
 | Recording | `cargo run -p boxddd --example recording_replay` | Recording and replay validation |
