@@ -39,6 +39,9 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
           fetch-depth: 0
 
+      - name: Lint GitHub Actions workflows
+        uses: docker://rhysd/actionlint:1.7.12
+
       - name: Read version from tag
         id: version
         shell: bash
@@ -125,6 +128,9 @@ jobs:
       - name: Run workspace tests
         run: cargo nextest run --workspace
 
+      - name: Validate Pages content
+        run: cargo run -p xtask -- validate-pages
+
       - name: Build package archives
         shell: bash
         run: |
@@ -151,7 +157,10 @@ jobs:
             fi
           done
 
+          tar -tf "$sys_crate" | grep -F '/README.md'
           tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
+          tar -tf "$core_crate" | grep -F '/README.md'
+          tar -tf "$core_crate" | grep -F '/examples/README.md'
           tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
           tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
           tar -tf "$core_crate" | grep -F '/examples/events.rs'
@@ -162,6 +171,8 @@ jobs:
           tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
           tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
           tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+          tar -tf "$bevy_crate" | grep -F '/README.md'
+          tar -tf "$bevy_crate" | grep -F '/examples/README.md'
           tar -tf "$bevy_crate" | grep -F '/examples/advanced_colliders_3d.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'

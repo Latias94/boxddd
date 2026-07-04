@@ -27,6 +27,7 @@ The GitHub Actions workflow is shaped like a native binding crate gate rather
 than a single workspace smoke test:
 
 - format check on stable Rust
+- actionlint workflow validation using `rhysd/actionlint` v1.7.12
 - native `cargo nextest run --workspace` on Windows, Linux, and macOS
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
@@ -149,6 +150,9 @@ for crate in "$sys_crate" "$core_crate" "$bevy_crate"; do
 done
 
 tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
+tar -tf "$sys_crate" | grep -F '/README.md'
+tar -tf "$core_crate" | grep -F '/README.md'
+tar -tf "$core_crate" | grep -F '/examples/README.md'
 tar -tf "$core_crate" | grep -F '/tests/fixtures/api_coverage_symbols.txt'
 tar -tf "$core_crate" | grep -F '/examples/compound_query.rs'
 tar -tf "$core_crate" | grep -F '/examples/events.rs'
@@ -159,6 +163,8 @@ tar -tf "$core_crate" | grep -F '/examples/mesh_height_field_query.rs'
 tar -tf "$core_crate" | grep -F '/examples/glam_interop.rs'
 tar -tf "$core_crate" | grep -F '/examples/nalgebra_interop.rs'
 tar -tf "$core_crate" | grep -F '/examples/dynamic_tree.rs'
+tar -tf "$bevy_crate" | grep -F '/README.md'
+tar -tf "$bevy_crate" | grep -F '/examples/README.md'
 tar -tf "$bevy_crate" | grep -F '/examples/advanced_colliders_3d.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
