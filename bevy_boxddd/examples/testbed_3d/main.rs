@@ -1,4 +1,5 @@
 mod control;
+mod picking;
 mod scenes;
 #[path = "../support/mod.rs"]
 mod support;
@@ -27,6 +28,7 @@ fn main() {
             enabled: false,
             options: boxddd::DebugDrawOptions::default(),
         })
+        .insert_resource(picking::PhysicsDragState::default())
         .add_plugins(support::teaching_default_plugins("boxddd Bevy Testbed"))
         .add_plugins(EguiPlugin::default())
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()))
@@ -40,7 +42,8 @@ fn main() {
                 apply_testbed_settings,
                 draw_debug_gizmos,
                 draw_mover_probe,
-                draw_physics_pick,
+                picking::update_physics_drag,
+                picking::draw_physics_pick,
             ),
         )
         .add_systems(PostUpdate, finish_single_step)
@@ -222,33 +225,6 @@ fn apply_testbed_settings(
         let _ = world.try_enable_warm_starting(state.warm_starting_enabled);
         let _ = world.try_enable_continuous(state.continuous_enabled);
     }
-}
-
-fn draw_physics_pick(
-    camera: Single<(&Camera, &GlobalTransform)>,
-    window: Single<&Window>,
-    context: NonSend<BoxdddPhysicsContext>,
-    mut gizmos: Gizmos,
-) {
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-    let (camera, camera_transform) = *camera;
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
-    let translation = ray.direction * 100.0;
-    let Ok(Some(hit)) = cast_ray_closest(
-        &context,
-        ray.origin,
-        translation,
-        boxddd::QueryFilter::default(),
-    ) else {
-        return;
-    };
-
-    gizmos.sphere(hit.point, 0.08, Color::srgb(1.0, 0.95, 0.2));
-    gizmos.ray(hit.point, hit.normal * 0.45, Color::srgb(0.2, 1.0, 0.35));
 }
 
 fn draw_mover_probe(

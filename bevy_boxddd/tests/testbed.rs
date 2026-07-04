@@ -1,6 +1,9 @@
 #[path = "../examples/testbed_3d/control.rs"]
 #[allow(dead_code)]
 mod control;
+#[path = "../examples/testbed_3d/picking.rs"]
+#[allow(dead_code)]
+mod picking;
 #[path = "../examples/testbed_3d/scenes.rs"]
 mod scenes;
 
@@ -194,6 +197,31 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     assert_eq!(default_state.hertz, DEFAULT_HERTZ);
     assert_eq!(default_state.sub_step_count, DEFAULT_SUB_STEPS);
     assert!((default_state.fixed_timestep_seconds() - 1.0 / DEFAULT_HERTZ).abs() < f64::EPSILON);
+}
+
+#[test]
+fn physics_drag_helpers_project_and_clamp_throw_velocity() {
+    let projected = picking::point_on_ray(Vec3::new(1.0, 2.0, 3.0), Vec3::Z, 4.0);
+    assert_eq!(projected, Vec3::new(1.0, 2.0, 7.0));
+
+    let clamped = picking::clamp_throw_velocity(Vec3::new(100.0, 0.0, 0.0));
+    assert!(clamped.length() <= 35.0 + f32::EPSILON);
+}
+
+#[test]
+fn ray_picking_scene_uses_dynamic_drag_targets() {
+    let mut app = physics_app(TestbedScene::RayPicking);
+    spawn_scene_once(&mut app, TestbedScene::RayPicking);
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&RigidBody, With<TestbedEntity>>();
+    let dynamic_count = query
+        .iter(app.world())
+        .filter(|body| **body == RigidBody::Dynamic)
+        .count();
+
+    assert!(dynamic_count >= 2);
 }
 
 #[test]

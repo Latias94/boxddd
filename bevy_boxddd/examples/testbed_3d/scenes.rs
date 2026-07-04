@@ -644,17 +644,27 @@ fn spawn_ray_picking(
     commands.spawn((
         Mesh3d(cube_mesh),
         MeshMaterial3d(blue),
-        Transform::from_xyz(-1.0, 1.0, 0.0),
-        RigidBody::Static,
+        Transform::from_xyz(-1.0, 1.6, 0.0),
+        RigidBody::Dynamic,
         Collider::cube(0.4),
+        BodySettings {
+            linear_damping: 0.15,
+            angular_damping: 0.25,
+            ..default()
+        },
         TestbedEntity,
     ));
     commands.spawn((
         Mesh3d(sphere_mesh),
         MeshMaterial3d(orange),
-        Transform::from_xyz(1.0, 1.1, 0.0),
-        RigidBody::Static,
+        Transform::from_xyz(1.0, 1.8, 0.0),
+        RigidBody::Dynamic,
         Collider::sphere(0.45),
+        BodySettings {
+            linear_damping: 0.12,
+            angular_damping: 0.2,
+            ..default()
+        },
         TestbedEntity,
     ));
 }
