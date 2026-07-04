@@ -36,6 +36,7 @@ subtree is updated, refresh this matrix in the same change.
 | Manifold | Sphere vs Sphere, Capsule vs Sphere, Hull vs Sphere, Triangle vs Sphere, Capsule vs Capsule, Capsule vs Hull, Triangle vs Capsule, Hull vs Hull, Triangle vs Hull | `boxddd/tests/manifold_collision.rs`, `boxddd/examples/advanced_collision.rs` | Covered | This is better as headless collision output than a separate Bevy scene. |
 | Mesh | Grid, Big Box, Box, Reflection, Height Field, Viewer, Creation Benchmark, Voxel, Hollow Box | `boxddd/examples/mesh_height_field_query.rs`, `bevy_boxddd/examples/advanced_colliders_3d.rs`, `bevy_boxddd/examples/testbed_3d` | Covered | Viewer and creation benchmark samples remain upstream reference material. |
 | Ragdoll | Box, Mesh, Pile, Incline, Pose | Joint and shape primitives in `boxddd/examples/joints.rs` and Bevy joint scenes | Deferred | Full ragdoll authoring is a higher-level asset/rigging topic, not core binding parity for 0.1.0. |
+| Replay | Viewer | `boxddd/examples/recording_replay.rs`, `boxddd/tests/recording.rs` | Covered | The Rust teaching path focuses on deterministic headless recording and replay instead of cloning the upstream ImGui timeline viewer. |
 | Robustness | HighMassRatio1, Tiny Pyramid, Overlap Recovery, Overflow Color Pile | Focused tests when a robustness case becomes a wrapper regression | Deferred | Keep these as upstream stress references until there is a Rust API bug or benchmark target. |
 | Shapes | Inclined Plane, Rolling Resistance, High Resistance, Isotropic Friction, Slide Twist, Restitution, Static Invoke, Conveyor Belt, Conveyor Mesh, Wind, Wind Drop, Wind Flap | `boxddd/examples/hello_world.rs`, `boxddd/examples/advanced_collision.rs`, `bevy_boxddd/examples/advanced_colliders_3d.rs`, planned Bevy shape/material scene | Partial | A visible Bevy scene should make materials, restitution, wind, and conveyor-style behavior easier to inspect. |
 | Stacking | Card House Thick, Card House, Sphere Stack, Capsule Stack, Single Box, Cylinder, Cylinder Stack, Box Stack, Jenga Stack, Dominoes, Wedge, Arch, Double Domino, Pyramid2D | `bevy_boxddd/examples/falling_stack_3d.rs`, `bevy_boxddd/examples/testbed_3d`, core `hello_world` smoke | Covered | Use Bevy for visual teaching; keep the core crate renderer-free. |
@@ -49,8 +50,7 @@ subtree is updated, refresh this matrix in the same change.
 2. Bevy visible scenes for static-vs-dynamic advanced colliders, shape/material
    behavior, events, joints, picking, and debug draw.
 3. Focused tests for concepts that are better proven headlessly than rendered:
-   manifolds, determinism, dynamic tree, recording, and callback/lifetime
+   manifolds, determinism, dynamic tree, recording/replay, and callback/lifetime
    behavior.
 4. Deferred benchmark, issue, robustness, and ragdoll work only after a concrete
    release goal requires it.
-
