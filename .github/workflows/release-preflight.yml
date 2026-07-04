@@ -51,6 +51,14 @@ jobs:
             exit 1
           fi
 
+      - name: Check changelog release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/changelog.py check-soft-wrap --version "${{ inputs.version }}"
+          python3 tools/changelog.py extract --version "${{ inputs.version }}" --output release-notes.md
+          test -s release-notes.md
+
       - name: Check formatting
         run: cargo fmt --all --check
 

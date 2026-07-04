@@ -130,20 +130,34 @@ tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/scenes.rs'
 
 ## Release Workflows
 
-Release automation is split into a validation workflow and a publishing workflow.
+Release automation is split into validation, GitHub Release, and crates.io
+publishing workflows.
 
 - `Release Preflight`: manual `workflow_dispatch` check for a version and source
-  ref. It verifies the workspace version, formatting, package archives, and the
-  `boxddd-sys` crates.io dry-run.
+  ref. It verifies the workspace version, changelog release notes, formatting,
+  package archives, and the `boxddd-sys` crates.io dry-run.
+- `GitHub Release`: runs on pushed `v*` tags or manual dispatch. It verifies the
+  workspace version, extracts the matching `CHANGELOG.md` section with
+  `tools/changelog.py`, rejects manually wrapped changelog prose, and creates or
+  updates the GitHub Release notes.
 - `Release Crates (crates.io)`: runs on pushed `v*` tags or manual dispatch.
-  It verifies the tag matches the workspace version, then publishes
-  `boxddd-sys`, `boxddd`, and `bevy_boxddd` in dependency order.
+  It verifies the tag matches the workspace version, verifies changelog release
+  notes, then publishes `boxddd-sys`, `boxddd`, and `bevy_boxddd` in dependency
+  order.
 
 The publish workflow expects a repository or environment secret named
 `CARGO_REGISTRY_TOKEN` and uses the protected `crates.io` environment. Downstream
 crate dry-runs happen after their dependency crate is visible on crates.io,
 because `cargo publish --dry-run` resolves registry dependencies rather than
 workspace path dependencies.
+
+Release automation does not create git tags. Create and push the tag after the
+workspace version and changelog section are ready:
+
+```bash
+git tag -a v0.1.0 -m "v0.1.0"
+git push origin v0.1.0
+```
 
 ## Cross-Target Compile-Only Checks
 
