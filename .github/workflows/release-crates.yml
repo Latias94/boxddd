@@ -268,7 +268,7 @@ jobs:
           workspace_crate_version() {
             local crate="$1"
 
-            cargo pkgid -p "$crate" | sed 's/.*@//'
+            cargo pkgid -p "$crate" | sed -E 's/.*[@#]//'
           }
 
           dry_run_crate_version() {
