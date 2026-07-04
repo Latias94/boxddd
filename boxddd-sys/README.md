@@ -18,6 +18,8 @@ High-level, safe Rust wrappers live in the companion `boxddd` crate.
 - WASM runtime smoke: `wasm32-wasip1` builds vendored C sources when `WASI_SYSROOT` or `WASI_SDK_PATH` points at WASI SDK.
 - WASM provider: `BOXDDD_SYS_WASM_MODE=provider` generates import bindings for module `box3d-sys-v0`; `xtask provider-smoke` builds an Emscripten provider and runs the shared-memory smoke.
 
+For normal users, `cargo build` compiles the vendored C sources for the current target and links the resulting static library into the Rust crate. This requires the platform C compiler that Rust's `cc` crate can find, but it does not require CMake, LLVM, libclang, or running bindgen.
+
 ## Features
 
 - `build-from-source`: compile vendored Box3D C sources. Enabled by default.

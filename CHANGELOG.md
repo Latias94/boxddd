@@ -15,12 +15,14 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 ### Changed
 
 - `DebugDraw::draw_shape` now returns `()` instead of `bool` because Box3D `0.1.0` does not consume the native `DrawShapeFcn` return value during world debug drawing.
+- Updated optional math interop baselines to `glam 0.33` and `nalgebra 0.35`.
 
 ### Documentation
 
 - Documented the current Box3D public API coverage boundary: 538 safe wrappers, 36 raw interop entries, 4 intentionally omitted entries, and 0 deferred entries.
 - Expanded FFI lifetime audit notes and tests for event views, debug draw callbacks, and material-mix callback containment.
 - Polished README quick-start guidance and removed manual prose line wrapping from README/CHANGELOG.
+- Clarified that normal builds compile vendored Box3D C sources locally while using pregenerated bindings, so users need a C compiler but not LLVM, libclang, or bindgen.
 - Added changelog-driven GitHub Release automation and release preflight checks.
 
 ### boxddd

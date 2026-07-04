@@ -173,6 +173,8 @@ The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.m
 
 Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and core-only: it is useful for compatibility work today, but not yet a recommended browser app path. Bevy Web, browser rendering, web workers, pthreads, and cross-module callbacks are deferred.
 
+Normal builds compile the vendored Box3D C sources locally through the Rust `cc` crate and link them into `boxddd-sys`. Users need a working platform C compiler, but they do not need CMake, LLVM, libclang, or bindgen unless they explicitly refresh bindings with `boxddd-sys/bindgen` and `BOXDDD_SYS_FORCE_BINDGEN=1`.
+
 Read more:
 
 - [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the detailed WASM support matrix
