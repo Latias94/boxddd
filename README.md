@@ -21,8 +21,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 
 ## Status
 
-`boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today.
-The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](docs/api-coverage.md).
+`boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today. The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](docs/api-coverage.md).
 
 | Surface | Status |
 |---|---|
@@ -35,9 +34,11 @@ The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95`
 
 ## Version Compatibility
 
-| `boxddd` release | Box3D API target | Vendored Box3D source | Notes |
-|---|---|---|---|
-| `0.1.0` | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) plus a local single-thread WASM timer portability patch | First `boxddd` release; native desktop is the supported runtime path |
+| `boxddd` release | Box3D API target | Vendored Box3D source |
+|---|---|---|
+| `0.1.0` | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) |
+
+The `0.1.0` vendored source includes a local single-thread WASM timer portability patch. Native desktop is the supported runtime path for the first release.
 
 ## Crates
 
@@ -94,6 +95,11 @@ cargo run -p boxddd --example hello_world
 ## Bevy
 
 Use `bevy_boxddd` when you want Bevy entities and transforms to author the physics scene:
+
+```bash
+cargo add bevy_boxddd
+cargo add bevy@0.19
+```
 
 ```rust
 use bevy::prelude::*;
@@ -153,8 +159,7 @@ Start here:
 | Native debug viewer | `cargo run -p boxddd --example egui_debug_draw --features egui-example` | Consuming debug draw data in an app-owned renderer |
 | Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable stacks, advanced colliders, body controls, continuous collision, character mover, materials, joints, contacts, picking, and debug draw scenes |
 
-The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.md) and [`bevy_boxddd/README.md`](bevy_boxddd/README.md).
-The mapping from official Box3D samples to Rust examples and deliberate deferrals lives in [`docs/upstream-parity/box3d-sample-matrix.md`](docs/upstream-parity/box3d-sample-matrix.md).
+The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.md) and [`bevy_boxddd/README.md`](bevy_boxddd/README.md). The mapping from official Box3D samples to Rust examples and deliberate deferrals lives in [`docs/upstream-parity/box3d-sample-matrix.md`](docs/upstream-parity/box3d-sample-matrix.md).
 
 ## Design Goals
 
@@ -197,8 +202,7 @@ Math interop is feature-gated and covered by runnable examples: `mint_interop`, 
 
 For async apps, use `spawn_blocking`, channels, and snapshots. See `physics_thread.rs` and `tokio_async_bridge.rs`.
 
-The terse APIs panic on programming misuse such as invalid stale ids. Use `try_*` APIs at engine, editor, scripting, and tooling boundaries where invalid input should become `boxddd::Error`.
-Unsafe native interop such as raw `void*` user data and process-global scalar tuning lives under `boxddd::raw`, outside the prelude.
+The terse APIs panic on programming misuse such as invalid stale ids. Use `try_*` APIs at engine, editor, scripting, and tooling boundaries where invalid input should become `boxddd::Error`. Unsafe native interop such as raw `void*` user data and process-global scalar tuning lives under `boxddd::raw`, outside the prelude.
 
 ## Development
 
