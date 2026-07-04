@@ -1,88 +1,72 @@
-<div align="center">
+# boxddd-sys
 
-# boxddd-sys - Low-level FFI for Box3D
+Low-level Rust FFI for the vendored [Box3D](https://github.com/erincatto/box3d) C API.
 
-</div>
+Most users should depend on [`boxddd`](https://crates.io/crates/boxddd) instead. Use `boxddd-sys` directly when you need raw C symbols, custom native linking, or binding-generation maintenance.
 
-`boxddd-sys` builds the vendored Box3D C sources from `third-party/box3d` and exposes the raw C API in `boxddd_sys::ffi`.
-High-level, safe Rust wrappers live in the companion `boxddd` crate.
+## Build Contract
 
-## Build
+Default builds compile the vendored Box3D C sources with the Rust `cc` crate and link the resulting static library into `boxddd-sys`.
 
-- Default: builds vendored Box3D C sources with `cc`.
-- External link: disable default features to skip vendored C compilation and link an external `box3d` library instead.
-- Bindings: uses checked-in pregenerated bindings so normal builds do not require LLVM or libclang.
-- Refresh: enable the `bindgen` feature and set `BOXDDD_SYS_FORCE_BINDGEN=1`.
-- Docs.rs/offline docs: uses pregenerated bindings and skips native C compilation.
-- WASM compile-only: `wasm32-unknown-unknown` skips C compilation by default.
-- WASM runtime smoke: `wasm32-wasip1` builds vendored C sources when `WASI_SYSROOT` or `WASI_SDK_PATH` points at WASI SDK.
-- WASM provider: `BOXDDD_SYS_WASM_MODE=provider` generates import bindings for module `box3d-sys-v0`; `xtask provider-smoke` builds an Emscripten provider and runs the shared-memory smoke.
-
-For normal users, `cargo build` compiles the vendored C sources for the current target and links the resulting static library into the Rust crate. This requires the platform C compiler that Rust's `cc` crate can find, but it does not require CMake, LLVM, libclang, or running bindgen.
+Normal users need a platform C compiler, such as MSVC Build Tools on Windows, Clang on macOS, or GCC/Clang on Linux. Normal users do not need CMake, LLVM, libclang, or bindgen because checked-in pregenerated bindings are used by default.
 
 ## Features
 
 - `build-from-source`: compile vendored Box3D C sources. Enabled by default.
-- `bindgen`: enable bindgen-based binding refresh.
+- `bindgen`: allow regenerating bindings when `BOXDDD_SYS_FORCE_BINDGEN=1` is set.
 - `double-precision`: build Box3D with `BOX3D_DOUBLE_PRECISION` and use matching pregenerated bindings.
 - `disable-simd`: define `BOX3D_DISABLE_SIMD`.
 - `validate`: define `BOX3D_VALIDATE`.
 
-## Environment
+## Native Linking
 
-- `BOXDDD_SYS_FORCE_BINDGEN=1`: regenerate bindings into Cargo's `OUT_DIR`; requires `--features bindgen`.
-- `BOXDDD_SYS_SKIP_CC=1`: skip native C compilation for check-only workflows.
-- `BOXDDD_SYS_WASM_MODE`: override wasm mode. Accepted values are `compile-only`, `source`, and `provider`.
-- `BOXDDD_SYS_SKIP_CC=1` is rejected with `BOXDDD_SYS_WASM_MODE=source` because source mode is the runtime-capable WASM path.
-- `BOXDDD_SYS_LINK_LIB`: external library name used when `build-from-source` is disabled. Defaults to `box3d`.
-- `BOXDDD_SYS_LINK_SEARCH`: optional native library search directory used when `build-from-source` is disabled.
-- `WASI_SYSROOT`: WASI libc sysroot used by `wasm32-wasip1` source builds.
-- `WASI_SDK_PATH`: WASI SDK root. If `WASI_SYSROOT` is unset, `build.rs` uses `$WASI_SDK_PATH/share/wasi-sysroot`.
-- `DOCS_RS=1` or `--cfg docsrs`: skip native C compilation for documentation.
+Disable default features to skip vendored C compilation and link an external `box3d` library:
 
-## WASM Commands
-
-Compile-only browser target:
-
-```bash
-rustup target add wasm32-unknown-unknown
-cargo check -p boxddd-sys --target wasm32-unknown-unknown
+```toml
+boxddd-sys = { version = "0.1", default-features = false }
 ```
 
-Provider import-mode check:
+Optional environment variables:
+
+- `BOXDDD_SYS_LINK_LIB`: external library name. Defaults to `box3d`.
+- `BOXDDD_SYS_LINK_SEARCH`: native library search directory.
+
+## Binding Refresh
+
+Pregenerated bindings are ABI-mode specific. The default build uses `bindings_pregenerated.rs`; `double-precision` uses `bindings_pregenerated_double.rs`.
+
+Regenerate bindings only when maintaining this crate:
 
 ```bash
-BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd-sys --target wasm32-unknown-unknown
+BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
+BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
 ```
 
-Browser-style provider smoke:
+## WASM
+
+WASM support is early and core-only.
+
+| Target | Status |
+|---|---|
+| `wasm32-unknown-unknown` | Compile-only by default. Provider mode imports Box3D symbols from module `box3d-sys-v0`. |
+| `wasm32-wasip1` | Runtime-capable source build when a WASI SDK sysroot is configured. |
+| Browser visual demos | Not supported yet. |
+
+Useful environment variables:
+
+- `BOXDDD_SYS_WASM_MODE`: `compile-only`, `source`, or `provider`.
+- `WASI_SYSROOT`: WASI libc sysroot for `wasm32-wasip1` source builds.
+- `WASI_SDK_PATH`: WASI SDK root. Used as `$WASI_SDK_PATH/share/wasi-sysroot` when `WASI_SYSROOT` is unset.
+
+Detailed WASM commands live in the workspace documentation: <https://github.com/Latias94/boxddd/blob/main/docs/platforms/wasm.md>.
+
+## Check-Only Builds
+
+`BOXDDD_SYS_SKIP_CC=1` skips native C compilation for check-only workflows. Do not use it for normal runnable native builds.
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo run -p xtask -- provider-smoke-app
-
-# Full smoke requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
-cargo run -p xtask -- provider-smoke
+BOXDDD_SYS_SKIP_CC=1 cargo check -p boxddd-sys
 ```
-
-The provider smoke verifies shared memory and imported Box3D symbols without
-cross-module callback function pointers. Callback-heavy APIs need a dedicated
-shared-table or dynamic-linking path before browser provider mode can claim
-them; the safe wrapper currently reports them as `Error::UnsupportedOnWasm`.
-
-C-backed WASI source build:
-
-```bash
-rustup target add wasm32-wasip1
-export WASI_SDK_PATH=/path/to/wasi-sdk-33.0-x86_64-linux
-export WASI_SYSROOT="$WASI_SDK_PATH/share/wasi-sysroot"
-export CC_wasm32_wasip1="$WASI_SDK_PATH/bin/clang"
-cargo build -p boxddd --example wasm_smoke --target wasm32-wasip1
-```
-
-## Notes
-
-The pregenerated bindings are ABI-mode specific. If `double-precision` is enabled, the crate uses `bindings_pregenerated_double.rs`; otherwise it uses `bindings_pregenerated.rs`.
 
 ## License
 

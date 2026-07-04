@@ -131,7 +131,7 @@ cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example t
 ## Official Box3D Sample Parity
 
 The maintained mapping from vendored Box3D official samples to Rust examples is
-[`docs/upstream-parity/box3d-sample-matrix.md`](../../docs/upstream-parity/box3d-sample-matrix.md).
+[`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md).
 Use that matrix when deciding whether a new example should be a core headless
 example, a Bevy visual scene, a focused test, or deferred upstream reference
 material.

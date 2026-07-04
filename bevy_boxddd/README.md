@@ -13,6 +13,7 @@
 | Default rendering deps | None |
 | Debug rendering | Optional `debug-gizmos` feature |
 | Picking example | Optional `physics-picking` feature |
+| Testbed UI | `bevy_egui` in the `testbed_3d` example only |
 | Threading | Keep `boxddd::World` on the Bevy main thread; move snapshots across threads |
 
 ## Quickstart
@@ -96,9 +97,7 @@ The plugin registers Bevy messages for errors, body moves, contact begin/end/hit
 
 ## Examples
 
-The visible examples complement the core headless examples and follow the
-official Box3D sample parity map in
-[`docs/upstream-parity/box3d-sample-matrix.md`](../docs/upstream-parity/box3d-sample-matrix.md).
+The visible examples complement the core headless examples and follow the official Box3D sample parity map in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md). The complete catalog lives in [`examples/README.md`](examples/README.md).
 
 | Example | Run command | Purpose |
 |---|---|---|
@@ -109,11 +108,9 @@ official Box3D sample parity map in
 | `joint_gallery_3d` | `cargo run -p bevy_boxddd --example joint_gallery_3d` | Visible connected bodies using every public declarative joint variant. |
 | `debug_draw_overlay_3d` | `cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d` | Box3D debug draw commands rendered through Bevy `Gizmos`. |
 | `physics_picking_3d` | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera/cursor ray mapped through Box3D queries, not mesh picking. |
-| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable teaching scenes for stacks, advanced colliders, body controls, continuous collision, character mover probes, materials, joints, contacts, picking, and debug draw. |
+| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for stacks, advanced colliders, body controls, continuous collision, character mover probes, materials, joints, contacts, picking, debug draw, dominoes, arch stacks, wind forces, and a ragdoll-lite chain. |
 
-The testbed scene keys are `1` falling stack, `2` advanced colliders, `3`
-body controls, `4` continuous collision, `5` character mover, `6` materials,
-`7` joints, `8` contacts, `9` ray picking, and `0` debug draw.
+The testbed is the primary teaching surface. Use the left panel to switch scenes and adjust pause, single-step, gravity, solver rate, substeps, sleeping, warm starting, continuous collision, and debug draw presets. The static demo hub at <https://latias94.github.io/boxddd/> mirrors the same scene registry.
 
 ## Platform And Concurrency Boundaries
 
