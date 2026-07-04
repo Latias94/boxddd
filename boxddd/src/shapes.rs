@@ -10,18 +10,27 @@ use std::ptr::NonNull;
 use std::rc::Rc;
 use std::slice;
 
+/// Height-field material marker that makes a cell behave as a hole.
 pub const HEIGHT_FIELD_HOLE: u8 = ffi::B3_HEIGHT_FIELD_HOLE as u8;
+/// Maximum number of material slots a compound mesh child can reference.
 pub const MAX_COMPOUND_MESH_MATERIALS: usize = ffi::B3_MAX_COMPOUND_MESH_MATERIALS as usize;
 
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Surface properties assigned to a shape or compound child.
 pub struct SurfaceMaterial {
+    /// Coulomb friction coefficient used by contacts.
     pub friction: f32,
+    /// Restitution coefficient used to make contacts bounce.
     pub restitution: f32,
+    /// Resistance applied to rolling contacts.
     pub rolling_resistance: f32,
+    /// Tangential surface speed used for conveyor-style contacts.
     pub tangent_velocity: Vec3,
+    /// User-defined material identifier carried through contact data.
     pub user_material_id: u64,
+    /// Optional debug-render color in Box3D's packed color format.
     pub custom_color: u32,
 }
 
@@ -33,6 +42,7 @@ impl Default for SurfaceMaterial {
 
 impl SurfaceMaterial {
     #[inline]
+    /// Converts a raw Box3D surface material into the safe wrapper.
     pub fn from_raw(raw: ffi::b3SurfaceMaterial) -> Self {
         Self {
             friction: raw.friction,
@@ -45,6 +55,7 @@ impl SurfaceMaterial {
     }
 
     #[inline]
+    /// Converts this material into the raw Box3D representation.
     pub fn into_raw(self) -> ffi::b3SurfaceMaterial {
         ffi::b3SurfaceMaterial {
             friction: self.friction,
@@ -56,6 +67,7 @@ impl SurfaceMaterial {
         }
     }
 
+    /// Validates that material coefficients are finite and non-negative.
     pub fn validate(self) -> Result<()> {
         if self.friction.is_finite()
             && self.friction >= 0.0
@@ -81,29 +93,35 @@ impl Default for ShapeDef {
 }
 
 #[derive(Clone, Debug)]
+/// Shared construction parameters used when attaching a shape to a body.
 pub struct ShapeDef {
     raw: ffi::b3ShapeDef,
 }
 
 impl ShapeDef {
     #[inline]
+    /// Starts a builder initialized with Box3D's default shape definition.
     pub fn builder() -> ShapeDefBuilder {
         ShapeDefBuilder::new()
     }
 
     #[inline]
+    /// Returns the raw Box3D shape definition.
     pub fn raw(&self) -> &ffi::b3ShapeDef {
         &self.raw
     }
 
+    /// Returns the collision filter configured for this shape.
     pub fn filter(&self) -> Filter {
         Filter::from_raw(self.raw.filter)
     }
 
+    /// Returns the base surface material configured for this shape.
     pub fn surface_material(&self) -> SurfaceMaterial {
         SurfaceMaterial::from_raw(self.raw.baseMaterial)
     }
 
+    /// Validates numeric fields and nested material data.
     pub fn validate(&self) -> Result<()> {
         SurfaceMaterial::from_raw(self.raw.baseMaterial).validate()?;
         if self.raw.density.is_finite()
@@ -118,12 +136,14 @@ impl ShapeDef {
 }
 
 #[derive(Clone, Debug)]
+/// Builder for `ShapeDef`.
 pub struct ShapeDefBuilder {
     def: ShapeDef,
 }
 
 impl ShapeDefBuilder {
     #[inline]
+    /// Creates a builder using Box3D's default shape definition.
     pub fn new() -> Self {
         Self {
             def: ShapeDef::default(),
@@ -131,78 +151,91 @@ impl ShapeDefBuilder {
     }
 
     #[inline]
+    /// Sets the shape density used for mass properties.
     pub fn density(mut self, density: f32) -> Self {
         self.def.raw.density = density;
         self
     }
 
     #[inline]
+    /// Sets the base material friction coefficient.
     pub fn friction(mut self, friction: f32) -> Self {
         self.def.raw.baseMaterial.friction = friction;
         self
     }
 
     #[inline]
+    /// Sets the base material restitution coefficient.
     pub fn restitution(mut self, restitution: f32) -> Self {
         self.def.raw.baseMaterial.restitution = restitution;
         self
     }
 
     #[inline]
+    /// Sets the collision filter.
     pub fn filter(mut self, filter: Filter) -> Self {
         self.def.raw.filter = filter.into_raw();
         self
     }
 
     #[inline]
+    /// Replaces the complete base surface material.
     pub fn surface_material(mut self, material: SurfaceMaterial) -> Self {
         self.def.raw.baseMaterial = material.into_raw();
         self
     }
 
     #[inline]
+    /// Sets the user material id on the base surface material.
     pub fn user_material_id(mut self, user_material_id: u64) -> Self {
         self.def.raw.baseMaterial.userMaterialId = user_material_id;
         self
     }
 
     #[inline]
+    /// Marks the shape as a sensor instead of a solid collider.
     pub fn sensor(mut self, is_sensor: bool) -> Self {
         self.def.raw.isSensor = is_sensor;
         self
     }
 
     #[inline]
+    /// Enables begin/end sensor overlap events for this shape.
     pub fn enable_sensor_events(mut self, enabled: bool) -> Self {
         self.def.raw.enableSensorEvents = enabled;
         self
     }
 
     #[inline]
+    /// Enables contact begin/end events for this shape.
     pub fn enable_contact_events(mut self, enabled: bool) -> Self {
         self.def.raw.enableContactEvents = enabled;
         self
     }
 
     #[inline]
+    /// Enables high-speed hit events for this shape.
     pub fn enable_hit_events(mut self, enabled: bool) -> Self {
         self.def.raw.enableHitEvents = enabled;
         self
     }
 
     #[inline]
+    /// Enables pre-solve callbacks for this shape.
     pub fn enable_pre_solve_events(mut self, enabled: bool) -> Self {
         self.def.raw.enablePreSolveEvents = enabled;
         self
     }
 
     #[inline]
+    /// Enables custom filtering callbacks for this shape.
     pub fn enable_custom_filtering(mut self, enabled: bool) -> Self {
         self.def.raw.enableCustomFiltering = enabled;
         self
     }
 
     #[inline]
+    /// Finishes the builder and returns the shape definition.
     pub fn build(self) -> ShapeDef {
         self.def
     }
@@ -216,12 +249,14 @@ impl Default for ShapeDefBuilder {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+/// Sphere shape geometry.
 pub struct Sphere {
     raw: ffi::b3Sphere,
 }
 
 impl Sphere {
     #[inline]
+    /// Creates a sphere from a center point and positive radius.
     pub fn new(center: impl Into<Vec3>, radius: f32) -> Self {
         Self {
             raw: ffi::b3Sphere {
@@ -232,15 +267,18 @@ impl Sphere {
     }
 
     #[inline]
+    /// Wraps a raw Box3D sphere.
     pub const fn from_raw(raw: ffi::b3Sphere) -> Self {
         Self { raw }
     }
 
     #[inline]
+    /// Returns the raw Box3D sphere.
     pub const fn raw(&self) -> &ffi::b3Sphere {
         &self.raw
     }
 
+    /// Validates that the center is finite and the radius is positive.
     pub fn validate(&self) -> Result<()> {
         if Vec3::from_raw(self.raw.center).is_valid()
             && self.raw.radius.is_finite()
@@ -262,12 +300,14 @@ impl PartialEq for Sphere {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+/// Capsule shape geometry defined by two segment endpoints and a radius.
 pub struct Capsule {
     raw: ffi::b3Capsule,
 }
 
 impl Capsule {
     #[inline]
+    /// Creates a capsule from two centerline endpoints and a positive radius.
     pub fn new(center1: impl Into<Vec3>, center2: impl Into<Vec3>, radius: f32) -> Self {
         Self {
             raw: ffi::b3Capsule {
@@ -279,15 +319,18 @@ impl Capsule {
     }
 
     #[inline]
+    /// Wraps a raw Box3D capsule.
     pub const fn from_raw(raw: ffi::b3Capsule) -> Self {
         Self { raw }
     }
 
     #[inline]
+    /// Returns the raw Box3D capsule.
     pub const fn raw(&self) -> &ffi::b3Capsule {
         &self.raw
     }
 
+    /// Validates that endpoints are finite and the radius is positive.
     pub fn validate(&self) -> Result<()> {
         if Vec3::from_raw(self.raw.center1).is_valid()
             && Vec3::from_raw(self.raw.center2).is_valid()
@@ -310,18 +353,23 @@ impl PartialEq for Capsule {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Convex hull data for box-shaped hulls generated by Box3D.
 pub struct BoxHull {
     raw: ffi::b3BoxHull,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Result of scaling box half-widths and transform together.
 pub struct ScaledBox {
+    /// Adjusted box half-widths after scaling and clamping.
     pub half_widths: Vec3,
+    /// Adjusted transform that keeps the scaled box representation stable.
     pub transform: Transform,
 }
 
 impl BoxHull {
     #[inline]
+    /// Creates an axis-aligned cube hull from a positive half-width.
     pub fn cube(half_width: f32) -> Self {
         Self {
             raw: unsafe { ffi::b3MakeCubeHull(half_width) },
@@ -329,6 +377,7 @@ impl BoxHull {
     }
 
     #[inline]
+    /// Creates an axis-aligned box hull from positive half-widths.
     pub fn new(hx: f32, hy: f32, hz: f32) -> Self {
         Self {
             raw: unsafe { ffi::b3MakeBoxHull(hx, hy, hz) },
@@ -336,6 +385,7 @@ impl BoxHull {
     }
 
     #[inline]
+    /// Creates an axis-aligned box hull offset from the local origin.
     pub fn offset(hx: f32, hy: f32, hz: f32, offset: impl Into<Vec3>) -> Self {
         Self {
             raw: unsafe { ffi::b3MakeOffsetBoxHull(hx, hy, hz, offset.into().into_raw()) },
@@ -343,6 +393,7 @@ impl BoxHull {
     }
 
     #[inline]
+    /// Creates a box hull with a local transform baked into the hull data.
     pub fn transformed(hx: f32, hy: f32, hz: f32, transform: Transform) -> Self {
         Self {
             raw: unsafe { ffi::b3MakeTransformedBoxHull(hx, hy, hz, transform.into_raw()) },
@@ -350,6 +401,7 @@ impl BoxHull {
     }
 
     #[inline]
+    /// Creates a box hull after applying a post scale.
     pub fn scaled(
         half_widths: impl Into<Vec3>,
         transform: Transform,
@@ -366,6 +418,7 @@ impl BoxHull {
         }
     }
 
+    /// Scales box half-widths and transform while preserving a minimum half-width.
     pub fn scale_box(
         half_widths: impl Into<Vec3>,
         transform: Transform,
@@ -395,11 +448,13 @@ impl BoxHull {
     }
 
     #[inline]
+    /// Returns the raw Box3D box hull.
     pub const fn raw(&self) -> &ffi::b3BoxHull {
         &self.raw
     }
 
     #[inline]
+    /// Returns the hull portion of the box hull data.
     pub const fn hull_data(&self) -> &ffi::b3HullData {
         &self.raw.base
     }
@@ -559,12 +614,16 @@ fn validate_box_half_widths(half_widths: Vec3) -> Result<Vec3> {
 }
 
 #[derive(Debug)]
+/// Owned convex hull data allocated by Box3D.
+///
+/// Hull values own native memory and are intentionally not `Send` or `Sync`.
 pub struct Hull {
     raw: NonNull<ffi::b3HullData>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
 impl Hull {
+    /// Builds a convex hull from points with an upper bound on generated vertices.
     pub fn from_points(points: impl AsRef<[Vec3]>, max_vertex_count: i32) -> Result<Self> {
         let points = points.as_ref();
         if points.len() < 4 || max_vertex_count <= 0 || points.iter().any(|point| !point.is_valid())
@@ -581,6 +640,7 @@ impl Hull {
         Self::from_ptr(ptr)
     }
 
+    /// Creates a cylinder hull.
     pub fn cylinder(height: f32, radius: f32, y_offset: f32, sides: i32) -> Result<Self> {
         if !height.is_finite()
             || height <= 0.0
@@ -594,6 +654,7 @@ impl Hull {
         Self::from_ptr(unsafe { ffi::b3CreateCylinder(height, radius, y_offset, sides) })
     }
 
+    /// Creates a cone or truncated cone hull.
     pub fn cone(height: f32, radius1: f32, radius2: f32, slices: i32) -> Result<Self> {
         if !height.is_finite()
             || height <= 0.0
@@ -608,6 +669,7 @@ impl Hull {
         Self::from_ptr(unsafe { ffi::b3CreateCone(height, radius1, radius2, slices) })
     }
 
+    /// Creates an irregular rock-like convex hull.
     pub fn rock(radius: f32) -> Result<Self> {
         if !radius.is_finite() || radius <= 0.0 {
             return Err(Error::InvalidArgument);
@@ -615,10 +677,12 @@ impl Hull {
         Self::from_ptr(unsafe { ffi::b3CreateRock(radius) })
     }
 
+    /// Clones this hull into a new owned Box3D allocation.
     pub fn try_clone(&self) -> Result<Self> {
         Self::from_ptr(unsafe { ffi::b3CloneHull(self.as_ptr()) })
     }
 
+    /// Clones this hull after applying a transform and non-zero scale.
     pub fn try_clone_transformed(
         &self,
         transform: Transform,
@@ -632,6 +696,7 @@ impl Hull {
     }
 
     #[inline]
+    /// Returns the raw Box3D hull data.
     pub fn as_hull_data(&self) -> &ffi::b3HullData {
         unsafe { self.raw.as_ref() }
     }
@@ -658,15 +723,21 @@ impl Drop for Hull {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Options controlling mesh cooking.
 pub struct MeshDataOptions {
+    /// Vertex welding tolerance used when `weld_vertices` is enabled.
     pub weld_tolerance: f32,
+    /// Whether mesh cooking should merge nearby vertices.
     pub weld_vertices: bool,
+    /// Whether the cooked mesh BVH should use median splitting.
     pub use_median_split: bool,
+    /// Whether Box3D should identify internal and boundary edges.
     pub identify_edges: bool,
 }
 
 impl MeshDataOptions {
     #[inline]
+    /// Creates default mesh cooking options.
     pub const fn new() -> Self {
         Self {
             weld_tolerance: 0.0,
@@ -677,24 +748,28 @@ impl MeshDataOptions {
     }
 
     #[inline]
+    /// Sets the vertex welding tolerance.
     pub const fn weld_tolerance(mut self, weld_tolerance: f32) -> Self {
         self.weld_tolerance = weld_tolerance;
         self
     }
 
     #[inline]
+    /// Enables or disables vertex welding.
     pub const fn weld_vertices(mut self, weld_vertices: bool) -> Self {
         self.weld_vertices = weld_vertices;
         self
     }
 
     #[inline]
+    /// Enables or disables median splitting for the mesh tree.
     pub const fn use_median_split(mut self, use_median_split: bool) -> Self {
         self.use_median_split = use_median_split;
         self
     }
 
     #[inline]
+    /// Enables or disables edge identification during mesh cooking.
     pub const fn identify_edges(mut self, identify_edges: bool) -> Self {
         self.identify_edges = identify_edges;
         self
@@ -716,6 +791,7 @@ impl Default for MeshDataOptions {
 }
 
 #[derive(Clone, Debug)]
+/// Builder for `MeshData` triangle meshes.
 pub struct MeshDataBuilder {
     vertices: Vec<Vec3>,
     indices: Vec<i32>,
@@ -725,6 +801,7 @@ pub struct MeshDataBuilder {
 
 impl MeshDataBuilder {
     #[inline]
+    /// Starts a mesh builder from vertices and triangle indices.
     pub fn new(vertices: impl Into<Vec<Vec3>>, indices: impl Into<Vec<i32>>) -> Self {
         Self {
             vertices: vertices.into(),
@@ -735,36 +812,42 @@ impl MeshDataBuilder {
     }
 
     #[inline]
+    /// Sets one material index per triangle.
     pub fn material_indices(mut self, material_indices: impl Into<Vec<u8>>) -> Self {
         self.material_indices = Some(material_indices.into());
         self
     }
 
     #[inline]
+    /// Sets the vertex welding tolerance.
     pub fn weld_tolerance(mut self, weld_tolerance: f32) -> Self {
         self.options.weld_tolerance = weld_tolerance;
         self
     }
 
     #[inline]
+    /// Enables or disables vertex welding.
     pub fn weld_vertices(mut self, weld_vertices: bool) -> Self {
         self.options.weld_vertices = weld_vertices;
         self
     }
 
     #[inline]
+    /// Enables or disables median splitting for the mesh tree.
     pub fn use_median_split(mut self, use_median_split: bool) -> Self {
         self.options.use_median_split = use_median_split;
         self
     }
 
     #[inline]
+    /// Enables or disables edge identification.
     pub fn identify_edges(mut self, identify_edges: bool) -> Self {
         self.options.identify_edges = identify_edges;
         self
     }
 
     #[inline]
+    /// Cooks the configured mesh into owned Box3D mesh data.
     pub fn build(self) -> Result<MeshData> {
         MeshData::from_triangles(
             &self.vertices,
@@ -776,21 +859,30 @@ impl MeshDataBuilder {
 }
 
 #[derive(Debug)]
+/// Owned cooked triangle mesh data allocated by Box3D.
+///
+/// Mesh values own native memory and are intentionally not `Send` or `Sync`.
 pub struct MeshData {
     raw: NonNull<ffi::b3MeshData>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Triangle returned by a mesh or height-field overlap query.
 pub struct MeshTriangleHit {
+    /// First triangle vertex in local shape space.
     pub a: Vec3,
+    /// Second triangle vertex in local shape space.
     pub b: Vec3,
+    /// Third triangle vertex in local shape space.
     pub c: Vec3,
+    /// Index of the triangle in the source mesh or height field.
     pub triangle_index: i32,
 }
 
 impl MeshData {
     #[inline]
+    /// Starts a mesh builder from vertices and triangle indices.
     pub fn builder(
         vertices: impl Into<Vec<Vec3>>,
         indices: impl Into<Vec<i32>>,
@@ -798,6 +890,7 @@ impl MeshData {
         MeshDataBuilder::new(vertices, indices)
     }
 
+    /// Cooks triangle vertices and indices into owned mesh data.
     pub fn from_triangles(
         vertices: impl AsRef<[Vec3]>,
         indices: impl AsRef<[i32]>,
@@ -862,6 +955,7 @@ impl MeshData {
         Self::from_ptr(unsafe { ffi::b3CreateMesh(&mut def, std::ptr::null_mut(), 0) })
     }
 
+    /// Creates a generated box mesh.
     pub fn box_mesh(
         center: impl Into<Vec3>,
         extent: impl Into<Vec3>,
@@ -882,6 +976,7 @@ impl MeshData {
         })
     }
 
+    /// Creates a generated grid mesh.
     pub fn grid_mesh(
         x_count: i32,
         z_count: i32,
@@ -902,6 +997,7 @@ impl MeshData {
         })
     }
 
+    /// Creates a generated wave mesh.
     pub fn wave_mesh(
         x_count: i32,
         z_count: i32,
@@ -932,6 +1028,7 @@ impl MeshData {
         })
     }
 
+    /// Creates a generated torus mesh.
     pub fn torus_mesh(
         radial_resolution: i32,
         tubular_resolution: i32,
@@ -952,6 +1049,7 @@ impl MeshData {
         })
     }
 
+    /// Creates a generated hollow box mesh.
     pub fn hollow_box_mesh(center: impl Into<Vec3>, extent: impl Into<Vec3>) -> Result<Self> {
         let center = center.into();
         let extent = extent.into();
@@ -966,6 +1064,7 @@ impl MeshData {
         Self::from_ptr(unsafe { ffi::b3CreateHollowBoxMesh(center.into_raw(), extent.into_raw()) })
     }
 
+    /// Creates a generated platform mesh.
     pub fn platform_mesh(
         center: impl Into<Vec3>,
         height: f32,
@@ -989,30 +1088,36 @@ impl MeshData {
     }
 
     #[inline]
+    /// Returns the native byte count of the cooked mesh.
     pub fn byte_count(&self) -> i32 {
         unsafe { self.raw.as_ref().byteCount }
     }
 
     #[inline]
+    /// Returns the height of the cooked mesh acceleration tree.
     pub fn tree_height(&self) -> i32 {
         unsafe { ffi::b3GetHeight(self.raw.as_ptr()) }
     }
 
     #[inline]
+    /// Returns the number of cooked mesh vertices.
     pub fn vertex_count(&self) -> i32 {
         unsafe { self.raw.as_ref().vertexCount }
     }
 
     #[inline]
+    /// Returns the number of cooked mesh triangles.
     pub fn triangle_count(&self) -> i32 {
         unsafe { self.raw.as_ref().triangleCount }
     }
 
     #[inline]
+    /// Returns the number of material slots referenced by the cooked mesh.
     pub fn material_count(&self) -> i32 {
         unsafe { self.raw.as_ref().materialCount }
     }
 
+    /// Collects triangles whose bounds overlap an AABB at the given scale.
     pub fn query_triangles(
         &self,
         bounds: Aabb,
@@ -1023,6 +1128,7 @@ impl MeshData {
         Ok(out)
     }
 
+    /// Writes triangles whose bounds overlap an AABB into `out`.
     pub fn query_triangles_into(
         &self,
         bounds: Aabb,
@@ -1036,6 +1142,9 @@ impl MeshData {
         })
     }
 
+    /// Visits triangles whose bounds overlap an AABB at the given scale.
+    ///
+    /// Return `false` from the visitor to stop traversal early.
     pub fn visit_triangles<F>(&self, bounds: Aabb, scale: impl Into<Vec3>, visitor: F) -> Result<()>
     where
         F: FnMut(MeshTriangleHit) -> bool,
@@ -1089,6 +1198,7 @@ impl Drop for MeshData {
 }
 
 #[derive(Clone, Debug)]
+/// Builder for `HeightField`.
 pub struct HeightFieldBuilder {
     row_count: i32,
     column_count: i32,
@@ -1099,6 +1209,7 @@ pub struct HeightFieldBuilder {
 
 impl HeightFieldBuilder {
     #[inline]
+    /// Starts a height-field builder from row count, column count, and samples.
     pub fn new(row_count: i32, column_count: i32, heights: impl Into<Vec<f32>>) -> Self {
         Self {
             row_count,
@@ -1110,18 +1221,21 @@ impl HeightFieldBuilder {
     }
 
     #[inline]
+    /// Sets one material index per height-field cell.
     pub fn material_indices(mut self, material_indices: impl Into<Vec<u8>>) -> Self {
         self.material_indices = Some(material_indices.into());
         self
     }
 
     #[inline]
+    /// Sets whether cells use clockwise triangle winding.
     pub fn clockwise_winding(mut self, clockwise_winding: bool) -> Self {
         self.clockwise_winding = clockwise_winding;
         self
     }
 
     #[inline]
+    /// Builds owned height-field data using the supplied sample scale.
     pub fn build(self, scale: impl Into<Vec3>) -> Result<HeightField> {
         HeightField::from_samples(
             self.row_count,
@@ -1135,6 +1249,9 @@ impl HeightFieldBuilder {
 }
 
 #[derive(Debug)]
+/// Owned height-field data allocated by Box3D.
+///
+/// Height fields own native memory and are intentionally not `Send` or `Sync`.
 pub struct HeightField {
     raw: NonNull<ffi::b3HeightFieldData>,
     _not_send_sync: PhantomData<Rc<()>>,
@@ -1142,6 +1259,7 @@ pub struct HeightField {
 
 impl HeightField {
     #[inline]
+    /// Starts a height-field builder from row count, column count, and samples.
     pub fn builder(
         row_count: i32,
         column_count: i32,
@@ -1150,6 +1268,7 @@ impl HeightField {
         HeightFieldBuilder::new(row_count, column_count, heights)
     }
 
+    /// Creates a height field from explicit samples.
     pub fn from_samples(
         row_count: i32,
         column_count: i32,
@@ -1200,6 +1319,7 @@ impl HeightField {
         Self::from_ptr(unsafe { ffi::b3CreateHeightField(&mut def) })
     }
 
+    /// Creates a generated grid height field.
     pub fn grid(
         row_count: i32,
         column_count: i32,
@@ -1221,6 +1341,7 @@ impl HeightField {
         })
     }
 
+    /// Creates a generated wave height field.
     pub fn wave(
         row_count: i32,
         column_count: i32,
@@ -1254,31 +1375,37 @@ impl HeightField {
     }
 
     #[inline]
+    /// Returns the native byte count of the height-field data.
     pub fn byte_count(&self) -> i32 {
         unsafe { self.raw.as_ref().byteCount }
     }
 
     #[inline]
+    /// Returns the number of sample rows.
     pub fn row_count(&self) -> i32 {
         unsafe { self.raw.as_ref().rowCount }
     }
 
     #[inline]
+    /// Returns the number of sample columns.
     pub fn column_count(&self) -> i32 {
         unsafe { self.raw.as_ref().columnCount }
     }
 
+    /// Collects height-field triangles whose bounds overlap an AABB.
     pub fn query_triangles(&self, bounds: Aabb) -> Result<Vec<MeshTriangleHit>> {
         let mut out = Vec::new();
         self.query_triangles_into(bounds, &mut out)?;
         Ok(out)
     }
 
+    /// Writes height-field triangles whose bounds overlap an AABB into `out`.
     pub fn query_triangles_into(&self, bounds: Aabb, out: &mut Vec<MeshTriangleHit>) -> Result<()> {
         out.clear();
         self.visit_triangles(bounds, |hit| out.push(hit))
     }
 
+    /// Visits height-field triangles whose bounds overlap an AABB.
     pub fn visit_triangles<F>(&self, bounds: Aabb, visitor: F) -> Result<()>
     where
         F: FnMut(MeshTriangleHit),
@@ -1401,6 +1528,7 @@ where
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Borrowed view of hull data owned by another Box3D shape resource.
 pub struct ShapeHull<'a> {
     raw: &'a ffi::b3HullData,
 }
@@ -1412,57 +1540,68 @@ impl<'a> ShapeHull<'a> {
     }
 
     #[inline]
+    /// Returns the native byte count of the hull data.
     pub const fn byte_count(&self) -> i32 {
         self.raw.byteCount
     }
 
     #[inline]
+    /// Returns Box3D's stable hash for the hull data.
     pub const fn hash(&self) -> u32 {
         self.raw.hash
     }
 
     #[inline]
+    /// Returns the hull's local-space AABB.
     pub const fn aabb(&self) -> Aabb {
         Aabb::from_raw(self.raw.aabb)
     }
 
     #[inline]
+    /// Returns the hull surface area.
     pub const fn surface_area(&self) -> f32 {
         self.raw.surfaceArea
     }
 
     #[inline]
+    /// Returns the hull volume.
     pub const fn volume(&self) -> f32 {
         self.raw.volume
     }
 
     #[inline]
+    /// Returns the hull inner radius.
     pub const fn inner_radius(&self) -> f32 {
         self.raw.innerRadius
     }
 
     #[inline]
+    /// Returns the hull center of mass.
     pub const fn center(&self) -> Vec3 {
         Vec3::from_raw(self.raw.center)
     }
 
     #[inline]
+    /// Returns the number of hull vertices.
     pub const fn vertex_count(&self) -> i32 {
         self.raw.vertexCount
     }
 
     #[inline]
+    /// Returns the number of hull half-edges.
     pub const fn edge_count(&self) -> i32 {
         self.raw.edgeCount
     }
 
     #[inline]
+    /// Returns the number of hull faces.
     pub const fn face_count(&self) -> i32 {
         self.raw.faceCount
     }
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Borrowed view of mesh data owned by another Box3D shape resource.
 pub struct ShapeMesh<'a> {
     data: &'a ffi::b3MeshData,
     scale: Vec3,
@@ -1478,57 +1617,68 @@ impl<'a> ShapeMesh<'a> {
     }
 
     #[inline]
+    /// Returns the scale applied to this mesh instance.
     pub const fn scale(&self) -> Vec3 {
         self.scale
     }
 
     #[inline]
+    /// Returns the native byte count of the mesh data.
     pub const fn byte_count(&self) -> i32 {
         self.data.byteCount
     }
 
     #[inline]
+    /// Returns Box3D's stable hash for the mesh data.
     pub const fn hash(&self) -> u32 {
         self.data.hash
     }
 
     #[inline]
+    /// Returns the mesh local-space bounds.
     pub const fn bounds(&self) -> Aabb {
         Aabb::from_raw(self.data.bounds)
     }
 
     #[inline]
+    /// Returns the mesh surface area.
     pub const fn surface_area(&self) -> f32 {
         self.data.surfaceArea
     }
 
     #[inline]
+    /// Returns the height of the mesh acceleration tree.
     pub const fn tree_height(&self) -> i32 {
         self.data.treeHeight
     }
 
     #[inline]
+    /// Returns the number of degenerate triangles found during cooking.
     pub const fn degenerate_count(&self) -> i32 {
         self.data.degenerateCount
     }
 
     #[inline]
+    /// Returns the number of mesh vertices.
     pub const fn vertex_count(&self) -> i32 {
         self.data.vertexCount
     }
 
     #[inline]
+    /// Returns the number of mesh triangles.
     pub const fn triangle_count(&self) -> i32 {
         self.data.triangleCount
     }
 
     #[inline]
+    /// Returns the number of material slots referenced by the mesh.
     pub const fn material_count(&self) -> i32 {
         self.data.materialCount
     }
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Borrowed view of height-field data owned by another Box3D shape resource.
 pub struct ShapeHeightField<'a> {
     raw: &'a ffi::b3HeightFieldData,
 }
@@ -1540,58 +1690,75 @@ impl<'a> ShapeHeightField<'a> {
     }
 
     #[inline]
+    /// Returns the native byte count of the height-field data.
     pub const fn byte_count(&self) -> i32 {
         self.raw.byteCount
     }
 
     #[inline]
+    /// Returns Box3D's stable hash for the height-field data.
     pub const fn hash(&self) -> u32 {
         self.raw.hash
     }
 
     #[inline]
+    /// Returns the height-field local-space AABB.
     pub const fn aabb(&self) -> Aabb {
         Aabb::from_raw(self.raw.aabb)
     }
 
     #[inline]
+    /// Returns the minimum sample height.
     pub const fn min_height(&self) -> f32 {
         self.raw.minHeight
     }
 
     #[inline]
+    /// Returns the maximum sample height.
     pub const fn max_height(&self) -> f32 {
         self.raw.maxHeight
     }
 
     #[inline]
+    /// Returns the sample scale used by the height field.
     pub const fn scale(&self) -> Vec3 {
         Vec3::from_raw(self.raw.scale)
     }
 
     #[inline]
+    /// Returns the number of sample columns.
     pub const fn column_count(&self) -> i32 {
         self.raw.columnCount
     }
 
     #[inline]
+    /// Returns the number of sample rows.
     pub const fn row_count(&self) -> i32 {
         self.raw.rowCount
     }
 
     #[inline]
+    /// Returns whether cells use clockwise triangle winding.
     pub const fn clockwise(&self) -> bool {
         self.raw.clockwise
     }
 }
 
 #[derive(Debug)]
+/// Owned compound shape data allocated by Box3D.
+///
+/// A compound stores multiple primitive children and shared geometry resources
+/// in a single native allocation.
 pub struct Compound {
     raw: NonNull<ffi::b3CompoundData>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
 #[derive(Debug)]
+/// Serialized bytes for a `Compound`.
+///
+/// The byte buffer is still owned by Box3D and can be converted back into an
+/// owned `Compound`.
 pub struct CompoundBytes {
     raw: NonNull<u8>,
     byte_count: i32,
@@ -1600,20 +1767,24 @@ pub struct CompoundBytes {
 
 impl Compound {
     #[inline]
+    /// Starts a compound builder.
     pub fn builder<'a>() -> CompoundBuilder<'a> {
         CompoundBuilder::new()
     }
 
+    /// Creates a compound containing exactly one sphere child.
     pub fn single_sphere(sphere: Sphere, material: SurfaceMaterial) -> Result<Self> {
         Self::builder().with_sphere(sphere, material)?.build()
     }
 
     #[inline]
+    /// Returns the native byte count of the compound data.
     pub fn byte_count(&self) -> i32 {
         unsafe { self.raw.as_ref().byteCount }
     }
 
     #[inline]
+    /// Returns the total number of child shapes.
     pub fn child_count(&self) -> i32 {
         unsafe {
             let raw = self.raw.as_ref();
@@ -1622,40 +1793,48 @@ impl Compound {
     }
 
     #[inline]
+    /// Returns the number of capsule children.
     pub fn capsule_count(&self) -> i32 {
         unsafe { self.raw.as_ref().capsuleCount }
     }
 
     #[inline]
+    /// Returns the number of hull children.
     pub fn hull_count(&self) -> i32 {
         unsafe { self.raw.as_ref().hullCount }
     }
 
     #[inline]
+    /// Returns the number of mesh children.
     pub fn mesh_count(&self) -> i32 {
         unsafe { self.raw.as_ref().meshCount }
     }
 
     #[inline]
+    /// Returns the number of sphere children.
     pub fn sphere_count(&self) -> i32 {
         unsafe { self.raw.as_ref().sphereCount }
     }
 
     #[inline]
+    /// Returns the number of material records stored by the compound.
     pub fn material_count(&self) -> i32 {
         unsafe { self.raw.as_ref().materialCount }
     }
 
     #[inline]
+    /// Returns the number of shared hull resources stored by the compound.
     pub fn shared_hull_count(&self) -> i32 {
         unsafe { self.raw.as_ref().sharedHullCount }
     }
 
     #[inline]
+    /// Returns the number of shared mesh resources stored by the compound.
     pub fn shared_mesh_count(&self) -> i32 {
         unsafe { self.raw.as_ref().sharedMeshCount }
     }
 
+    /// Returns a material by compound material index.
     pub fn material(&self, index: i32) -> Result<SurfaceMaterial> {
         if index < 0 || index >= self.material_count() {
             return Err(Error::IndexOutOfRange);
@@ -1667,6 +1846,7 @@ impl Compound {
             .ok_or(Error::InvalidArgument)
     }
 
+    /// Returns a child by flattened child index.
     pub fn child(&self, index: i32) -> Result<CompoundChild<'_>> {
         if index < 0 || index >= self.child_count() {
             return Err(Error::IndexOutOfRange);
@@ -1674,6 +1854,7 @@ impl Compound {
         CompoundChild::from_raw(unsafe { ffi::b3GetCompoundChild(self.raw.as_ptr(), index) })
     }
 
+    /// Returns a capsule child by capsule-child index.
     pub fn capsule_child(&self, index: i32) -> Result<CompoundCapsule> {
         if index < 0 || index >= self.capsule_count() {
             return Err(Error::IndexOutOfRange);
@@ -1682,6 +1863,7 @@ impl Compound {
         Ok(CompoundCapsule::from_raw(raw))
     }
 
+    /// Returns a hull child by hull-child index.
     pub fn hull_child(&self, index: i32) -> Result<CompoundHull<'_>> {
         if index < 0 || index >= self.hull_count() {
             return Err(Error::IndexOutOfRange);
@@ -1690,6 +1872,7 @@ impl Compound {
         CompoundHull::from_raw(raw)
     }
 
+    /// Returns a mesh child by mesh-child index.
     pub fn mesh_child(&self, index: i32) -> Result<CompoundMesh<'_>> {
         if index < 0 || index >= self.mesh_count() {
             return Err(Error::IndexOutOfRange);
@@ -1698,6 +1881,7 @@ impl Compound {
         CompoundMesh::from_raw(raw)
     }
 
+    /// Returns a sphere child by sphere-child index.
     pub fn sphere_child(&self, index: i32) -> Result<CompoundSphere> {
         if index < 0 || index >= self.sphere_count() {
             return Err(Error::IndexOutOfRange);
@@ -1706,12 +1890,14 @@ impl Compound {
         Ok(CompoundSphere::from_raw(raw))
     }
 
+    /// Collects compound children whose bounds overlap an AABB.
     pub fn query_aabb(&self, aabb: Aabb) -> Result<Vec<CompoundQueryHit<'_>>> {
         let mut out = Vec::new();
         self.query_aabb_into(aabb, &mut out)?;
         Ok(out)
     }
 
+    /// Writes compound children whose bounds overlap an AABB into `out`.
     pub fn query_aabb_into<'a>(
         &'a self,
         aabb: Aabb,
@@ -1724,6 +1910,9 @@ impl Compound {
         })
     }
 
+    /// Visits compound children whose bounds overlap an AABB.
+    ///
+    /// Return `false` from the visitor to stop traversal early.
     pub fn visit_query_aabb<'a, F>(&'a self, aabb: Aabb, visitor: F) -> Result<()>
     where
         F: FnMut(CompoundQueryHit<'a>) -> bool,
@@ -1754,6 +1943,7 @@ impl Compound {
         }
     }
 
+    /// Converts this compound into Box3D-owned serialized bytes.
     pub fn into_bytes(self) -> CompoundBytes {
         let compound = ManuallyDrop::new(self);
         let byte_count = compound.byte_count();
@@ -1788,15 +1978,18 @@ impl Drop for Compound {
 
 impl CompoundBytes {
     #[inline]
+    /// Returns the number of serialized bytes.
     pub const fn byte_count(&self) -> i32 {
         self.byte_count
     }
 
     #[inline]
+    /// Borrows the serialized byte buffer.
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(self.raw.as_ptr(), self.byte_count as usize) }
     }
 
+    /// Converts the serialized bytes back into an owned compound.
     pub fn into_compound(self) -> Result<Compound> {
         let raw = unsafe { ffi::b3ConvertBytesToCompound(self.raw.as_ptr(), self.byte_count) };
         let compound = Compound::from_ptr(raw)?;
@@ -1812,6 +2005,10 @@ impl Drop for CompoundBytes {
 }
 
 #[derive(Debug)]
+/// Builder for `Compound`.
+///
+/// Borrowed hull and mesh inputs must outlive the builder until `build` is
+/// called because Box3D reads them during compound creation.
 pub struct CompoundBuilder<'a> {
     capsules: Vec<ffi::b3CompoundCapsuleDef>,
     hulls: Vec<ffi::b3CompoundHullDef>,
@@ -1824,6 +2021,7 @@ pub struct CompoundBuilder<'a> {
 
 impl<'a> CompoundBuilder<'a> {
     #[inline]
+    /// Creates an empty compound builder.
     pub fn new() -> Self {
         Self {
             capsules: Vec::new(),
@@ -1836,6 +2034,7 @@ impl<'a> CompoundBuilder<'a> {
         }
     }
 
+    /// Adds a sphere child, storing any validation error until `build`.
     pub fn sphere(mut self, sphere: Sphere, material: SurfaceMaterial) -> Self {
         if let Err(error) = self.add_sphere(sphere, material) {
             self.error = Some(error);
@@ -1843,11 +2042,13 @@ impl<'a> CompoundBuilder<'a> {
         self
     }
 
+    /// Adds a sphere child and returns validation errors immediately.
     pub fn with_sphere(mut self, sphere: Sphere, material: SurfaceMaterial) -> Result<Self> {
         self.add_sphere(sphere, material)?;
         Ok(self)
     }
 
+    /// Adds a sphere child to the builder in place.
     pub fn add_sphere(&mut self, sphere: Sphere, material: SurfaceMaterial) -> Result<&mut Self> {
         sphere.validate()?;
         material.validate()?;
@@ -1859,6 +2060,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a capsule child, storing any validation error until `build`.
     pub fn capsule(mut self, capsule: Capsule, material: SurfaceMaterial) -> Self {
         if let Err(error) = self.add_capsule(capsule, material) {
             self.error = Some(error);
@@ -1866,11 +2068,13 @@ impl<'a> CompoundBuilder<'a> {
         self
     }
 
+    /// Adds a capsule child and returns validation errors immediately.
     pub fn with_capsule(mut self, capsule: Capsule, material: SurfaceMaterial) -> Result<Self> {
         self.add_capsule(capsule, material)?;
         Ok(self)
     }
 
+    /// Adds a capsule child to the builder in place.
     pub fn add_capsule(
         &mut self,
         capsule: Capsule,
@@ -1886,6 +2090,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a hull child, storing any validation error until `build`.
     pub fn hull(
         mut self,
         hull: &'a Hull,
@@ -1898,6 +2103,7 @@ impl<'a> CompoundBuilder<'a> {
         self
     }
 
+    /// Adds a hull child and returns validation errors immediately.
     pub fn with_hull(
         mut self,
         hull: &'a Hull,
@@ -1908,6 +2114,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a hull child to the builder in place.
     pub fn add_hull(
         &mut self,
         hull: &'a Hull,
@@ -1917,6 +2124,7 @@ impl<'a> CompoundBuilder<'a> {
         self.add_hull_ptr(hull.as_ptr(), transform.into(), material)
     }
 
+    /// Adds a generated box hull child, storing any validation error until `build`.
     pub fn box_hull(
         mut self,
         hull: &'a BoxHull,
@@ -1929,6 +2137,7 @@ impl<'a> CompoundBuilder<'a> {
         self
     }
 
+    /// Adds a generated box hull child and returns validation errors immediately.
     pub fn with_box_hull(
         mut self,
         hull: &'a BoxHull,
@@ -1939,6 +2148,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a generated box hull child to the builder in place.
     pub fn add_box_hull(
         &mut self,
         hull: &'a BoxHull,
@@ -1968,6 +2178,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a mesh child, storing any validation error until `build`.
     pub fn mesh(
         mut self,
         mesh: &'a MeshData,
@@ -1981,6 +2192,7 @@ impl<'a> CompoundBuilder<'a> {
         self
     }
 
+    /// Adds a mesh child and returns validation errors immediately.
     pub fn with_mesh(
         mut self,
         mesh: &'a MeshData,
@@ -1992,6 +2204,10 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Adds a mesh child to the builder in place.
+    ///
+    /// `materials` must contain exactly `mesh.material_count()` entries and no
+    /// more than `MAX_COMPOUND_MESH_MATERIALS` entries.
     pub fn add_mesh(
         &mut self,
         mesh: &'a MeshData,
@@ -2034,6 +2250,7 @@ impl<'a> CompoundBuilder<'a> {
         Ok(self)
     }
 
+    /// Builds the compound data.
     pub fn build(mut self) -> Result<Compound> {
         if let Some(error) = self.error {
             return Err(error);
@@ -2075,8 +2292,11 @@ impl<'a> Default for CompoundBuilder<'a> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Capsule child returned from a compound.
 pub struct CompoundCapsule {
+    /// Capsule geometry.
     pub capsule: Capsule,
+    /// Index into the compound material table.
     pub material_index: i32,
 }
 
@@ -2091,9 +2311,13 @@ impl CompoundCapsule {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Hull child returned from a compound.
 pub struct CompoundHull<'a> {
+    /// Borrowed hull geometry.
     pub hull: ShapeHull<'a>,
+    /// Child transform in compound-local space.
     pub transform: Transform,
+    /// Index into the compound material table.
     pub material_index: i32,
 }
 
@@ -2110,9 +2334,13 @@ impl<'a> CompoundHull<'a> {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Mesh child returned from a compound.
 pub struct CompoundMesh<'a> {
+    /// Borrowed mesh geometry and per-child scale.
     pub mesh: ShapeMesh<'a>,
+    /// Child transform in compound-local space.
     pub transform: Transform,
+    /// Material indices used by the mesh child's material slots.
     pub material_indices: [i32; MAX_COMPOUND_MESH_MATERIALS],
 }
 
@@ -2132,8 +2360,11 @@ impl<'a> CompoundMesh<'a> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Sphere child returned from a compound.
 pub struct CompoundSphere {
+    /// Sphere geometry.
     pub sphere: Sphere,
+    /// Index into the compound material table.
     pub material_index: i32,
 }
 
@@ -2148,9 +2379,13 @@ impl CompoundSphere {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Flattened child returned from generic compound indexing and queries.
 pub struct CompoundChild<'a> {
+    /// Child geometry variant.
     pub shape: CompoundChildShape<'a>,
+    /// Child transform in compound-local space.
     pub transform: Transform,
+    /// Material indices used by the child.
     pub material_indices: [i32; MAX_COMPOUND_MESH_MATERIALS],
 }
 
@@ -2184,19 +2419,24 @@ impl<'a> CompoundChild<'a> {
     }
 
     #[inline]
+    /// Returns the child shape type.
     pub const fn shape_type(&self) -> ShapeType {
         self.shape.shape_type()
     }
 
     #[inline]
+    /// Returns the first material index for the child.
     pub const fn primary_material_index(&self) -> i32 {
         self.material_indices[0]
     }
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Hit returned by a compound AABB query.
 pub struct CompoundQueryHit<'a> {
+    /// Flattened child index hit by the query.
     pub child_index: i32,
+    /// Borrowed child data for the hit.
     pub child: CompoundChild<'a>,
 }
 
@@ -2246,15 +2486,21 @@ where
 }
 
 #[derive(Copy, Clone, Debug)]
+/// Shape variants that can appear inside a compound child.
 pub enum CompoundChildShape<'a> {
+    /// Capsule child geometry.
     Capsule(Capsule),
+    /// Hull child geometry.
     Hull(ShapeHull<'a>),
+    /// Mesh child geometry.
     Mesh(ShapeMesh<'a>),
+    /// Sphere child geometry.
     Sphere(Sphere),
 }
 
 impl<'a> CompoundChildShape<'a> {
     #[inline]
+    /// Returns the shape type represented by this variant.
     pub const fn shape_type(&self) -> ShapeType {
         match self {
             Self::Capsule(_) => ShapeType::Capsule,
@@ -2267,16 +2513,24 @@ impl<'a> CompoundChildShape<'a> {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Box3D shape type tag.
 pub enum ShapeType {
+    /// Capsule shape.
     Capsule,
+    /// Compound shape.
     Compound,
+    /// Height-field shape.
     HeightField,
+    /// Convex hull shape.
     Hull,
+    /// Triangle mesh shape.
     Mesh,
+    /// Sphere shape.
     Sphere,
 }
 
 impl ShapeType {
+    /// Converts a raw Box3D shape type into the safe enum.
     pub const fn from_raw(raw: ffi::b3ShapeType) -> Option<Self> {
         match raw {
             ffi::b3ShapeType_b3_capsuleShape => Some(Self::Capsule),

@@ -67,9 +67,9 @@ cargo rustdoc -p bevy_boxddd --all-features -- -D missing_docs
 
 The core `boxddd` crate is not yet ready for a workspace-wide
 `-D missing_docs` gate. The latest audit after documenting the shared `types`
-layer reports 1428 missing public item docs, concentrated in:
+and shape resource layers reports 1196 missing public item docs, concentrated
+in:
 
-- `boxddd/src/shapes.rs`
 - `boxddd/src/collision.rs`
 - `boxddd/src/joints/defs.rs`
 - `boxddd/src/events.rs`
