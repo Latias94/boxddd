@@ -4,14 +4,20 @@
 
 - `wasm32-unknown-unknown` is a browser-oriented compile/import target.
 - `wasm32-wasip1` is the first C-backed runtime smoke target.
-- provider mode can run as a Node smoke and as live browser examples that
+- provider mode can run as a Node smoke, as core browser probes, and as the
+  published Bevy + egui Web testbed that
   share memory between a Rust wasm module and an Emscripten-built Box3D C provider.
 
-The supported runtime tier is intentionally core-only. It proves Box3D C code,
-world creation, shape creation, stepping, closest-ray queries, standalone
-collision helpers, distance joints, and teardown in WebAssembly. It does not
-claim Bevy Web, browser renderer integration, web workers, pthreads, Atomics, or
-threaded Box3D scheduling yet.
+The supported runtime tier now has two browser-facing proofs:
+
+- the real `bevy_boxddd/examples/testbed_3d` Bevy + egui testbed compiled with
+  `wasm-bindgen`;
+- smaller core provider probes that prove Box3D C code, world creation, shape
+  creation, stepping, closest-ray queries, standalone collision helpers,
+  distance joints, and teardown in WebAssembly.
+
+It does not claim web workers, pthreads, Atomics, or threaded Box3D scheduling
+yet.
 
 ## Support Matrix
 
@@ -23,7 +29,7 @@ threaded Box3D scheduling yet.
 | `boxddd` | `wasm32-unknown-unknown` | compile-only/provider examples | Safe APIs type-check. `xtask provider-smoke` runs a Rust wasm app against an Emscripten Box3D provider with shared memory, and Pages publishes the same provider shape as live browser examples. |
 | `boxddd` | `wasm32-wasip1` | runtime smoke | `wasm_smoke` creates a world, steps a body, runs a query, and exits successfully. |
 | `bevy_boxddd` minimal library | `wasm32-unknown-unknown` | compile-only | `--no-default-features` type-checks the library surface. |
-| Bevy examples and renderer integrations | browser WASM | deferred | Native examples use windowing/rendering assumptions. Bevy Web needs a separate renderer/input/testbed plan. |
+| Bevy + egui testbed | browser WASM | provider-backed runtime | `xtask build-pages-wasm` builds `bevy_boxddd/examples/testbed_3d` with `wasm-bindgen` and publishes it on Pages. |
 | Task-system callbacks and replay worker counts | all WASM targets | single-thread only | `TaskSystem::blocking_threads()` is native-only. WASM APIs reject unsupported world and replay worker counts. |
 
 ## Compile-Only Checks
@@ -44,20 +50,20 @@ BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unkn
 Provider mode does not compile Box3D C. It rewrites pregenerated bindings so
 extern functions import from the stable module name `box3d-sys-v0`.
 
-## Browser Provider Examples
+## Browser Provider Runtime
 
-The provider examples prove the import-provider architecture before adding Bevy
-Web, renderer state, input, or cross-module callback APIs. They have two forms:
+The browser runtime has two forms:
 
 - `cargo run -p xtask -- provider-smoke` runs the shared-memory smoke under Node.
 - GitHub Pages runs `cargo run -p xtask -- build-pages-wasm` and publishes a
-  small browser canvas with falling-body, closest-ray, shape-cast, and distance-joint
-  examples that call the same Rust wasm app and Box3D provider.
+  real Bevy + egui Web testbed plus a smaller browser canvas with falling-body,
+  closest-ray, shape-cast, and distance-joint core probes.
 
 Prerequisites:
 
 - Rust target: `wasm32-unknown-unknown`
 - Node.js
+- `wasm-bindgen-cli` matching the workspace `wasm-bindgen` version
 - Emscripten SDK (`emcc` on `PATH`, or `EMSDK` set to the emsdk root) for the
   full provider build
 
@@ -77,6 +83,7 @@ cargo run -p xtask -- provider-smoke
 Pages browser artifacts:
 
 ```bash
+cargo install wasm-bindgen-cli --version 0.2.126 --locked
 cargo run -p xtask -- build-pages-wasm
 ```
 
@@ -91,6 +98,14 @@ dynamic tree, contact, debug draw, and task callbacks need a separate shared-tab
 dynamic-linking design before they are claimed for browser provider mode.
 The safe wrapper returns `Error::UnsupportedOnWasm` for callback-heavy APIs in
 provider mode instead of allowing a runtime table trap.
+
+`build-pages-wasm` also builds `bevy_boxddd/examples/testbed_3d` in provider
+mode, runs `wasm-bindgen`, extracts the Bevy testbed's actual Box3D imports, and
+generates a small JavaScript shim that forwards those imports to the shared
+Emscripten provider. The Pages Bevy entry is therefore the real Bevy + egui
+application, not the JavaScript-drawn core probe. Callback-heavy tools inside the
+testbed, such as Box3D debug draw collection, still follow the provider-mode
+`UnsupportedOnWasm` path until cross-module callback tables are designed.
 
 Expected output:
 
@@ -156,12 +171,15 @@ CI separates WASM support into visible jobs:
   `wasm32-wasip1`, and runs it under `wasmtime`.
 - `WASM provider smoke`: installs Emscripten SDK, builds the provider-mode Rust
   smoke and Box3D C provider, and runs the shared-memory Node smoke.
+- `Pages`: installs Emscripten SDK and `wasm-bindgen-cli`, then builds the real
+  Bevy + egui Web testbed and core provider probes for GitHub Pages.
 
-## Deferred Browser Work
+## Remaining Browser Work
 
 The browser route follows the same shape as `dear-imgui-rs`: a Rust app WASM
 module imports C symbols from a provider module, and both modules share the same
-`WebAssembly.Memory`. The current browser examples prove the memory/import part
-of this runtime contract with a minimal canvas UI and enforce typed errors for
-callback APIs. Future work should add cross-module callback support and then
-Bevy Web or other renderer integrations.
+`WebAssembly.Memory`. The current browser surfaces prove the memory/import part
+of this runtime contract through both a real Bevy + egui Web testbed and a
+minimal core probe UI. Future work should add cross-module callback support,
+web-worker packaging, pthread/Atomics policy, and broader renderer-specific
+examples.

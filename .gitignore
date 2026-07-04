@@ -1,6 +1,7 @@
 /target
 /repo-ref
 /docs/pages/wasm/generated
+/docs/pages/bevy-testbed/generated
 /.idea
 *.pdb
 *.ilk

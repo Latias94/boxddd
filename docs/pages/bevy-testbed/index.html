@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boxddd Bevy + egui Web Testbed</title>
+  <meta name="description" content="Real Bevy and bevy_egui WASM testbed for boxddd, backed by the Box3D provider runtime.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c1117;
+      --panel: #111820;
+      --line: #2d3945;
+      --text: #eef4f8;
+      --muted: #9fb0bf;
+      --blue: #6aa7ff;
+      --teal: #7bd6c4;
+      --amber: #f4c95d;
+      --red: #ff8a8a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      width: 100%;
+      height: 100%;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #0f161f;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      padding: 2px 8px;
+      border: 1px solid #3c5962;
+      border-radius: 999px;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    #bevy-app {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      background: #05080c;
+    }
+
+    #bevy-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+      touch-action: none;
+    }
+
+    #bevy-status {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      max-width: min(560px, calc(100% - 36px));
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 24, 32, 0.92);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    #bevy-status strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    #bevy-status[data-state="error"] strong {
+      color: var(--red);
+    }
+
+    #bevy-status[data-state="running"] {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>boxddd Bevy + egui Web Testbed</h1>
+        <div class="meta">
+          <span class="tag">real wasm app</span>
+          <span>Built from <code>bevy_boxddd/examples/testbed_3d</code></span>
+        </div>
+      </div>
+      <a href="../">Examples hub</a>
+    </header>
+
+    <main id="bevy-app">
+      <canvas id="bevy-canvas" tabindex="0"></canvas>
+      <div id="bevy-status" role="status" aria-live="polite">
+        <strong>Loading Bevy Web testbed</strong>
+        <span>Preparing the shared Box3D provider and the Rust Bevy + egui wasm module.</span>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="loader.js"></script>
+</body>
+</html>

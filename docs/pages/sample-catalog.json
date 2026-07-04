@@ -245,12 +245,23 @@
     "id": "wasm-provider-smoke",
     "source": "wasm-example",
     "category": "WASM",
-    "name": "Provider Examples",
-    "description": "Browser-style provider mode with shared WebAssembly memory, Box3D C imports, and core probes.",
+    "name": "Core Provider Probes",
+    "description": "Browser-style provider mode with shared WebAssembly memory, Box3D C imports, and JavaScript diagnostics drawn from real core metrics.",
     "command": "cargo run -p xtask -- provider-smoke",
-    "display": "Headless browser-style examples",
-    "status": "CI verifies the provider architecture; live core examples can run below.",
+    "display": "Browser core probes",
+    "status": "CI verifies the provider architecture; the live canvas is a core probe, not a Bevy renderer.",
     "preview": "wasm"
+  },
+  {
+    "id": "bevy-web-testbed",
+    "source": "wasm-example",
+    "category": "Bevy Web",
+    "name": "Bevy + egui Web Testbed",
+    "description": "The real bevy_boxddd testbed compiled to wasm32-unknown-unknown with egui controls and the Box3D provider runtime.",
+    "command": "cargo run -p xtask -- build-pages-wasm",
+    "display": "Live Bevy Web app",
+    "status": "Published on the Pages example hub as a real Bevy + egui WASM application.",
+    "preview": "testbed"
   },
   {
     "id": "bevy-falling-stack",

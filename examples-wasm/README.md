@@ -22,7 +22,7 @@ Expected output:
 boxddd wasm smoke passed: y 4.000 -> -0.003, hits 2
 ```
 
-## Browser Provider Smoke
+## Browser Provider Runtime
 
 Browser-style `wasm32-unknown-unknown` builds use provider mode and a separate
 Box3D C provider module:
@@ -32,13 +32,16 @@ BOXDDD_SYS_WASM_MODE=provider cargo check -p boxddd --target wasm32-unknown-unkn
 ```
 
 The provider smoke verifies the same shared-memory import shape used by browser
-apps. It can run headlessly under Node or be packaged into the GitHub Pages demo:
+apps. It can run headlessly under Node or be packaged into the GitHub Pages demo
+alongside the real Bevy + egui Web testbed:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo run -p xtask -- provider-smoke-app
 
 # Requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
+# Requires wasm-bindgen-cli for the Bevy Web testbed in build-pages-wasm.
+cargo install wasm-bindgen-cli --version 0.2.126 --locked
 cargo run -p xtask -- provider-smoke
 cargo run -p xtask -- build-pages-wasm
 ```
@@ -55,7 +58,15 @@ Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
 checks non-callback APIs and asserts that callback-heavy APIs return
 `Error::UnsupportedOnWasm` instead of trapping across wasm module tables.
 
-The Pages examples are intentionally core-only: they run falling-body, closest-ray,
-shape-cast, and distance-joint probes and display the result on a canvas. Bevy Web
-and renderer-specific examples are still deferred until callback/table ownership
-and browser packaging mature.
+`build-pages-wasm` publishes two browser surfaces:
+
+- a real `bevy_boxddd/examples/testbed_3d` Bevy + egui app compiled with
+  `wasm-bindgen`;
+- smaller core provider probes that run falling-body, closest-ray, shape-cast,
+  and distance-joint checks and draw JavaScript diagnostics from returned metrics.
+
+The core probe canvas is not the Bevy renderer. It stays in the site as a compact
+runtime diagnostic while the Bevy page is the user-facing visual example. The
+Bevy page still inherits provider-mode callback limits: callback-heavy features
+such as Box3D debug draw collection report `UnsupportedOnWasm` until cross-module
+callback tables are designed.

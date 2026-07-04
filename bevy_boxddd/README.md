@@ -14,6 +14,7 @@
 | Debug rendering | Optional `debug-gizmos` feature |
 | Picking example | Optional `physics-picking` feature |
 | Testbed UI | `bevy_egui` in the `testbed_3d` example only |
+| Web testbed | Published through `cargo run -p xtask -- build-pages-wasm` |
 | Threading | Keep `boxddd::World` on the Bevy main thread; move snapshots across threads |
 
 ## Quickstart
@@ -110,13 +111,13 @@ The visible examples complement the core headless examples and follow the offici
 | `physics_picking_3d` | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera/cursor ray mapped through Box3D queries, not mesh picking. |
 | `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for stacks, advanced colliders, body controls, continuous collision, character mover probes, materials, joints, contacts, picking, debug draw, dominoes, arch stacks, wind forces, and a ragdoll-lite chain. |
 
-The testbed is the primary teaching surface. Use the left panel to switch scenes and adjust pause, single-step, gravity, solver rate, substeps, sleeping, warm starting, continuous collision, and debug draw presets. The static demo hub at <https://latias94.github.io/boxddd/> mirrors the same scene registry.
+The testbed is the primary teaching surface. Use the left panel to switch scenes and adjust pause, single-step, gravity, solver rate, substeps, sleeping, warm starting, continuous collision, and debug draw presets. The static demo hub at <https://latias94.github.io/boxddd/> mirrors the same scene registry and publishes a real Bevy + egui Web build of this testbed.
 
 ## Platform And Concurrency Boundaries
 
-Native desktop targets are the supported runtime target for the Bevy plugin. CI checks Windows, Linux, and macOS native builds through the workspace test suite, and checks the Bevy examples on Linux with the required windowing/audio packages installed.
+Native desktop targets are the main supported runtime target for the Bevy plugin. CI checks Windows, Linux, and macOS native builds through the workspace test suite, and checks the Bevy examples on Linux with the required windowing/audio packages installed.
 
-`wasm32-unknown-unknown` is compile-only for the minimal library surface; windowed examples are native-only in this release. Mobile targets are also compile-only at the core `boxddd` layer and are not yet runtime targets for `bevy_boxddd`.
+`wasm32-unknown-unknown` has two tiers: the minimal library surface remains compile-checked with `--no-default-features`, and the `testbed_3d` example is built for GitHub Pages through provider mode, `wasm-bindgen`, and an Emscripten Box3D provider. Other windowed examples are native teaching examples today. Mobile targets are compile-only at the core `boxddd` layer and are not yet runtime targets for `bevy_boxddd`.
 
 `boxddd::World` is intentionally non-send and lives in `BoxdddPhysicsContext`. Do not move it into Bevy worker systems. The core crate has `TaskSystem::blocking_threads()` for Box3D's native task callbacks, but Bevy task-pool integration is deferred until that contract has more usage.
 
@@ -131,6 +132,7 @@ cargo check -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_
 cargo check -p bevy_boxddd --features physics-picking --example physics_picking_3d
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 cargo check -p bevy_boxddd --target wasm32-unknown-unknown --no-default-features
+BOXDDD_SYS_WASM_MODE=provider RUSTFLAGS="-C link-arg=--import-memory" cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d --target wasm32-unknown-unknown
 ```
 
 Windowed teaching examples:

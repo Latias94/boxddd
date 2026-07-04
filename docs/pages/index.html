@@ -299,6 +299,22 @@
       font-size: 12px;
     }
 
+    .web-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--band);
+    }
+
+    .web-panel p {
+      max-width: 760px;
+      margin: 0;
+    }
+
     .wasm-panel {
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
@@ -366,6 +382,10 @@
     }
 
     @media (max-width: 860px) {
+      .web-panel {
+        grid-template-columns: 1fr;
+      }
+
       .wasm-panel {
         grid-template-columns: 1fr;
       }
@@ -379,10 +399,11 @@
         <div>
           <p class="eyebrow">Box3D Rust example hub</p>
           <h1>boxddd Examples</h1>
-          <p class="lead">Live WASM probes, native Bevy 3D scenes, and core Rust examples for learning how to integrate Box3D through boxddd.</p>
+          <p class="lead">A real Bevy + egui Web testbed, core WASM provider probes, native Bevy 3D scenes, and core Rust examples for learning how to integrate Box3D through boxddd.</p>
         </div>
         <div class="actions">
-          <a class="button primary" href="#live-wasm">Live WASM</a>
+          <a class="button primary" href="bevy-testbed/">Bevy Web</a>
+          <a class="button" href="#core-wasm">Core WASM</a>
           <a class="button" href="#examples">All Examples</a>
           <a class="button" href="https://github.com/Latias94/boxddd">Repository</a>
           <a class="button" href="https://crates.io/crates/boxddd">Crates.io</a>
@@ -392,17 +413,25 @@
       <div class="command">cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d</div>
     </header>
 
-    <section id="live-wasm">
-      <h2>Live WASM Examples</h2>
+    <section id="bevy-web">
+      <h2>Bevy + egui Web Testbed</h2>
+      <div class="web-panel">
+        <p class="muted">This entry loads the actual Rust <code>bevy_boxddd/examples/testbed_3d</code> Bevy 0.19 application compiled to <code>wasm32-unknown-unknown</code>, including the egui scene browser, picking, scene controls, and Box3D provider runtime. Callback-heavy tools such as Box3D debug draw still report typed unsupported errors in provider mode.</p>
+        <a class="button primary" href="bevy-testbed/">Open Testbed</a>
+      </div>
+    </section>
+
+    <section id="core-wasm">
+      <h2>Core WASM Provider Probes</h2>
       <div class="wasm-panel">
         <div class="wasm-stage">
-          <canvas id="wasm-canvas" width="640" height="360" aria-label="Live WASM core example visualization"></canvas>
+          <canvas id="wasm-canvas" width="640" height="360" aria-label="Core WASM provider probe visualization"></canvas>
         </div>
         <div class="wasm-copy">
-          <span class="tag">wasm example</span>
+          <span class="tag">core wasm probe</span>
           <h3 id="wasm-status">Ready to run</h3>
-          <p id="wasm-detail" class="muted">This loads the Rust wasm app and an Emscripten-built Box3D provider, then runs real Box3D core examples in the browser.</p>
-          <div class="wasm-actions" aria-label="Live WASM example selector">
+          <p id="wasm-detail" class="muted">This smaller canvas is a core Box3D provider probe: it calls real Rust wasm and the Emscripten-built Box3D provider, then draws simple JavaScript diagnostics from returned metrics. It is not the Bevy/egui renderer.</p>
+          <div class="wasm-actions" aria-label="Core WASM provider probe selector">
             <button class="button primary" type="button" data-wasm-demo="drop" aria-pressed="true">Falling body</button>
             <button class="button" type="button" data-wasm-demo="ray" aria-pressed="false">Ray query</button>
             <button class="button" type="button" data-wasm-demo="cast" aria-pressed="false">Shape cast</button>
@@ -434,7 +463,7 @@
       <div class="status">
         <div><strong>Native desktop</strong><br><span class="muted">Windows, Linux, and macOS are tested.</span></div>
         <div><strong>Bevy</strong><br><span class="muted">Bevy 0.19 with Rust 1.95 for the integration crate.</span></div>
-        <div><strong>WASM</strong><br><span class="muted">The page runs live provider-mode core examples in the browser.</span></div>
+        <div><strong>WASM</strong><br><span class="muted">The site publishes the real Bevy + egui Web testbed and core provider probes.</span></div>
         <div><strong>Box3D</strong><br><span class="muted">Targets upstream Box3D v0.1.0.</span></div>
       </div>
     </section>

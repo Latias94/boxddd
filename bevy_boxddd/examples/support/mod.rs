@@ -8,10 +8,7 @@ use bevy::render::{
 
 pub fn teaching_default_plugins(title: &'static str) -> impl PluginGroup {
     let window_plugin = WindowPlugin {
-        primary_window: Some(Window {
-            title: title.into(),
-            ..default()
-        }),
+        primary_window: Some(teaching_window(title)),
         ..default()
     };
 
@@ -30,5 +27,24 @@ pub fn teaching_default_plugins(title: &'static str) -> impl PluginGroup {
     #[cfg(not(target_os = "windows"))]
     {
         DefaultPlugins.set(window_plugin)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn teaching_window(title: &'static str) -> Window {
+    Window {
+        title: title.into(),
+        ..default()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn teaching_window(title: &'static str) -> Window {
+    Window {
+        title: title.into(),
+        canvas: Some("#bevy-canvas".into()),
+        fit_canvas_to_parent: true,
+        prevent_default_event_handling: false,
+        ..default()
     }
 }

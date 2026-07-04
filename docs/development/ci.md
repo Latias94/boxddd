@@ -16,7 +16,7 @@ support, or vendored Box3D build.
 | `aarch64-apple-ios` | compile-only | Rust wrapper and pregenerated bindings are type-checked. Native C linking is skipped. |
 | `aarch64-apple-ios-sim` | compile-only | Simulator compile sentinel. Native C linking is skipped. |
 | `aarch64-linux-android` | compile-only | Android compile sentinel. Native C linking is skipped. |
-| `wasm32-unknown-unknown` | compile-only + provider smoke | Browser-oriented target. Default checks skip Box3D C; provider mode imports Box3D from module `box3d-sys-v0`; CI runs a shared-memory smoke and Pages publishes the same shape as a live browser smoke. |
+| `wasm32-unknown-unknown` | compile-only + provider smoke + Pages build | Browser-oriented target. Default checks skip Box3D C; provider mode imports Box3D from module `box3d-sys-v0`; CI runs a shared-memory smoke and Pages publishes the real Bevy + egui Web testbed plus core provider probes. |
 | `wasm32-wasip1` | runtime smoke | CI builds vendored Box3D C with WASI SDK and runs `boxddd/examples/wasm_smoke.rs` under wasmtime. |
 
 See [`../platforms/wasm.md`](../platforms/wasm.md) for the exact WASM matrix.
@@ -32,7 +32,7 @@ than a single workspace smoke test:
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
 - explicit headless Bevy testbed scene validation through `bevy_boxddd/tests/testbed.rs`
-- static GitHub Pages validation that checks linked assets, builds the live WASM smoke assets, and mirrors the Bevy testbed scene registry
+- static GitHub Pages validation that checks linked assets, builds the Bevy Web testbed and core WASM probe assets, and mirrors the Bevy testbed scene registry
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
 - no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
@@ -85,9 +85,10 @@ until there is a renderer path stable enough for unattended CI.
 ## Pages Static Site
 
 The GitHub Pages site under `docs/pages` is the public example hub. It links
-users to the native Bevy testbed command, crate docs, the current scene catalog,
-and a small live browser WASM provider smoke. The testbed scene subset in the
-catalog must mirror `SCENE_REGISTRY` in `bevy_boxddd/examples/testbed_3d/scenes.rs`.
+users to crate docs, the current scene catalog, a real Bevy + egui Web build of
+`bevy_boxddd/examples/testbed_3d`, and smaller core WASM provider probes. The
+testbed scene subset in the catalog must mirror `SCENE_REGISTRY` in
+`bevy_boxddd/examples/testbed_3d/scenes.rs`.
 
 ```bash
 cargo run -p xtask -- build-pages-wasm
@@ -95,8 +96,9 @@ cargo run -p xtask -- validate-pages
 ```
 
 The Pages workflow builds generated browser WASM assets into
-`docs/pages/wasm/generated`, validates the site, and uploads only `docs/pages`.
-Release and crates.io publishing workflows remain separate.
+`docs/pages/wasm/generated` and `docs/pages/bevy-testbed/generated`, validates
+the site, and uploads only `docs/pages`. Release and crates.io publishing
+workflows remain separate.
 
 ## Rustdoc Coverage
 
@@ -244,4 +246,8 @@ cargo run -p xtask -- provider-smoke-app
 
 # Full provider smoke also requires Emscripten SDK on PATH or EMSDK set.
 cargo run -p xtask -- provider-smoke
+
+# Pages Bevy Web build also requires wasm-bindgen-cli matching Cargo.lock.
+cargo install wasm-bindgen-cli --version 0.2.126 --locked
+cargo run -p xtask -- build-pages-wasm
 ```

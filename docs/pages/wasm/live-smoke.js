@@ -296,7 +296,7 @@ async function runDemo(demoKey) {
   currentProgress = 0;
   setActiveButton(demoKey);
   setBusy(true);
-  setStatus("Loading WASM...", demo.loading);
+  setStatus("Loading core WASM probe...", demo.loading);
   drawScene(demoKey, 0, 0);
 
   try {
@@ -314,7 +314,7 @@ async function runDemo(demoKey) {
     animate(demoKey, value);
   } catch (error) {
     console.error(error);
-    setStatus("WASM example failed", error instanceof Error ? error.message : String(error));
+    setStatus("Core WASM probe failed", error instanceof Error ? error.message : String(error));
     drawLabel("failed");
   } finally {
     setBusy(false);

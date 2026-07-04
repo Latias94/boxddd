@@ -15,6 +15,12 @@ const TARGET: &str = "wasm32-unknown-unknown";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
 const PAGES_WASM_DIR: &str = "wasm/generated";
+const BEVY_WEB_EXAMPLE: &str = "testbed_3d";
+const BEVY_WEB_OUT_DIR: &str = "bevy-testbed/generated";
+const BEVY_WEB_OUT_NAME: &str = "bevy_boxddd_testbed";
+const BEVY_WEB_JS: &str = "bevy_boxddd_testbed.js";
+const BEVY_WEB_WASM: &str = "bevy_boxddd_testbed_bg.wasm";
+const BEVY_PROVIDER_SHIM: &str = "box3d-provider-shim.js";
 
 #[derive(Clone, Debug, serde::Deserialize)]
 struct PageSample {
@@ -35,6 +41,18 @@ struct RegistrySample {
     category: String,
     name: String,
     description: String,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum BuildProfile {
+    Debug,
+    Release,
+}
+
+#[derive(Debug)]
+struct BevyWebArtifacts {
+    out_dir: PathBuf,
+    imports: Vec<String>,
 }
 
 #[derive(Default)]
@@ -80,7 +98,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
     );
 }
 
@@ -102,6 +120,13 @@ fn pages_wasm_generated_dir() -> PathBuf {
         .join(PAGES_WASM_DIR)
 }
 
+fn pages_bevy_generated_dir() -> PathBuf {
+    project_root()
+        .join("docs")
+        .join("pages")
+        .join(BEVY_WEB_OUT_DIR)
+}
+
 fn validate_pages() -> Result<()> {
     let root = project_root();
     let pages_dir = root.join("docs").join("pages");
@@ -109,6 +134,14 @@ fn validate_pages() -> Result<()> {
     let catalog = ensure_file(
         &pages_dir.join("sample-catalog.json"),
         "Pages sample catalog",
+    )?;
+    ensure_file(
+        &pages_dir.join("bevy-testbed").join("index.html"),
+        "Bevy Web testbed page",
+    )?;
+    ensure_file(
+        &pages_dir.join("bevy-testbed").join("loader.js"),
+        "Bevy Web testbed loader",
     )?;
 
     let catalog_json = fs::read_to_string(&catalog)?;
@@ -326,6 +359,29 @@ impl PageSampleBuilder {
     }
 }
 
+impl BuildProfile {
+    fn from_env() -> Self {
+        match env::var("PROFILE").as_deref() {
+            Ok("release") => Self::Release,
+            _ => Self::Debug,
+        }
+    }
+
+    fn cargo_args(self) -> &'static [&'static str] {
+        match self {
+            Self::Debug => &[],
+            Self::Release => &["--release"],
+        }
+    }
+
+    fn target_dir(self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Release => "release",
+        }
+    }
+}
+
 fn required_registry_field(value: Option<String>, field: &str) -> Result<String> {
     value.ok_or_else(|| format!("SCENE_REGISTRY entry is missing `{field}`").into())
 }
@@ -418,8 +474,11 @@ fn strip_url_suffix(value: &str) -> &str {
 }
 
 fn build_provider_smoke_app() -> Result<PathBuf> {
+    build_provider_smoke_app_for(BuildProfile::from_env())
+}
+
+fn build_provider_smoke_app_for(profile: BuildProfile) -> Result<PathBuf> {
     let root = project_root();
-    let profile = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
     let mut command = Command::new("cargo");
     command
         .arg("build")
@@ -427,6 +486,7 @@ fn build_provider_smoke_app() -> Result<PathBuf> {
         .arg(SMOKE_PACKAGE)
         .arg("--target")
         .arg(TARGET)
+        .args(profile.cargo_args())
         .env("BOXDDD_SYS_WASM_MODE", "provider")
         .env("RUSTFLAGS", provider_rustflags());
     run_command(&mut command, "build provider-smoke Rust wasm")?;
@@ -434,7 +494,7 @@ fn build_provider_smoke_app() -> Result<PathBuf> {
     let wasm = root
         .join("target")
         .join(TARGET)
-        .join(profile)
+        .join(profile.target_dir())
         .join(SMOKE_WASM);
     if !wasm.exists() {
         return Err(format!("provider-smoke wasm artifact not found: {}", wasm.display()).into());
@@ -447,18 +507,29 @@ fn build_provider_smoke_app() -> Result<PathBuf> {
 }
 
 fn provider_rustflags() -> OsString {
-    let mut flags = env::var_os("RUSTFLAGS").unwrap_or_default();
-    if !flags.is_empty() {
-        flags.push(" ");
-    }
-    flags.push(
-        "-C link-arg=--import-memory \
-         -C link-arg=--export=boxddd_provider_smoke \
+    append_rustflags(
+        "-C link-arg=--export=boxddd_provider_smoke \
          -C link-arg=--export=boxddd_provider_drop_millimeters \
          -C link-arg=--export=boxddd_provider_ray_hit_millimeters \
          -C link-arg=--export=boxddd_provider_shape_cast_permyriad \
          -C link-arg=--export=boxddd_provider_joint_error_millimeters",
-    );
+    )
+}
+
+fn shared_memory_rustflags() -> OsString {
+    append_rustflags("")
+}
+
+fn append_rustflags(extra: &str) -> OsString {
+    let mut flags = env::var_os("RUSTFLAGS").unwrap_or_default();
+    if !flags.is_empty() {
+        flags.push(" ");
+    }
+    flags.push("-C link-arg=--import-memory");
+    if !extra.trim().is_empty() {
+        flags.push(" ");
+        flags.push(extra);
+    }
     flags
 }
 
@@ -497,6 +568,8 @@ for (const name of names) console.log(name);
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(ToOwned::to_owned)
+        .collect::<BTreeSet<_>>()
+        .into_iter()
         .collect::<Vec<_>>();
     if imports.is_empty() {
         return Err(format!(
@@ -520,6 +593,154 @@ fn write_exports_json(out_dir: &Path, imports: &[String]) -> Result<PathBuf> {
     Ok(path)
 }
 
+fn combine_provider_imports(groups: &[&[String]]) -> Vec<String> {
+    groups
+        .iter()
+        .flat_map(|group| group.iter().cloned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
+    ensure_tool(
+        "wasm-bindgen",
+        "--version",
+        "wasm-bindgen-cli is required for Bevy Web examples",
+    )?;
+
+    let root = project_root();
+    let out_dir = root.join("target").join("boxddd-bevy-testbed-web");
+    replace_dir_under(&out_dir, &root.join("target"))?;
+
+    let mut command = Command::new("cargo");
+    command
+        .arg("build")
+        .arg("-p")
+        .arg("bevy_boxddd")
+        .arg("--features")
+        .arg("debug-gizmos physics-picking")
+        .arg("--example")
+        .arg(BEVY_WEB_EXAMPLE)
+        .arg("--target")
+        .arg(TARGET)
+        .arg("--release")
+        .env("BOXDDD_SYS_WASM_MODE", "provider")
+        .env("RUSTFLAGS", shared_memory_rustflags());
+    run_command(&mut command, "build Bevy testbed wasm")?;
+
+    let wasm = root
+        .join("target")
+        .join(TARGET)
+        .join("release")
+        .join("examples")
+        .join(format!("{BEVY_WEB_EXAMPLE}.wasm"));
+    ensure_file(&wasm, "Bevy testbed wasm")?;
+
+    let mut bindgen = Command::new("wasm-bindgen");
+    bindgen
+        .arg("--target")
+        .arg("web")
+        .arg("--out-dir")
+        .arg(&out_dir)
+        .arg("--out-name")
+        .arg(BEVY_WEB_OUT_NAME)
+        .arg(&wasm);
+    run_command(&mut bindgen, "run wasm-bindgen for Bevy testbed")?;
+
+    patch_bevy_bindgen_imports(&out_dir.join(BEVY_WEB_JS))?;
+    let bevy_wasm = out_dir.join(BEVY_WEB_WASM);
+    let imports = collect_provider_imports(&bevy_wasm)?;
+    write_browser_provider_shim(&out_dir, &imports)?;
+
+    Ok(BevyWebArtifacts { out_dir, imports })
+}
+
+fn patch_bevy_bindgen_imports(js: &Path) -> Result<()> {
+    let source = fs::read_to_string(js)?;
+    let patched = source.replace(
+        &format!("from \"{PROVIDER_MODULE}\""),
+        &format!("from \"./{BEVY_PROVIDER_SHIM}\""),
+    );
+    if patched == source {
+        return Err(format!(
+            "wasm-bindgen output does not import {PROVIDER_MODULE}: {}",
+            js.display()
+        )
+        .into());
+    }
+    fs::write(js, patched)?;
+    Ok(())
+}
+
+fn write_browser_provider_shim(out_dir: &Path, imports: &[String]) -> Result<PathBuf> {
+    let exports = imports
+        .iter()
+        .map(|name| {
+            format!("export function {name}(...args) {{ return callProvider(\"{name}\", args); }}")
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let shim = format!(
+        r#"let provider;
+
+export function setBox3dProvider(nextProvider) {{
+  provider = nextProvider;
+}}
+
+function resolveProviderExport(name) {{
+  if (!provider) {{
+    throw new Error("Box3D provider is not initialized");
+  }}
+  const exported = provider[`_${{name}}`] || provider[name];
+  if (typeof exported !== "function") {{
+    throw new Error(`Box3D provider is missing export ${{name}}`);
+  }}
+  return exported;
+}}
+
+function callProvider(name, args) {{
+  return resolveProviderExport(name)(...args);
+}}
+
+{exports}
+"#
+    );
+    let path = out_dir.join(BEVY_PROVIDER_SHIM);
+    fs::write(&path, shim)?;
+    Ok(path)
+}
+
+fn copy_bevy_web_artifacts(artifacts: &BevyWebArtifacts) -> Result<()> {
+    let generated = pages_bevy_generated_dir();
+    replace_dir_under(&generated, &project_root().join("docs").join("pages"))?;
+
+    for file in [BEVY_WEB_JS, BEVY_WEB_WASM, BEVY_PROVIDER_SHIM] {
+        fs::copy(artifacts.out_dir.join(file), generated.join(file))?;
+    }
+
+    Ok(())
+}
+
+fn replace_dir_under(dir: &Path, allowed_root: &Path) -> Result<()> {
+    fs::create_dir_all(allowed_root)?;
+    if dir.exists() {
+        let canonical_dir = fs::canonicalize(dir)?;
+        let canonical_root = fs::canonicalize(allowed_root)?;
+        if !canonical_dir.starts_with(&canonical_root) {
+            return Err(format!(
+                "refusing to remove directory outside {}: {}",
+                canonical_root.display(),
+                canonical_dir.display()
+            )
+            .into());
+        }
+        fs::remove_dir_all(dir)?;
+    }
+    fs::create_dir_all(dir)?;
+    Ok(())
+}
+
 fn run_provider_smoke() -> Result<()> {
     let app_wasm = build_provider_smoke_app()?;
     let imports = collect_provider_imports(&app_wasm)?;
@@ -537,8 +758,10 @@ fn run_provider_smoke() -> Result<()> {
 }
 
 fn build_pages_wasm() -> Result<()> {
-    let app_wasm = build_provider_smoke_app()?;
-    let imports = collect_provider_imports(&app_wasm)?;
+    let app_wasm = build_provider_smoke_app_for(BuildProfile::Release)?;
+    let smoke_imports = collect_provider_imports(&app_wasm)?;
+    let bevy_artifacts = build_bevy_web_app()?;
+    let imports = combine_provider_imports(&[&smoke_imports, &bevy_artifacts.imports]);
     let out_dir = provider_smoke_dir();
     let exports = write_exports_json(&out_dir, &imports)?;
     let provider = build_box3d_provider(&out_dir, &exports)?;
@@ -547,32 +770,19 @@ fn build_pages_wasm() -> Result<()> {
     ensure_file(&provider_wasm, "Box3D provider wasm")?;
 
     let generated = pages_wasm_generated_dir();
-    let pages_root = project_root().join("docs").join("pages");
-    let generated_parent = generated
-        .parent()
-        .ok_or("generated WASM directory has no parent")?;
-    fs::create_dir_all(generated_parent)?;
-    if generated.exists() {
-        let canonical_generated = fs::canonicalize(&generated)?;
-        let canonical_pages = fs::canonicalize(&pages_root)?;
-        if !canonical_generated.starts_with(&canonical_pages) {
-            return Err(format!(
-                "refusing to remove generated WASM directory outside docs/pages: {}",
-                generated.display()
-            )
-            .into());
-        }
-        fs::remove_dir_all(&generated)?;
-    }
-    fs::create_dir_all(&generated)?;
+    replace_dir_under(&generated, &project_root().join("docs").join("pages"))?;
 
     fs::copy(&app_wasm, generated.join(SMOKE_WASM))?;
     fs::copy(&provider, generated.join("box3d-sys-v0.mjs"))?;
     fs::copy(&provider_wasm, generated.join("box3d-sys-v0.wasm"))?;
+    copy_bevy_web_artifacts(&bevy_artifacts)?;
 
     eprintln!(
-        "Pages WASM assets ready: {} ({} provider imports)",
+        "Pages WASM assets ready: {} and {} ({} core imports, {} Bevy imports, {} provider exports)",
         generated.display(),
+        pages_bevy_generated_dir().display(),
+        smoke_imports.len(),
+        bevy_artifacts.imports.len(),
         imports.len()
     );
     Ok(())
@@ -609,7 +819,7 @@ fn build_box3d_provider(out_dir: &Path, exports_json: &Path) -> Result<PathBuf> 
         .arg("-s")
         .arg("INITIAL_MEMORY=134217728")
         .arg("-s")
-        .arg("MAXIMUM_MEMORY=268435456")
+        .arg("MAXIMUM_MEMORY=536870912")
         .arg("-s")
         .arg("FILESYSTEM=0")
         .arg("-s")

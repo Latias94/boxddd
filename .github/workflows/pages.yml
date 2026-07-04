@@ -7,6 +7,7 @@ on:
       - "docs/pages/**"
       - "examples-wasm/**"
       - "xtask/**"
+      - "bevy_boxddd/**"
       - "boxddd/**"
       - "boxddd-sys/**"
       - ".github/workflows/pages.yml"
@@ -42,6 +43,9 @@ jobs:
         uses: Swatinem/rust-cache@v2.9.1
         with:
           cache-bin: "false"
+
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
 
       - name: Install Emscripten SDK
         shell: bash

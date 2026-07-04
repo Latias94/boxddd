@@ -28,7 +28,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 |---|---|
 | Core `boxddd` on Windows, Linux, macOS | Supported and tested |
 | `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
-| WASM | Experimental core support with live provider-mode browser examples on the demo hub |
+| WASM | Experimental provider-mode support with a live Bevy + egui Web testbed and core provider probes on the demo hub |
 | Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
@@ -139,7 +139,7 @@ cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example tes
 ```
 
 See [`bevy_boxddd/README.md`](bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
-The demo hub at <https://latias94.github.io/boxddd/> shows the maintained example gallery and runs live provider-mode WASM core examples in the browser.
+The demo hub at <https://latias94.github.io/boxddd/> opens with the maintained example gallery and links to the real Bevy + egui Web testbed. It also keeps smaller core provider probes for validating the WASM runtime path.
 
 ## Examples
 
@@ -173,7 +173,7 @@ The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.m
 
 ## Platform Notes
 
-Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and core-only: the demo hub can run provider-mode browser examples for world stepping, closest-ray queries, shape casts, and distance joints, while Bevy Web, full browser rendering, web workers, pthreads, and cross-module callbacks are still deferred.
+Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes the real `bevy_boxddd/examples/testbed_3d` Bevy + egui application through `wasm-bindgen`, and also runs core provider probes for world stepping, closest-ray queries, shape casts, and distance joints. Web workers, pthreads, and threaded Box3D scheduling are still deferred.
 
 Normal builds compile the vendored Box3D C sources locally through the Rust `cc` crate and link them into `boxddd-sys`. Users need a working platform C compiler, but they do not need CMake, LLVM, libclang, or bindgen unless they explicitly refresh bindings with `boxddd-sys/bindgen` and `BOXDDD_SYS_FORCE_BINDGEN=1`.
 
