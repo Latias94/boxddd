@@ -225,6 +225,36 @@ fn ray_picking_scene_uses_dynamic_drag_targets() {
 }
 
 #[test]
+fn visual_showcase_scenes_cover_representative_concepts() {
+    for scene in [
+        TestbedScene::DominoRun,
+        TestbedScene::ArchStack,
+        TestbedScene::WindField,
+        TestbedScene::RagdollChain,
+    ] {
+        let mut app = physics_app(scene);
+        spawn_scene_once(&mut app, scene);
+        run_fixed_frames(&mut app, 3);
+
+        let metadata = scene.metadata();
+        assert!(!metadata.category.is_empty());
+        assert!(!metadata.description.is_empty());
+        assert!(
+            testbed_body_ids(&mut app)
+                .iter()
+                .any(|body_id| body_id.is_valid()),
+            "{scene:?} should create native bodies"
+        );
+        assert!(
+            testbed_shape_ids(&mut app)
+                .iter()
+                .any(|shape_id| shape_id.is_valid()),
+            "{scene:?} should create native shapes"
+        );
+    }
+}
+
+#[test]
 fn every_testbed_scene_factory_spawns_without_panic() {
     for scene in ALL_SCENES {
         let mut app = physics_app(scene);

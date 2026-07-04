@@ -25,6 +25,10 @@ pub enum TestbedScene {
     Contacts,
     RayPicking,
     DebugDraw,
+    DominoRun,
+    ArchStack,
+    WindField,
+    RagdollChain,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -64,7 +68,7 @@ impl TestbedScene {
     }
 }
 
-pub const ALL_SCENES: [TestbedScene; 10] = [
+pub const ALL_SCENES: [TestbedScene; 14] = [
     TestbedScene::FallingStack,
     TestbedScene::AdvancedColliders,
     TestbedScene::BodyControls,
@@ -75,9 +79,13 @@ pub const ALL_SCENES: [TestbedScene; 10] = [
     TestbedScene::Contacts,
     TestbedScene::RayPicking,
     TestbedScene::DebugDraw,
+    TestbedScene::DominoRun,
+    TestbedScene::ArchStack,
+    TestbedScene::WindField,
+    TestbedScene::RagdollChain,
 ];
 
-pub const SCENE_REGISTRY: [TestbedSceneMetadata; 10] = [
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
     TestbedSceneMetadata {
         scene: TestbedScene::FallingStack,
         id: "falling-stack",
@@ -167,6 +175,42 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 10] = [
         description: "Native Box3D debug draw commands rendered through Bevy gizmos.",
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_debug_draw,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::DominoRun,
+        id: "domino-run",
+        category: "Stacking",
+        name: "Domino Run",
+        description: "A curved line of dynamic dominoes started by a moving sphere.",
+        camera: TestbedCamera::new([-6.5, 5.3, 8.4], [0.3, 0.9, 0.1]),
+        spawn: spawn_domino_run,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::ArchStack,
+        id: "arch-stack",
+        category: "Stacking",
+        name: "Arch Stack",
+        description: "Dynamic blocks arranged as a simple arch over static pillars.",
+        camera: TestbedCamera::new([-7.2, 5.4, 8.8], [0.0, 1.6, 0.0]),
+        spawn: spawn_arch_stack,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::WindField,
+        id: "wind-field",
+        category: "Forces",
+        name: "Wind Field",
+        description: "Continuous external forces push light bodies through obstacles.",
+        camera: TestbedCamera::new([-7.0, 4.8, 8.6], [0.3, 1.2, 0.0]),
+        spawn: spawn_wind_field,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::RagdollChain,
+        id: "ragdoll-chain",
+        category: "Joints",
+        name: "Ragdoll Chain",
+        description: "A lightweight joint chain made from capsule bodies.",
+        camera: TestbedCamera::new([-6.4, 5.6, 8.0], [0.0, 1.9, 0.0]),
+        spawn: spawn_ragdoll_chain,
     },
 ];
 
@@ -683,4 +727,204 @@ fn spawn_debug_draw(
         Collider::sphere(0.4),
         TestbedEntity,
     ));
+}
+
+fn spawn_domino_run(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let domino_mesh = meshes.add(Cuboid::new(0.16, 1.2, 0.52));
+    let domino_material = materials.add(Color::srgb(0.18, 0.45, 0.86));
+    let accent_material = materials.add(Color::srgb(0.95, 0.55, 0.24));
+
+    for index in 0..18 {
+        let t = index as f32 / 17.0;
+        let angle = -0.72 + t * 1.44;
+        let position = Vec3::new(angle.sin() * 3.2, 0.6, angle.cos() * 1.8);
+        commands.spawn((
+            Mesh3d(domino_mesh.clone()),
+            MeshMaterial3d(if index % 5 == 0 {
+                accent_material.clone()
+            } else {
+                domino_material.clone()
+            }),
+            Transform::from_translation(position)
+                .with_rotation(Quat::from_rotation_y(-angle + 0.25)),
+            RigidBody::Dynamic,
+            Collider::cuboid(0.08, 0.6, 0.26),
+            PhysicsMaterial {
+                friction: 0.8,
+                restitution: 0.05,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+
+    commands.spawn((
+        Mesh3d(meshes.add(Sphere::new(0.28).mesh().uv(24, 12))),
+        MeshMaterial3d(materials.add(Color::srgb(0.38, 0.78, 0.38))),
+        Transform::from_xyz(-3.45, 0.45, 1.55),
+        RigidBody::Dynamic,
+        Collider::sphere(0.28),
+        LinearVelocity(Vec3::new(4.4, 0.0, -0.4)),
+        PhysicsMaterial {
+            restitution: 0.25,
+            ..default()
+        },
+        TestbedEntity,
+    ));
+}
+
+fn spawn_arch_stack(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let pillar_material = materials.add(Color::srgb(0.34, 0.36, 0.40));
+    let block_material = materials.add(Color::srgb(0.76, 0.52, 0.32));
+    let block_mesh = meshes.add(Cuboid::new(0.78, 0.28, 0.55));
+
+    for x in [-2.2, 2.2] {
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::new(0.55, 1.7, 0.75))),
+            MeshMaterial3d(pillar_material.clone()),
+            Transform::from_xyz(x, 0.85, 0.0),
+            RigidBody::Static,
+            Collider::cuboid(0.275, 0.85, 0.375),
+            TestbedEntity,
+        ));
+    }
+
+    for index in 0..11 {
+        let t = index as f32 / 10.0;
+        let angle = std::f32::consts::PI * (0.12 + t * 0.76);
+        let radius = 2.25;
+        let position = Vec3::new(angle.cos() * radius, 0.65 + angle.sin() * 1.7, 0.0);
+        commands.spawn((
+            Mesh3d(block_mesh.clone()),
+            MeshMaterial3d(block_material.clone()),
+            Transform::from_translation(position)
+                .with_rotation(Quat::from_rotation_z(angle - std::f32::consts::FRAC_PI_2)),
+            RigidBody::Dynamic,
+            Collider::cuboid(0.39, 0.14, 0.275),
+            PhysicsMaterial {
+                friction: 0.9,
+                restitution: 0.02,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+}
+
+fn spawn_wind_field(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let field_material = materials.add(StandardMaterial {
+        base_color: Color::srgba(0.30, 0.70, 0.95, 0.16),
+        alpha_mode: AlphaMode::Blend,
+        ..default()
+    });
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(5.6, 2.0, 3.2))),
+        MeshMaterial3d(field_material),
+        Transform::from_xyz(0.0, 1.25, 0.0),
+        TestbedEntity,
+    ));
+
+    let obstacle_material = materials.add(Color::srgb(0.38, 0.40, 0.46));
+    for position in [
+        Vec3::new(-0.8, 0.8, -0.7),
+        Vec3::new(0.7, 1.1, 0.55),
+        Vec3::new(2.0, 0.7, -0.35),
+    ] {
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::new(0.42, 1.6, 0.42))),
+            MeshMaterial3d(obstacle_material.clone()),
+            Transform::from_translation(position),
+            RigidBody::Static,
+            Collider::cuboid(0.21, 0.8, 0.21),
+            TestbedEntity,
+        ));
+    }
+
+    let sphere_mesh = meshes.add(Sphere::new(0.24).mesh().uv(20, 10));
+    let colors = [
+        Color::srgb(0.20, 0.52, 0.90),
+        Color::srgb(0.90, 0.56, 0.22),
+        Color::srgb(0.35, 0.74, 0.45),
+    ];
+    for index in 0..12 {
+        let row = index / 4;
+        let column = index % 4;
+        commands.spawn((
+            Mesh3d(sphere_mesh.clone()),
+            MeshMaterial3d(materials.add(colors[index % colors.len()])),
+            Transform::from_xyz(
+                -3.2 - row as f32 * 0.2,
+                0.65 + column as f32 * 0.42,
+                -1.2 + row as f32 * 0.85,
+            ),
+            RigidBody::Dynamic,
+            Collider::sphere(0.24),
+            BodySettings {
+                gravity_scale: 0.35,
+                linear_damping: 0.04,
+                ..default()
+            },
+            ExternalForce::at_center(Vec3::new(17.0, 1.2, 2.4)),
+            PhysicsMaterial {
+                restitution: 0.35,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+}
+
+fn spawn_ragdoll_chain(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let anchor = commands
+        .spawn((
+            Mesh3d(meshes.add(Sphere::new(0.16).mesh().uv(20, 10))),
+            MeshMaterial3d(materials.add(Color::srgb(0.95, 0.72, 0.22))),
+            Transform::from_xyz(-2.0, 3.4, 0.0),
+            RigidBody::Static,
+            TestbedEntity,
+        ))
+        .id();
+
+    let capsule_mesh = meshes.add(Capsule3d::new(0.16, 0.68));
+    let capsule_material = materials.add(Color::srgb(0.32, 0.60, 0.90));
+    let mut previous = anchor;
+    for index in 0..7 {
+        let body = commands
+            .spawn((
+                Mesh3d(capsule_mesh.clone()),
+                MeshMaterial3d(capsule_material.clone()),
+                Transform::from_xyz(-1.45 + index as f32 * 0.48, 3.05 - index as f32 * 0.24, 0.0)
+                    .with_rotation(Quat::from_rotation_z(0.28)),
+                RigidBody::Dynamic,
+                Collider::capsule_y(0.34, 0.16),
+                BodySettings {
+                    angular_damping: 0.18,
+                    ..default()
+                },
+                TestbedEntity,
+            ))
+            .id();
+        commands.spawn((
+            JointTarget::new(previous, body),
+            Joint::distance(0.55),
+            TestbedEntity,
+        ));
+        previous = body;
+    }
 }
