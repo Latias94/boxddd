@@ -115,6 +115,23 @@ fn coverage_fixture_has_policy_buckets_and_high_priority_symbols() {
     assert_eq!(by_symbol["b3World_Step"].status, CoverageStatus::Safe);
     assert_eq!(by_symbol["b3SetAllocator"].status, CoverageStatus::Raw);
     assert_eq!(by_symbol["b3GetWorldCount"].status, CoverageStatus::Omitted);
+    assert_eq!(by_symbol["b3Body_GetWorld"].status, CoverageStatus::Omitted);
+    assert_eq!(
+        by_symbol["b3Shape_GetWorld"].status,
+        CoverageStatus::Omitted
+    );
+    assert_eq!(
+        by_symbol["b3Joint_GetWorld"].status,
+        CoverageStatus::Omitted
+    );
+    assert_eq!(
+        by_symbol["b3LoadRecordingFromFile"].status,
+        CoverageStatus::Safe
+    );
+    assert_eq!(
+        by_symbol["b3SaveRecordingToFile"].status,
+        CoverageStatus::Raw
+    );
 
     for entry in entries
         .iter()

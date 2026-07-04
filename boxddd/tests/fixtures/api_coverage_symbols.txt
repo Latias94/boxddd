@@ -78,8 +78,8 @@ b3Recording_GetData|safe|recording|box3d.h|covered by current safe wrapper imple
 b3Recording_GetSize|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3World_StartRecording|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_StopRecording|safe|world|box3d.h|covered by current safe wrapper implementation
-b3SaveRecordingToFile|raw|recording|box3d.h|process-global, file IO, debug dump, or raw pointer policy
-b3LoadRecordingFromFile|raw|recording|box3d.h|process-global, file IO, debug dump, or raw pointer policy
+b3SaveRecordingToFile|raw|recording|box3d.h|native save helper remains raw; Recording::save_to_file writes safe bytes through Rust IO
+b3LoadRecordingFromFile|safe|recording|box3d.h|Recording::load_from_file returns an owned Recording with path conversion and error mapping
 b3ValidateReplay|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_Create|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_Destroy|safe|recording|box3d.h|covered by current safe wrapper implementation
@@ -167,7 +167,7 @@ b3Body_IsBullet|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_EnableContactRecycling|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_IsContactRecyclingEnabled|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_EnableHitEvents|safe|body|box3d.h|covered by current safe wrapper implementation
-b3Body_GetWorld|safe|body|box3d.h|covered by current safe wrapper implementation
+b3Body_GetWorld|omitted|body|box3d.h|redundant with safe World ownership and membership checks
 b3Body_GetShapeCount|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_GetShapes|safe|body|box3d.h|covered by current safe wrapper implementation
 b3Body_GetJointCount|safe|body|box3d.h|covered by current safe wrapper implementation

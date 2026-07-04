@@ -58,6 +58,12 @@ Reasoning:
 - Borrowed bytes prevent mutable use of the same `Recording`.
 - `World::start_recording` requires `&mut Recording`, so safe Rust cannot start
   a recording while a borrowed byte slice exists.
+- `Recording::load_from_file` returns a fresh owned recording buffer. It does
+  not expose borrowed native storage or attach the recording to a world.
+- `Recording::save_to_file` copies bytes while the Box3D lock is held and fails
+  while the recording is active on a live world. The upstream native save helper
+  remains raw-only because the safe API already writes validated bytes through
+  Rust IO.
 - `Recording::drop` stops active recording sessions when the world is still
   valid.
 - `World::drop` detaches active recording registry entries for that world.
