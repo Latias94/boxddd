@@ -2,6 +2,10 @@ use super::*;
 
 impl World {
     /// Tries to enable or disable the spring on a revolute joint.
+    ///
+    /// All revolute-joint runtime methods return [`Error::WrongJointType`] when
+    /// `joint_id` belongs to another joint family, and [`Error::InvalidJointId`]
+    /// when the handle is stale or belongs to another world.
     pub fn try_enable_revolute_joint_spring(
         &mut self,
         joint_id: JointId,
@@ -19,7 +23,7 @@ impl World {
         })
     }
 
-    /// Tries to set the spring hertz on a revolute joint.
+    /// Tries to set the spring frequency, in hertz, on a revolute joint.
     pub fn try_set_revolute_joint_spring_hertz(
         &mut self,
         joint_id: JointId,
@@ -31,14 +35,14 @@ impl World {
         })
     }
 
-    /// Returns the spring hertz of a revolute joint.
+    /// Returns the spring frequency, in hertz, of a revolute joint.
     pub fn try_revolute_joint_spring_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetSpringHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the spring damping ratio on a revolute joint.
+    /// Tries to set the dimensionless spring damping ratio on a revolute joint.
     pub fn try_set_revolute_joint_spring_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -52,14 +56,14 @@ impl World {
         })
     }
 
-    /// Returns the spring damping ratio of a revolute joint.
+    /// Returns the dimensionless spring damping ratio of a revolute joint.
     pub fn try_revolute_joint_spring_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetSpringDampingRatio(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the target angle on a revolute joint.
+    /// Tries to set the target angle, in radians, on a revolute joint.
     pub fn try_set_revolute_joint_target_angle(
         &mut self,
         joint_id: JointId,
@@ -71,14 +75,14 @@ impl World {
         })
     }
 
-    /// Returns the target angle of a revolute joint.
+    /// Returns the target angle, in radians, of a revolute joint.
     pub fn try_revolute_joint_target_angle(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetTargetAngle(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the angle of a revolute joint.
+    /// Returns the current joint angle, in radians, of a revolute joint.
     pub fn try_revolute_joint_angle(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetAngle(joint_id.into_raw()) }
@@ -103,21 +107,21 @@ impl World {
         })
     }
 
-    /// Returns the lower limit of a revolute joint.
+    /// Returns the lower angle limit, in radians, of a revolute joint.
     pub fn try_revolute_joint_lower_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetLowerLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the upper limit of a revolute joint.
+    /// Returns the upper angle limit, in radians, of a revolute joint.
     pub fn try_revolute_joint_upper_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetUpperLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the limits on a revolute joint.
+    /// Tries to set angle limits, in radians, on a revolute joint.
     pub fn try_set_revolute_joint_limits(
         &mut self,
         joint_id: JointId,
@@ -148,7 +152,7 @@ impl World {
         })
     }
 
-    /// Tries to set the motor speed on a revolute joint.
+    /// Tries to set the motor speed, in radians per second, on a revolute joint.
     pub fn try_set_revolute_joint_motor_speed(
         &mut self,
         joint_id: JointId,
@@ -160,21 +164,21 @@ impl World {
         })
     }
 
-    /// Returns the motor speed of a revolute joint.
+    /// Returns the motor speed, in radians per second, of a revolute joint.
     pub fn try_revolute_joint_motor_speed(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetMotorSpeed(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the motor torque of a revolute joint.
+    /// Returns the current motor torque, in newton-meters, of a revolute joint.
     pub fn try_revolute_joint_motor_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetMotorTorque(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the max motor torque on a revolute joint.
+    /// Tries to set the maximum motor torque, in newton-meters, on a revolute joint.
     pub fn try_set_revolute_joint_max_motor_torque(
         &mut self,
         joint_id: JointId,
@@ -186,7 +190,7 @@ impl World {
         })
     }
 
-    /// Returns the max motor torque of a revolute joint.
+    /// Returns the maximum motor torque, in newton-meters, of a revolute joint.
     pub fn try_revolute_joint_max_motor_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Revolute, {
             unsafe { ffi::b3RevoluteJoint_GetMaxMotorTorque(joint_id.into_raw()) }

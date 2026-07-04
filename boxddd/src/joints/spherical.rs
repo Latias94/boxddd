@@ -2,6 +2,11 @@ use super::*;
 
 impl World {
     /// Tries to enable or disable the cone limit on a spherical joint.
+    ///
+    /// All spherical-joint and weld-joint runtime methods in this module return
+    /// [`Error::WrongJointType`] when `joint_id` belongs to another joint family,
+    /// and [`Error::InvalidJointId`] when the handle is stale or belongs to
+    /// another world.
     pub fn try_enable_spherical_joint_cone_limit(
         &mut self,
         joint_id: JointId,
@@ -19,7 +24,7 @@ impl World {
         })
     }
 
-    /// Tries to set the cone limit on a spherical joint.
+    /// Tries to set the cone limit angle, in radians, on a spherical joint.
     pub fn try_set_spherical_joint_cone_limit(
         &mut self,
         joint_id: JointId,
@@ -31,14 +36,14 @@ impl World {
         })
     }
 
-    /// Returns the cone limit of a spherical joint.
+    /// Returns the cone limit angle, in radians, of a spherical joint.
     pub fn try_spherical_joint_cone_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetConeLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the cone angle of a spherical joint.
+    /// Returns the current cone angle, in radians, of a spherical joint.
     pub fn try_spherical_joint_cone_angle(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetConeAngle(joint_id.into_raw()) }
@@ -63,21 +68,21 @@ impl World {
         })
     }
 
-    /// Returns the lower twist limit of a spherical joint.
+    /// Returns the lower twist limit, in radians, of a spherical joint.
     pub fn try_spherical_joint_lower_twist_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetLowerTwistLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the upper twist limit of a spherical joint.
+    /// Returns the upper twist limit, in radians, of a spherical joint.
     pub fn try_spherical_joint_upper_twist_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetUpperTwistLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the twist limits on a spherical joint.
+    /// Tries to set twist limits, in radians, on a spherical joint.
     pub fn try_set_spherical_joint_twist_limits(
         &mut self,
         joint_id: JointId,
@@ -90,7 +95,7 @@ impl World {
         })
     }
 
-    /// Returns the twist angle of a spherical joint.
+    /// Returns the current twist angle, in radians, of a spherical joint.
     pub fn try_spherical_joint_twist_angle(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetTwistAngle(joint_id.into_raw()) }
@@ -115,7 +120,7 @@ impl World {
         })
     }
 
-    /// Tries to set the spring hertz on a spherical joint.
+    /// Tries to set the spring frequency, in hertz, on a spherical joint.
     pub fn try_set_spherical_joint_spring_hertz(
         &mut self,
         joint_id: JointId,
@@ -127,14 +132,14 @@ impl World {
         })
     }
 
-    /// Returns the spring hertz of a spherical joint.
+    /// Returns the spring frequency, in hertz, of a spherical joint.
     pub fn try_spherical_joint_spring_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetSpringHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the spring damping ratio on a spherical joint.
+    /// Tries to set the dimensionless spring damping ratio on a spherical joint.
     pub fn try_set_spherical_joint_spring_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -148,7 +153,7 @@ impl World {
         })
     }
 
-    /// Returns the spring damping ratio of a spherical joint.
+    /// Returns the dimensionless spring damping ratio of a spherical joint.
     pub fn try_spherical_joint_spring_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetSpringDampingRatio(joint_id.into_raw()) }
@@ -194,7 +199,7 @@ impl World {
         })
     }
 
-    /// Tries to set the motor velocity on a spherical joint.
+    /// Tries to set the motor angular velocity, in radians per second, on a spherical joint.
     pub fn try_set_spherical_joint_motor_velocity(
         &mut self,
         joint_id: JointId,
@@ -208,21 +213,21 @@ impl World {
         })
     }
 
-    /// Returns the motor velocity of a spherical joint.
+    /// Returns the motor angular velocity, in radians per second, of a spherical joint.
     pub fn try_spherical_joint_motor_velocity(&self, joint_id: JointId) -> Result<Vec3> {
         family_method!(self, joint_id, JointType::Spherical, {
             Vec3::from_raw(unsafe { ffi::b3SphericalJoint_GetMotorVelocity(joint_id.into_raw()) })
         })
     }
 
-    /// Returns the motor torque of a spherical joint.
+    /// Returns the current motor torque, in newton-meters, of a spherical joint.
     pub fn try_spherical_joint_motor_torque(&self, joint_id: JointId) -> Result<Vec3> {
         family_method!(self, joint_id, JointType::Spherical, {
             Vec3::from_raw(unsafe { ffi::b3SphericalJoint_GetMotorTorque(joint_id.into_raw()) })
         })
     }
 
-    /// Tries to set the max motor torque on a spherical joint.
+    /// Tries to set the maximum motor torque, in newton-meters, on a spherical joint.
     pub fn try_set_spherical_joint_max_motor_torque(
         &mut self,
         joint_id: JointId,
@@ -234,14 +239,14 @@ impl World {
         })
     }
 
-    /// Returns the max motor torque of a spherical joint.
+    /// Returns the maximum motor torque, in newton-meters, of a spherical joint.
     pub fn try_spherical_joint_max_motor_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Spherical, {
             unsafe { ffi::b3SphericalJoint_GetMaxMotorTorque(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the linear hertz on a weld joint.
+    /// Tries to set the linear spring frequency, in hertz, on a weld joint.
     pub fn try_set_weld_joint_linear_hertz(&mut self, joint_id: JointId, hertz: f32) -> Result<()> {
         validate_nonnegative_scalar(hertz)?;
         family_method!(self, joint_id, JointType::Weld, {
@@ -249,14 +254,14 @@ impl World {
         })
     }
 
-    /// Returns the linear hertz of a weld joint.
+    /// Returns the linear spring frequency, in hertz, of a weld joint.
     pub fn try_weld_joint_linear_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Weld, {
             unsafe { ffi::b3WeldJoint_GetLinearHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the linear damping ratio on a weld joint.
+    /// Tries to set the dimensionless linear damping ratio on a weld joint.
     pub fn try_set_weld_joint_linear_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -268,14 +273,14 @@ impl World {
         })
     }
 
-    /// Returns the linear damping ratio of a weld joint.
+    /// Returns the dimensionless linear damping ratio of a weld joint.
     pub fn try_weld_joint_linear_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Weld, {
             unsafe { ffi::b3WeldJoint_GetLinearDampingRatio(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the angular hertz on a weld joint.
+    /// Tries to set the angular spring frequency, in hertz, on a weld joint.
     pub fn try_set_weld_joint_angular_hertz(
         &mut self,
         joint_id: JointId,
@@ -287,14 +292,14 @@ impl World {
         })
     }
 
-    /// Returns the angular hertz of a weld joint.
+    /// Returns the angular spring frequency, in hertz, of a weld joint.
     pub fn try_weld_joint_angular_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Weld, {
             unsafe { ffi::b3WeldJoint_GetAngularHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the angular damping ratio on a weld joint.
+    /// Tries to set the dimensionless angular damping ratio on a weld joint.
     pub fn try_set_weld_joint_angular_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -306,7 +311,7 @@ impl World {
         })
     }
 
-    /// Returns the angular damping ratio of a weld joint.
+    /// Returns the dimensionless angular damping ratio of a weld joint.
     pub fn try_weld_joint_angular_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Weld, {
             unsafe { ffi::b3WeldJoint_GetAngularDampingRatio(joint_id.into_raw()) }

@@ -208,9 +208,33 @@ unsafe extern "C" fn pre_solve_trampoline(
 impl World {
     /// Registers a custom contact filter callback.
     ///
-    /// The callback returns `true` to allow a pair to collide. Panics if the
-    /// callback cannot be registered; use `try_set_custom_filter` to handle
-    /// errors explicitly.
+    /// Box3D calls this when an awake dynamic contact pair is considered and at
+    /// least one shape has custom filtering enabled. Return `true` to allow the
+    /// collision, or `false` to disable it.
+    ///
+    /// The callback must be thread-safe and must not mutate the world. Safe
+    /// callbacks do not receive a `World` capability, and `World` itself is not
+    /// `Send` or `Sync`, so safe Rust cannot move a live world handle into the
+    /// callback:
+    ///
+    /// ```compile_fail
+    /// use boxddd::{ShapeId, World};
+    ///
+    /// fn register(world: &mut World, captured: World) {
+    ///     world.set_custom_filter(move |_: ShapeId, _: ShapeId| {
+    ///         let _ = captured.body_events();
+    ///         true
+    ///     });
+    /// }
+    /// ```
+    ///
+    /// The runtime callback guard remains as an FFI reentrancy boundary for raw
+    /// handles, global state, and future callback surfaces. A panic raised by
+    /// the callback is caught and reported after stepping as
+    /// [`Error::CallbackPanicked`].
+    ///
+    /// Panics if the callback cannot be registered; use
+    /// [`Self::try_set_custom_filter`] to handle errors explicitly.
     pub fn set_custom_filter<F>(&mut self, callback: F)
     where
         F: Fn(ShapeId, ShapeId) -> bool + Send + Sync + 'static,
@@ -221,7 +245,9 @@ impl World {
 
     /// Tries to register a custom contact filter callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// This cannot be called from inside another Box3D callback. On Emscripten
+    /// provider builds, custom Rust callbacks are reported as
+    /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_custom_filter<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(ShapeId, ShapeId) -> bool + Send + Sync + 'static,
@@ -264,6 +290,8 @@ impl World {
     }
 
     /// Tries to clear the custom contact filter callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_clear_custom_filter(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -277,8 +305,20 @@ impl World {
 
     /// Registers a pre-solve callback.
     ///
-    /// The callback returns `true` to keep the contact enabled for the current
-    /// step. Panics if the callback cannot be registered.
+    /// Box3D calls this after contact update and before solving when a dynamic
+    /// non-sensor shape has pre-solve events enabled. Return `true` to keep the
+    /// contact enabled for the current step, or `false` to disable it for this
+    /// step.
+    ///
+    /// The point and normal are the limited CCD-compatible contact data Box3D
+    /// exposes to this callback, not the full manifold. The callback must be
+    /// thread-safe and must not mutate the world. Safe `World` methods reject
+    /// calls made from inside Box3D callbacks, and a panic raised by the
+    /// callback is caught and reported after stepping as
+    /// [`Error::CallbackPanicked`].
+    ///
+    /// Panics if the callback cannot be registered; use
+    /// [`Self::try_set_pre_solve`] to handle errors explicitly.
     pub fn set_pre_solve<F>(&mut self, callback: F)
     where
         F: Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 'static,
@@ -289,7 +329,9 @@ impl World {
 
     /// Tries to register a pre-solve callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// This cannot be called from inside another Box3D callback. On Emscripten
+    /// provider builds, custom Rust callbacks are reported as
+    /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_pre_solve<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(ShapeId, ShapeId, Pos, Vec3) -> bool + Send + Sync + 'static,
@@ -331,6 +373,8 @@ impl World {
     }
 
     /// Tries to clear the pre-solve callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_clear_pre_solve(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -344,7 +388,17 @@ impl World {
 
     /// Registers a friction mixing callback.
     ///
-    /// Panics if the callback cannot be registered.
+    /// Box3D calls this from worker threads while mixing two shape materials.
+    /// The default upstream behavior is `sqrt(friction_a * friction_b)`.
+    ///
+    /// The callback receives only the two material inputs and must not mutate
+    /// Box3D or application state. Panics are caught and reported after stepping
+    /// as [`Error::CallbackPanicked`]. If the callback returns a non-finite
+    /// coefficient, `boxddd` falls back to the default mix instead of reporting
+    /// a panic.
+    ///
+    /// Panics if the callback cannot be registered; use
+    /// [`Self::try_set_friction_callback`] to handle errors explicitly.
     pub fn set_friction_callback<F>(&mut self, callback: F)
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -354,6 +408,9 @@ impl World {
     }
 
     /// Tries to register a friction mixing callback.
+    ///
+    /// On Emscripten provider builds, custom Rust callbacks are reported as
+    /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_friction_callback<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -395,6 +452,8 @@ impl World {
     }
 
     /// Tries to clear the friction mixing callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_clear_friction_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -410,7 +469,17 @@ impl World {
 
     /// Registers a restitution mixing callback.
     ///
-    /// Panics if the callback cannot be registered.
+    /// Box3D calls this from worker threads while mixing two shape materials.
+    /// The default upstream behavior is `max(restitution_a, restitution_b)`.
+    ///
+    /// The callback receives only the two material inputs and must not mutate
+    /// Box3D or application state. Panics are caught and reported after stepping
+    /// as [`Error::CallbackPanicked`]. If the callback returns a non-finite
+    /// coefficient, `boxddd` falls back to the default mix instead of reporting
+    /// a panic.
+    ///
+    /// Panics if the callback cannot be registered; use
+    /// [`Self::try_set_restitution_callback`] to handle errors explicitly.
     pub fn set_restitution_callback<F>(&mut self, callback: F)
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -420,6 +489,9 @@ impl World {
     }
 
     /// Tries to register a restitution mixing callback.
+    ///
+    /// On Emscripten provider builds, custom Rust callbacks are reported as
+    /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_restitution_callback<F>(&mut self, callback: F) -> Result<()>
     where
         F: Fn(MaterialMixInput, MaterialMixInput) -> f32 + Send + Sync + 'static,
@@ -461,6 +533,8 @@ impl World {
     }
 
     /// Tries to clear the restitution mixing callback.
+    ///
+    /// This cannot be called from inside another Box3D callback.
     pub fn try_clear_restitution_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();

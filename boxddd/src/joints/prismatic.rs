@@ -2,6 +2,11 @@ use super::*;
 
 impl World {
     /// Tries to enable or disable the spring on a prismatic joint.
+    ///
+    /// All prismatic-joint runtime methods return [`Error::WrongJointType`]
+    /// when `joint_id` belongs to another joint family, and
+    /// [`Error::InvalidJointId`] when the handle is stale or belongs to another
+    /// world.
     pub fn try_enable_prismatic_joint_spring(
         &mut self,
         joint_id: JointId,
@@ -19,7 +24,7 @@ impl World {
         })
     }
 
-    /// Tries to set the spring hertz on a prismatic joint.
+    /// Tries to set the spring frequency, in hertz, on a prismatic joint.
     pub fn try_set_prismatic_joint_spring_hertz(
         &mut self,
         joint_id: JointId,
@@ -31,14 +36,14 @@ impl World {
         })
     }
 
-    /// Returns the spring hertz of a prismatic joint.
+    /// Returns the spring frequency, in hertz, of a prismatic joint.
     pub fn try_prismatic_joint_spring_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetSpringHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the spring damping ratio on a prismatic joint.
+    /// Tries to set the dimensionless spring damping ratio on a prismatic joint.
     pub fn try_set_prismatic_joint_spring_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -52,14 +57,14 @@ impl World {
         })
     }
 
-    /// Returns the spring damping ratio of a prismatic joint.
+    /// Returns the dimensionless spring damping ratio of a prismatic joint.
     pub fn try_prismatic_joint_spring_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetSpringDampingRatio(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the target translation on a prismatic joint.
+    /// Tries to set the target translation, in world length units, on a prismatic joint.
     pub fn try_set_prismatic_joint_target_translation(
         &mut self,
         joint_id: JointId,
@@ -71,7 +76,7 @@ impl World {
         })
     }
 
-    /// Returns the target translation of a prismatic joint.
+    /// Returns the target translation, in world length units, of a prismatic joint.
     pub fn try_prismatic_joint_target_translation(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetTargetTranslation(joint_id.into_raw()) }
@@ -96,21 +101,21 @@ impl World {
         })
     }
 
-    /// Returns the lower limit of a prismatic joint.
+    /// Returns the lower translation limit, in world length units, of a prismatic joint.
     pub fn try_prismatic_joint_lower_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetLowerLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the upper limit of a prismatic joint.
+    /// Returns the upper translation limit, in world length units, of a prismatic joint.
     pub fn try_prismatic_joint_upper_limit(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetUpperLimit(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the limits on a prismatic joint.
+    /// Tries to set translation limits, in world length units, on a prismatic joint.
     pub fn try_set_prismatic_joint_limits(
         &mut self,
         joint_id: JointId,
@@ -141,7 +146,7 @@ impl World {
         })
     }
 
-    /// Tries to set the motor speed on a prismatic joint.
+    /// Tries to set the motor speed, in length units per second, on a prismatic joint.
     pub fn try_set_prismatic_joint_motor_speed(
         &mut self,
         joint_id: JointId,
@@ -153,14 +158,14 @@ impl World {
         })
     }
 
-    /// Returns the motor speed of a prismatic joint.
+    /// Returns the motor speed, in length units per second, of a prismatic joint.
     pub fn try_prismatic_joint_motor_speed(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetMotorSpeed(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the max motor force on a prismatic joint.
+    /// Tries to set the maximum motor force, in newtons, on a prismatic joint.
     pub fn try_set_prismatic_joint_max_motor_force(
         &mut self,
         joint_id: JointId,
@@ -172,28 +177,28 @@ impl World {
         })
     }
 
-    /// Returns the max motor force of a prismatic joint.
+    /// Returns the maximum motor force, in newtons, of a prismatic joint.
     pub fn try_prismatic_joint_max_motor_force(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetMaxMotorForce(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the motor force of a prismatic joint.
+    /// Returns the current motor force, in newtons, of a prismatic joint.
     pub fn try_prismatic_joint_motor_force(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetMotorForce(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the translation of a prismatic joint.
+    /// Returns the current translation, in world length units, of a prismatic joint.
     pub fn try_prismatic_joint_translation(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetTranslation(joint_id.into_raw()) }
         })
     }
 
-    /// Returns the speed of a prismatic joint.
+    /// Returns the current translation speed, in length units per second, of a prismatic joint.
     pub fn try_prismatic_joint_speed(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Prismatic, {
             unsafe { ffi::b3PrismaticJoint_GetSpeed(joint_id.into_raw()) }

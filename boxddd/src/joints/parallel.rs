@@ -1,7 +1,11 @@
 use super::*;
 
 impl World {
-    /// Tries to set the spring hertz on a parallel joint.
+    /// Tries to set the spring frequency, in hertz, on a parallel joint.
+    ///
+    /// All parallel-joint runtime methods return [`Error::WrongJointType`] when
+    /// `joint_id` belongs to another joint family, and [`Error::InvalidJointId`]
+    /// when the handle is stale or belongs to another world.
     pub fn try_set_parallel_joint_spring_hertz(
         &mut self,
         joint_id: JointId,
@@ -13,14 +17,14 @@ impl World {
         })
     }
 
-    /// Returns the spring hertz of a parallel joint.
+    /// Returns the spring frequency, in hertz, of a parallel joint.
     pub fn try_parallel_joint_spring_hertz(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Parallel, {
             unsafe { ffi::b3ParallelJoint_GetSpringHertz(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the spring damping ratio on a parallel joint.
+    /// Tries to set the dimensionless spring damping ratio on a parallel joint.
     pub fn try_set_parallel_joint_spring_damping_ratio(
         &mut self,
         joint_id: JointId,
@@ -34,14 +38,14 @@ impl World {
         })
     }
 
-    /// Returns the spring damping ratio of a parallel joint.
+    /// Returns the dimensionless spring damping ratio of a parallel joint.
     pub fn try_parallel_joint_spring_damping_ratio(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Parallel, {
             unsafe { ffi::b3ParallelJoint_GetSpringDampingRatio(joint_id.into_raw()) }
         })
     }
 
-    /// Tries to set the max torque on a parallel joint.
+    /// Tries to set the maximum spring torque, in newton-meters, on a parallel joint.
     pub fn try_set_parallel_joint_max_torque(
         &mut self,
         joint_id: JointId,
@@ -53,7 +57,7 @@ impl World {
         })
     }
 
-    /// Returns the max torque of a parallel joint.
+    /// Returns the maximum spring torque, in newton-meters, of a parallel joint.
     pub fn try_parallel_joint_max_torque(&self, joint_id: JointId) -> Result<f32> {
         family_method!(self, joint_id, JointType::Parallel, {
             unsafe { ffi::b3ParallelJoint_GetMaxTorque(joint_id.into_raw()) }

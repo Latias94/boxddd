@@ -1529,6 +1529,10 @@ where
 
 #[derive(Copy, Clone, Debug)]
 /// Borrowed view of hull data owned by another Box3D shape resource.
+///
+/// This type does not own native storage. It is tied to the `World` or
+/// `Compound` borrow that produced it and becomes invalid if the owning shape,
+/// compound, or resource-backed geometry is destroyed or replaced.
 pub struct ShapeHull<'a> {
     raw: &'a ffi::b3HullData,
 }
@@ -1602,6 +1606,10 @@ impl<'a> ShapeHull<'a> {
 
 #[derive(Copy, Clone, Debug)]
 /// Borrowed view of mesh data owned by another Box3D shape resource.
+///
+/// This type does not own native storage. It is tied to the `World` or
+/// `Compound` borrow that produced it and becomes invalid if the owning shape,
+/// compound, or resource-backed geometry is destroyed or replaced.
 pub struct ShapeMesh<'a> {
     data: &'a ffi::b3MeshData,
     scale: Vec3,
@@ -1679,6 +1687,10 @@ impl<'a> ShapeMesh<'a> {
 
 #[derive(Copy, Clone, Debug)]
 /// Borrowed view of height-field data owned by another Box3D shape resource.
+///
+/// This type does not own native storage. It is tied to the `World` borrow that
+/// produced it and becomes invalid if the owning shape or resource-backed
+/// geometry is destroyed or replaced.
 pub struct ShapeHeightField<'a> {
     raw: &'a ffi::b3HeightFieldData,
 }
@@ -2380,6 +2392,9 @@ impl CompoundSphere {
 
 #[derive(Copy, Clone, Debug)]
 /// Flattened child returned from generic compound indexing and queries.
+///
+/// Hull and mesh children borrow native storage owned by the parent
+/// [`Compound`]. Keep this value scoped to the compound borrow that produced it.
 pub struct CompoundChild<'a> {
     /// Child geometry stored by a compound shape.
     pub shape: CompoundChildShape<'a>,
@@ -2433,6 +2448,9 @@ impl<'a> CompoundChild<'a> {
 
 #[derive(Copy, Clone, Debug)]
 /// Hit returned by a compound AABB query.
+///
+/// The contained child borrows native storage owned by the queried
+/// [`Compound`]. Do not retain it beyond the compound borrow.
 pub struct CompoundQueryHit<'a> {
     /// Flattened child index hit by the query.
     pub child_index: i32,

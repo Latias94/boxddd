@@ -15,7 +15,9 @@ use std::thread::{self, JoinHandle};
 /// Box3D calls `enqueueTask` during `b3World_Step` and later calls `finishTask`
 /// for every non-null task handle returned by enqueue. `finishTask` must block
 /// until that task has completed; schedulers that cannot provide this blocking
-/// guarantee must not be installed through this adapter.
+/// guarantee must not be installed through this adapter. Do not call
+/// `World::try_step` from a job system worker that cannot park or join child
+/// work; that scheduler shape can deadlock when Box3D asks `finishTask` to wait.
 #[derive(Clone, Debug)]
 pub struct TaskSystem {
     inner: Arc<TaskSystemInner>,

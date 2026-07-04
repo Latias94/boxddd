@@ -430,6 +430,10 @@ impl World {
     }
 
     /// Tries to borrow the compound resource backing a compound shape.
+    ///
+    /// The returned reference is the Rust sidecar that keeps Box3D's native
+    /// compound allocation alive for this shape. It is tied to `&self` and
+    /// becomes invalid if the shape is destroyed or replaced.
     pub fn try_shape_compound(&self, shape_id: ShapeId) -> Result<&Compound> {
         let _guard = self.lock_shape_checked(shape_id)?;
         if ShapeType::from_raw(unsafe { ffi::b3Shape_GetType(shape_id.into_raw()) })

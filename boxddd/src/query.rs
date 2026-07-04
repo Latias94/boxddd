@@ -266,7 +266,11 @@ impl World {
 
     /// Visits shapes whose bounds overlap `aabb`.
     ///
-    /// Returning `false` from `visitor` terminates traversal early.
+    /// Returning `false` from `visitor` terminates traversal early. Box3D may
+    /// visit shapes in any order. The visitor runs inside a Box3D callback
+    /// context, so safe `World` APIs called reentrantly return
+    /// [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_overlap_aabb<F>(
         &self,
         aabb: Aabb,
@@ -337,7 +341,11 @@ impl World {
 
     /// Visits shapes overlapping `proxy` placed at `origin`.
     ///
-    /// Returning `false` from `visitor` terminates traversal early.
+    /// Returning `false` from `visitor` terminates traversal early. Box3D may
+    /// visit shapes in any order. The visitor runs inside a Box3D callback
+    /// context, so safe `World` APIs called reentrantly return
+    /// [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_overlap_shape<F>(
         &self,
         origin: impl Into<Pos>,
@@ -411,9 +419,15 @@ impl World {
 
     /// Visits hits from a ray cast through the world.
     ///
-    /// The callback follows Box3D ray-cast semantics: return `-1.0` to ignore the hit and continue,
-    /// `0.0` to terminate, the hit fraction to clip the ray for closest-hit behavior, or `1.0` to
-    /// continue without clipping. Non-finite returns are treated as termination.
+    /// The callback follows Box3D ray-cast semantics: return `-1.0` to ignore
+    /// the hit and continue, `0.0` to terminate, the hit fraction to clip the
+    /// ray for closest-hit behavior, or `1.0` to continue without clipping.
+    /// Non-finite returns are treated as termination.
+    ///
+    /// Box3D may visit shapes in any order. The visitor runs inside a Box3D
+    /// callback context, so safe `World` APIs called reentrantly return
+    /// [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_cast_ray<F>(
         &self,
         origin: impl Into<Pos>,
@@ -528,6 +542,8 @@ impl World {
     /// Visits hits from sweeping a shape proxy through the world.
     ///
     /// The callback uses the same control return values as [`Self::visit_cast_ray`].
+    /// Box3D may visit shapes in any order, and callback panics are reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_cast_shape<F>(
         &self,
         origin: impl Into<Pos>,

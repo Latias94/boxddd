@@ -14,6 +14,9 @@ kind of C API:
 - Box3D calls are serialized through the crate-global Box3D lock.
 - Safe APIs reject calls made from Box3D callbacks through the callback-state
   guard.
+- Callback registration types require `Send + Sync + 'static`, and `World` is
+  intentionally `!Send` and `!Sync`, so safe Rust cannot move a live world
+  handle into registered callbacks.
 - Callback trampolines catch Rust panics and report them back through
   `Error::CallbackPanicked` instead of unwinding across FFI.
 - Body/shape resource sidecars keep `MeshData`, `HeightField`, and `Compound`
@@ -39,8 +42,8 @@ Reasoning:
 
 Future hardening:
 
-- Consider adding doc-test `compile_fail` examples to lock in the no-escape
-  contract for event views.
+- The no-escape contract is now covered by rustdoc `compile_fail` examples for
+  closure-scoped event views.
 
 ### Recording Bytes
 
@@ -113,10 +116,28 @@ Reasoning:
 
 - Context boxes outlive the registered callbacks because they are owned by the
   `World`.
+- Registered callback types are `Send + Sync + 'static` and receive only value
+  data such as shape ids, contact point/normal, or material inputs. They do not
+  receive a `World` capability.
+- `World` contains `PhantomData<Rc<()>>`, so it is not `Send` or `Sync`; safe
+  Rust cannot move a live `World` into these registered callbacks.
 - Callback replacement is performed while the Box3D global lock is held.
 - `World::drop` clears raw callbacks before destroying the native world.
 - Material-mix callbacks use registry slots and release them when both callbacks
   are cleared.
+- Callback trampolines catch panics and report them after stepping as
+  `Error::CallbackPanicked`.
+- Non-finite material-mix return values fall back to the upstream default mix
+  instead of being treated as panics.
+
+Token decision:
+
+- Do not require a global `OutsideCallbackToken` for every `World` method. That
+  would make the whole safe API harder to use while adding little soundness:
+  the important callback registration paths are already type-constrained, and
+  the runtime `Error::InCallback` guard is still needed for raw handles, global
+  state, FFI reentrancy, debug draw/query visitors, and future callback surfaces
+  that Rust's type system cannot fully model.
 
 ### Task System
 
@@ -150,3 +171,12 @@ Recommended future token candidates:
 
 The current safe API should keep using closure-scoped borrowed views unless a
 new public API needs to return borrowed transient data directly.
+
+Evidence:
+
+- Event borrowed views are exposed only through `with_*_events_view` closures and
+  have rustdoc `compile_fail` examples showing they cannot escape.
+- Callback registration signatures and `World: !Send + !Sync` prevent moving a
+  live `World` into Box3D callbacks in safe Rust.
+- Shape and compound borrowed views are tied to `&World` or `&Compound` and now
+  document that replacing or destroying the owner invalidates the native view.

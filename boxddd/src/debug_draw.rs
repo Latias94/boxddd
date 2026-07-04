@@ -154,8 +154,16 @@ pub enum DebugDrawCommand {
 }
 
 /// Trait implemented by debug draw sinks.
+///
+/// Box3D calls these methods while walking the world for debug output. All
+/// positions and transforms are in world coordinates. The callbacks run inside
+/// Box3D callback context, so safe `World` APIs called reentrantly return
+/// [`Error::InCallback`], and a panic is caught and reported by
+/// [`World::try_debug_draw`] as [`Error::CallbackPanicked`].
 pub trait DebugDraw {
     /// Draws a shape outline.
+    ///
+    /// Returning `false` asks Box3D to stop drawing further shapes.
     fn draw_shape(
         &mut self,
         _shape: Option<DebugShape>,

@@ -161,6 +161,10 @@ pub enum DynamicTreeCastControl {
     /// Continue traversal without changing the current maximum fraction.
     Continue,
     /// Clip future traversal to the supplied fraction.
+    ///
+    /// The fraction must be finite and within the current cast interval. An
+    /// invalid clip fraction makes the visit method return
+    /// [`Error::InvalidArgument`].
     Clip(f32),
     /// Skip the current hit while continuing traversal.
     Skip,
@@ -459,7 +463,10 @@ impl DynamicTree {
 
     /// Visits proxies whose bounds overlap `aabb` and pass `filter`.
     ///
-    /// Returning `false` from `visitor` stops traversal early.
+    /// Returning `false` from `visitor` stops traversal early. The visitor runs
+    /// inside a Box3D callback context, so reentrant safe APIs return
+    /// [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_query<F>(
         &self,
         aabb: Aabb,
@@ -504,8 +511,11 @@ impl DynamicTree {
 
     /// Visits closest-query candidates near `point`.
     ///
-    /// The callback returns the next squared distance bound. Non-finite or negative callback
-    /// results are ignored and leave the existing bound unchanged.
+    /// The callback returns the next squared distance bound. Non-finite or
+    /// negative callback results are ignored and leave the existing bound
+    /// unchanged. The visitor runs inside a Box3D callback context, so reentrant
+    /// safe APIs return [`Error::InCallback`], and a panic is caught and reported
+    /// as [`Error::CallbackPanicked`].
     pub fn visit_query_closest<F>(
         &self,
         point: impl Into<Vec3>,
@@ -574,6 +584,9 @@ impl DynamicTree {
     /// Visits proxies intersected by a ray cast through the tree.
     ///
     /// The callback controls traversal by returning [`DynamicTreeCastControl`].
+    /// The visitor runs inside a Box3D callback context, so reentrant safe APIs
+    /// return [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_ray_cast<F>(
         &self,
         input: RayCastInput,
@@ -639,6 +652,9 @@ impl DynamicTree {
     /// Visits proxies intersected by a swept AABB cast through the tree.
     ///
     /// The callback controls traversal by returning [`DynamicTreeCastControl`].
+    /// The visitor runs inside a Box3D callback context, so reentrant safe APIs
+    /// return [`Error::InCallback`], and a panic is caught and reported as
+    /// [`Error::CallbackPanicked`].
     pub fn visit_box_cast<F>(
         &self,
         input: BoxCastInput,
