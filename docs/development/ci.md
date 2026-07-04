@@ -30,6 +30,7 @@ than a single workspace smoke test:
 - native `cargo nextest run --workspace` on Windows, Linux, and macOS
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
+- explicit headless Bevy testbed scene validation through `bevy_boxddd/tests/testbed.rs`
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
 - no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
@@ -55,8 +56,28 @@ cargo check --workspace --all-features
 cargo nextest run -p boxddd --features "mint glam nalgebra cgmath serde" --test interop
 cargo check -p bevy_boxddd --examples
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
+cargo nextest run -p bevy_boxddd --test testbed
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
+
+## Bevy Testbed Validation
+
+The maintained visual teaching surface is the native Bevy testbed:
+
+```bash
+cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
+```
+
+CI does not require a GPU window or screenshots. The required headless gate is:
+
+```bash
+cargo nextest run -p bevy_boxddd --test testbed
+```
+
+That test constructs every registry scene with `TimePlugin`, steps physics, and
+checks body, shape, joint, query, interaction, and lifecycle invariants without
+creating a renderer window. Screenshots remain local documentation artifacts
+until there is a renderer path stable enough for unattended CI.
 
 ## Rustdoc Coverage
 
