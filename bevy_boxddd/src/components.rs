@@ -176,6 +176,17 @@ pub enum HullDescriptor {
         /// Approximate hull radius.
         radius: f32,
     },
+    /// Procedural cylinder hull.
+    Cylinder {
+        /// Cylinder height along the Y axis.
+        height: f32,
+        /// Cylinder radius in the XZ plane.
+        radius: f32,
+        /// Local Y offset applied by Box3D when generating the hull.
+        y_offset: f32,
+        /// Number of sides in the generated hull.
+        sides: i32,
+    },
 }
 
 impl HullDescriptor {
@@ -184,10 +195,45 @@ impl HullDescriptor {
         Self::Rock { radius }
     }
 
+    /// Creates a procedural cylinder hull descriptor.
+    pub const fn cylinder(height: f32, radius: f32, sides: i32) -> Self {
+        Self::Cylinder {
+            height,
+            radius,
+            y_offset: 0.0,
+            sides,
+        }
+    }
+
+    /// Creates a procedural cylinder hull descriptor with a local Y offset.
+    pub const fn offset_cylinder(height: f32, radius: f32, y_offset: f32, sides: i32) -> Self {
+        Self::Cylinder {
+            height,
+            radius,
+            y_offset,
+            sides,
+        }
+    }
+
     /// Validates finite, positive descriptor parameters before creating native resources.
     pub fn validate(self) -> boxddd::Result<()> {
         match self {
             Self::Rock { radius } => validate_positive_scalar(radius),
+            Self::Cylinder {
+                height,
+                radius,
+                y_offset,
+                sides,
+            } => {
+                validate_positive_scalar(height)?;
+                validate_positive_scalar(radius)?;
+                validate_scalar(y_offset)?;
+                if sides >= 3 {
+                    Ok(())
+                } else {
+                    Err(boxddd::Error::InvalidArgument)
+                }
+            }
         }
     }
 }
@@ -300,6 +346,11 @@ impl Collider {
     /// Creates a procedural rock hull collider.
     pub fn created_rock_hull(radius: f32) -> Self {
         Self::created_hull(HullDescriptor::rock(radius))
+    }
+
+    /// Creates a procedural cylinder hull collider.
+    pub fn cylinder_hull(height: f32, radius: f32, sides: i32) -> Self {
+        Self::created_hull(HullDescriptor::cylinder(height, radius, sides))
     }
 
     /// Creates a transformed procedural rock hull collider.

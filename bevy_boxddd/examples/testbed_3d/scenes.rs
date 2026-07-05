@@ -128,7 +128,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
         id: "falling-stack",
         category: "Basics",
         name: "Falling Stack",
-        description: "Dynamic boxes falling onto a static floor.",
+        description: "Box, sphere, capsule, and cylinder stacks falling onto a static floor.",
         upstream: &[
             UpstreamSampleRef {
                 category: "Stacking",
@@ -150,8 +150,23 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 name: "Sphere Stack",
                 mode: ParityMode::TeachingAdaptation,
             },
+            UpstreamSampleRef {
+                category: "Stacking",
+                name: "Capsule Stack",
+                mode: ParityMode::TeachingAdaptation,
+            },
+            UpstreamSampleRef {
+                category: "Stacking",
+                name: "Cylinder",
+                mode: ParityMode::TeachingAdaptation,
+            },
+            UpstreamSampleRef {
+                category: "Stacking",
+                name: "Cylinder Stack",
+                mode: ParityMode::TeachingAdaptation,
+            },
         ],
-        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        camera: TestbedCamera::new([-8.2, 5.7, 9.6], [0.0, 1.5, 0.0]),
         spawn: spawn_falling_stack,
     },
     TestbedSceneMetadata {
@@ -559,19 +574,77 @@ fn spawn_falling_stack(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) {
-    let mesh = meshes.add(Cuboid::new(0.75, 0.75, 0.75));
-    let material = materials.add(Color::srgb(0.22, 0.48, 0.88));
+    let box_mesh = meshes.add(Cuboid::new(0.72, 0.72, 0.72));
+    let box_material = materials.add(Color::srgb(0.22, 0.48, 0.88));
     for layer in 0..5 {
-        for column in 0..4 {
+        for column in 0..(5 - layer) {
+            let x = -5.0 + column as f32 * 0.82 + layer as f32 * 0.41;
             commands.spawn((
-                Mesh3d(mesh.clone()),
-                MeshMaterial3d(material.clone()),
-                Transform::from_xyz(column as f32 * 0.9 - 1.35, 0.55 + layer as f32 * 0.82, 0.0),
+                Mesh3d(box_mesh.clone()),
+                MeshMaterial3d(box_material.clone()),
+                Transform::from_xyz(x, 0.52 + layer as f32 * 0.78, -0.7),
                 RigidBody::Dynamic,
-                Collider::cube(0.375),
+                Collider::cube(0.36),
                 TestbedEntity,
             ));
         }
+    }
+
+    let sphere_mesh = meshes.add(Sphere::new(0.34).mesh().uv(24, 12));
+    let sphere_material = materials.add(Color::srgb(0.88, 0.56, 0.24));
+    for layer in 0..5 {
+        commands.spawn((
+            Mesh3d(sphere_mesh.clone()),
+            MeshMaterial3d(sphere_material.clone()),
+            Transform::from_xyz(
+                -1.2 + (layer % 2) as f32 * 0.06,
+                0.48 + layer as f32 * 0.7,
+                0.0,
+            ),
+            RigidBody::Dynamic,
+            Collider::sphere(0.34),
+            PhysicsMaterial {
+                restitution: 0.12,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+
+    let capsule_mesh = meshes.add(Capsule3d::new(0.22, 0.68));
+    let capsule_material = materials.add(Color::srgb(0.38, 0.68, 0.42));
+    for layer in 0..4 {
+        commands.spawn((
+            Mesh3d(capsule_mesh.clone()),
+            MeshMaterial3d(capsule_material.clone()),
+            Transform::from_xyz(1.3, 0.62 + layer as f32 * 0.78, -0.1)
+                .with_rotation(Quat::from_rotation_z(0.18 * (layer as f32 - 1.5))),
+            RigidBody::Dynamic,
+            Collider::capsule_y(0.34, 0.22),
+            PhysicsMaterial {
+                friction: 0.75,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+
+    let cylinder_mesh = meshes.add(Cylinder::new(0.32, 0.72).mesh().resolution(24));
+    let cylinder_material = materials.add(Color::srgb(0.72, 0.42, 0.82));
+    for layer in 0..4 {
+        commands.spawn((
+            Mesh3d(cylinder_mesh.clone()),
+            MeshMaterial3d(cylinder_material.clone()),
+            Transform::from_xyz(3.6, 0.54 + layer as f32 * 0.76, 0.15)
+                .with_rotation(Quat::from_rotation_y(0.32 * layer as f32)),
+            RigidBody::Dynamic,
+            Collider::cylinder_hull(0.72, 0.32, 16),
+            PhysicsMaterial {
+                friction: 0.65,
+                ..default()
+            },
+            TestbedEntity,
+        ));
     }
 }
 

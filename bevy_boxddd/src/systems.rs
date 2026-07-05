@@ -981,6 +981,12 @@ fn create_shape(
 fn create_hull(hull: crate::components::HullDescriptor) -> boxddd::Result<Hull> {
     match hull {
         crate::components::HullDescriptor::Rock { radius } => Hull::rock(radius),
+        crate::components::HullDescriptor::Cylinder {
+            height,
+            radius,
+            y_offset,
+            sides,
+        } => Hull::cylinder(height, radius, y_offset, sides),
     }
 }
 

@@ -407,6 +407,85 @@ fn advanced_collider_scene_separates_static_resources_from_dynamic_bodies() {
 }
 
 #[test]
+fn cylinder_hull_descriptor_validates_box3d_constraints() {
+    assert!(HullDescriptor::cylinder(0.8, 0.3, 16).validate().is_ok());
+    assert!(
+        HullDescriptor::offset_cylinder(0.8, 0.3, 0.1, 16)
+            .validate()
+            .is_ok()
+    );
+
+    for invalid in [
+        HullDescriptor::cylinder(0.0, 0.3, 16),
+        HullDescriptor::cylinder(0.8, 0.0, 16),
+        HullDescriptor::cylinder(0.8, 0.3, 2),
+        HullDescriptor::offset_cylinder(0.8, 0.3, f32::NAN, 16),
+    ] {
+        assert!(
+            invalid.validate().is_err(),
+            "expected invalid cylinder hull descriptor to fail validation: {invalid:?}"
+        );
+    }
+}
+
+#[test]
+fn cylinder_hull_collider_creates_native_shape() {
+    let mut app = physics_app(TestbedScene::FallingStack);
+    app.world_mut().spawn((
+        Transform::from_xyz(0.0, 2.0, 0.0),
+        RigidBody::Dynamic,
+        Collider::cylinder_hull(0.8, 0.3, 16),
+        TestbedEntity,
+    ));
+    run_fixed_frames(&mut app, 3);
+
+    let body_ids = testbed_body_ids(&mut app);
+    let shape_ids = testbed_shape_ids(&mut app);
+    assert!(body_ids.iter().any(|body_id| body_id.is_valid()));
+    assert!(shape_ids.iter().any(|shape_id| shape_id.is_valid()));
+}
+
+#[test]
+fn falling_stack_scene_contains_official_stack_shape_variants() {
+    let mut app = physics_app(TestbedScene::FallingStack);
+    spawn_scene_once(&mut app, TestbedScene::FallingStack);
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<(&RigidBody, &Collider), With<TestbedEntity>>();
+    let mut has_box = false;
+    let mut has_sphere = false;
+    let mut has_capsule = false;
+    let mut has_cylinder = false;
+    let mut dynamic_count = 0;
+
+    for (body, collider) in query.iter(app.world()) {
+        if *body != RigidBody::Dynamic {
+            continue;
+        }
+        dynamic_count += 1;
+        match collider {
+            Collider::Cuboid { .. } => has_box = true,
+            Collider::Sphere { .. } => has_sphere = true,
+            Collider::Capsule { .. } => has_capsule = true,
+            Collider::CreatedHull {
+                hull: HullDescriptor::Cylinder { .. },
+            } => has_cylinder = true,
+            _ => {}
+        }
+    }
+
+    assert!(dynamic_count >= 16, "expected a visible unstable stack");
+    assert!(has_box, "expected a Box Stack-style cuboid stack");
+    assert!(has_sphere, "expected a Sphere Stack-style dynamic stack");
+    assert!(has_capsule, "expected a Capsule Stack-style dynamic stack");
+    assert!(
+        has_cylinder,
+        "expected a Cylinder Stack-style dynamic stack"
+    );
+}
+
+#[test]
 fn materials_scene_contains_friction_and_restitution_variants() {
     let mut app = physics_app(TestbedScene::Materials);
     spawn_scene_once(&mut app, TestbedScene::Materials);
