@@ -10,6 +10,35 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ## [Unreleased]
 
+This section describes changes on `main` after the published `0.1.0` release. The workspace is now on the `0.2.0` development line because the debug draw frame model and Bevy hull descriptor API have breaking changes, but `0.2.0` is not release-ready yet.
+
+### Added
+
+- Browser demo pages now expose direct Bevy + egui examples from the shared `testbed_3d` scene registry at <https://frankorz.com/boxddd/>.
+- Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics. This makes renderer integration more practical than consuming command lists alone.
+- The Bevy testbed now covers more official Box3D teaching scenarios, including dominoes, arch stacks, wind fields, ragdoll-style joint chains, and cylinder stacks.
+- The official Box3D sample matrix is now case-level. Every vendored upstream sample registration, including `Replay / Viewer`, is classified as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
+- `bevy_boxddd` now supports procedural cylinder hull colliders through `HullDescriptor::cylinder` and `Collider::cylinder_hull`.
+
+### Changed
+
+- The root GitHub Pages URL is now the examples index rather than a marketing homepage.
+- README and example docs now describe sample support as case-level tracking instead of implying every official sample is a one-to-one clone.
+- Release checks now catch stale example pages, official sample matrix drift, and package omissions before publishing.
+
+### Fixed
+
+- WASM provider-mode debug draw can bridge Box3D debug callbacks for the browser demo bundle instead of reporting all debug draw collection as unsupported.
+- The browser demo path now handles Box3D timer portability correctly.
+- Procedural cylinder hull validation now rejects invalid side counts outside Box3D's supported `3..=32` range before reaching FFI.
+
+### Migration Notes
+
+- `boxddd::DebugShape` has been replaced by `DebugShapeHandle`, `DebugShapeAsset`, `DebugShapeGeometry`, and `DebugDrawFrame`. If your renderer matched `DebugDrawCommand::Shape { shape, .. }`, switch to `DebugDrawCommand::Shape { handle, .. }` and look up geometry through a `DebugDrawFrame`.
+- Prefer `World::debug_draw_frame`, `try_debug_draw_frame`, or `try_debug_draw_frame_into` when a renderer needs stable shape geometry across frames. The older command collection helpers remain for simpler command-only consumers.
+- `Error::ProviderCallbackFailed` is a new public error variant. Exhaustive matches on `boxddd::Error` need a new arm.
+- `HullDescriptor` gained the `Cylinder` variant. Exhaustive matches in `bevy_boxddd` apps need to handle it.
+
 ## [0.1.0] - 2026-07-04
 
 ### Added

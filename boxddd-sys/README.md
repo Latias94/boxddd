@@ -23,7 +23,7 @@ Normal users need a platform C compiler, such as MSVC Build Tools on Windows, Cl
 Disable default features to skip vendored C compilation and link an external `box3d` library:
 
 ```toml
-boxddd-sys = { version = "0.1", default-features = false }
+boxddd-sys = { version = "0.2", default-features = false }
 ```
 
 Optional environment variables:

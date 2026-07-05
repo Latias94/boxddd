@@ -22,24 +22,25 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 
 ## Status
 
-`boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today. The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](https://github.com/Latias94/boxddd/blob/main/docs/api-coverage.md).
+`boxddd` is an experimental `0.x` binding while Box3D itself is new. The latest published release is `0.1.0`; `main` is the unreleased `0.2.0` development line with breaking debug draw and Bevy example-surface improvements. The native desktop path is the main supported runtime surface today. The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](https://github.com/Latias94/boxddd/blob/main/docs/api-coverage.md).
 
 | Surface | Status |
 |---|---|
 | Core `boxddd` on Windows, Linux, macOS | Supported and tested |
 | `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
-| WASM | Experimental provider-mode support with direct Bevy + egui Web example pages on the demo hub |
+| WASM | Experimental provider-mode support on `main`; direct Bevy + egui Web example pages are unreleased until `0.2.0` |
 | Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
 
 ## Version Compatibility
 
-| `boxddd` release | Box3D API target | Vendored Box3D source |
-|---|---|---|
+| `boxddd` release | Box3D API target | Vendored Box3D source | Notes |
+|---|---|---|---|
+| `0.2.0` (development) | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) | Current `main`; unreleased and still under active development. |
 | `0.1.0` | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) |
 
-The `0.1.0` vendored source includes a local single-thread WASM timer portability patch. Native desktop is the supported runtime path for the first release.
+The vendored source includes a local single-thread WASM timer portability patch. Native desktop remains the supported runtime path for published releases today.
 
 ## Crates
 

@@ -233,8 +233,9 @@ Release automation does not create git tags. Create and push the tag after the
 workspace version and changelog section are ready:
 
 ```bash
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin v0.1.0
+version=0.2.0
+git tag -a "v${version}" -m "v${version}"
+git push origin "v${version}"
 ```
 
 ## Cross-Target Compile-Only Checks
