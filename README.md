@@ -28,7 +28,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 |---|---|
 | Core `boxddd` on Windows, Linux, macOS | Supported and tested |
 | `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
-| WASM | Experimental provider-mode support on `main`; direct Bevy + egui Web example pages are unreleased until `0.2.0` |
+| WASM | Experimental provider-mode support on `main`; the demo hub may expose unreleased Bevy + egui Web examples, while published crates remain native-first |
 | Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
@@ -41,6 +41,10 @@ The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95`
 | `0.1.0` | [`box3d` `v0.1.0`](https://github.com/erincatto/box3d/tree/v0.1.0) | [`erincatto/box3d@29bf523`](https://github.com/erincatto/box3d/commit/29bf523ce7bc4590aba9f17c9db791cdc5c4397e) |
 
 The vendored source includes a local single-thread WASM timer portability patch. Native desktop remains the supported runtime path for published releases today.
+
+## Migrating From 0.1.0 To main
+
+`main` is already on the unreleased `0.2.0` development line. The intentional breaks are limited and are tracked in [`CHANGELOG.md`](https://github.com/Latias94/boxddd/blob/main/CHANGELOG.md): debug draw renderers should move from `DebugDrawCommand::Shape { shape, .. }` to the `DebugDrawFrame` asset/handle model, exhaustive `boxddd::Error` matches need the provider-callback arm, and exhaustive `bevy_boxddd::HullDescriptor` matches need a wildcard arm.
 
 ## Crates
 
@@ -174,7 +178,7 @@ The full catalog lives in [`boxddd/examples/README.md`](https://github.com/Latia
 
 ## Platform Notes
 
-Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle, and debug draw collection is bridged through provider-local callbacks. Web workers, pthreads, callback-heavy Box3D APIs other than debug draw, and threaded scheduling are still deferred.
+Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub can publish direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle. Web workers, pthreads, callback-heavy Box3D APIs beyond the supported debug draw bridge, and threaded scheduling are still deferred.
 
 Normal builds compile the vendored Box3D C sources locally through the Rust `cc` crate and link them into `boxddd-sys`. Users need a working platform C compiler, but they do not need CMake, LLVM, libclang, or bindgen unless they explicitly refresh bindings with `boxddd-sys/bindgen` and `BOXDDD_SYS_FORCE_BINDGEN=1`.
 
