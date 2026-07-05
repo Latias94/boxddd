@@ -50,7 +50,7 @@ WASM support is early and core-only.
 |---|---|
 | `wasm32-unknown-unknown` | Compile-only by default. Provider mode imports Box3D symbols from module `box3d-sys-v0`. |
 | `wasm32-wasip1` | Runtime-capable source build when a WASI SDK sysroot is configured. |
-| Browser visual demos | Only the workspace Pages provider smoke is supported; full visual examples are not a `boxddd-sys` contract. |
+| Browser visual demos | Not a `boxddd-sys` public API contract. The workspace builds Bevy Web examples through provider mode for the demo hub. |
 
 Useful environment variables:
 

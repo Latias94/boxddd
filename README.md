@@ -28,7 +28,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 |---|---|
 | Core `boxddd` on Windows, Linux, macOS | Supported and tested |
 | `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
-| WASM | Experimental provider-mode support on `main`; the demo hub may expose unreleased Bevy + egui Web examples, while published crates remain native-first |
+| WASM | Experimental provider-mode support on `main`; the demo hub exposes unreleased Bevy + egui Web examples, while published crates remain native-first |
 | Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
@@ -144,7 +144,7 @@ cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example tes
 ```
 
 See [`bevy_boxddd/README.md`](https://github.com/Latias94/boxddd/blob/main/bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
-The demo hub at <https://frankorz.com/boxddd/> is the maintained example gallery. Browser entries link directly to individual Bevy + egui Web scenes such as Falling Stack and Ray Picking.
+The demo hub at <https://frankorz.com/boxddd/> is the maintained example gallery. Browser entries link directly to individual Bevy + egui Web scenes such as Falling Stack, Query Lab, and Debug Draw Inspector.
 
 ## Examples
 
@@ -164,7 +164,7 @@ Start here:
 | Joints | `cargo run -p boxddd --example joints` | Joint creation and runtime reads |
 | Recording | `cargo run -p boxddd --example recording_replay` | Recording and replay validation |
 | Native debug viewer | `cargo run -p boxddd --example egui_debug_draw --features egui-example` | Consuming debug draw data in an app-owned renderer |
-| Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for stacks, advanced colliders, body controls, continuous collision, character mover, materials, joints, contacts, picking, debug draw, dominoes, arch stacks, wind forces, and ragdoll-lite joints |
+| Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for official Box3D teaching scenes plus Query Lab, Debug Draw Inspector, and Material Lab showcases |
 
 The full catalog lives in [`boxddd/examples/README.md`](https://github.com/Latias94/boxddd/blob/main/boxddd/examples/README.md) and [`bevy_boxddd/examples/README.md`](https://github.com/Latias94/boxddd/blob/main/bevy_boxddd/examples/README.md). The case-level official Box3D sample support matrix lives in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md); it labels each upstream case as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
 

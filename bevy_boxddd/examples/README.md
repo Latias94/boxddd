@@ -36,7 +36,7 @@ Current official-parity scenes: Falling Stack, Advanced Colliders, Body Controls
 
 Current boxddd showcase scenes: Query Lab, Debug Draw Inspector, and Material Lab. These scenes teach Rust/Bevy integration patterns and are not counted as official Box3D sample ports.
 
-The static demo hub at <https://latias94.github.io/boxddd/> mirrors this scene registry.
+The static demo hub at <https://frankorz.com/boxddd/> mirrors this scene registry.
 
 ## Headless Validation
 

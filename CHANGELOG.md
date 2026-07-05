@@ -15,6 +15,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 ### Added
 
 - Browser demo pages now expose direct Bevy + egui examples from the shared `testbed_3d` scene registry at <https://frankorz.com/boxddd/>.
+- The Bevy testbed now includes original `boxddd` showcase scenes for query integration, debug draw inspection, and material comparison.
 - Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics. This makes renderer integration more practical than consuming command lists alone.
 - The Bevy testbed now covers more official Box3D teaching scenarios, including dominoes, arch stacks, wind fields, ragdoll-style joint chains, and cylinder stacks.
 - The official Box3D sample matrix is now case-level. Every vendored upstream sample registration, including `Replay / Viewer`, is classified as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
@@ -23,6 +24,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 ### Changed
 
 - The root GitHub Pages URL is now the examples index rather than a marketing homepage.
+- Example pages and the Bevy testbed now label official Box3D sample coverage separately from original `boxddd` showcase scenes.
 - README and example docs now describe sample support as case-level tracking instead of implying every official sample is a one-to-one clone.
 - Release checks now catch stale example pages, official sample matrix drift, and package omissions before publishing.
 
