@@ -293,7 +293,23 @@ fn assert_provider_callback_guardrails(world: &mut World) -> Result<(), i32> {
     if !is_unsupported_on_wasm(world.overlap_aabb(aabb, QueryFilter::default())) {
         return Err(ERR_CALLBACK_GUARDRAIL);
     }
-    if !is_unsupported_on_wasm(world.try_debug_draw_collect(DebugDrawOptions::default())) {
+    let frame = world
+        .try_debug_draw_frame(DebugDrawOptions::default())
+        .map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !frame
+        .events
+        .iter()
+        .any(|event| matches!(event, boxddd::DebugShapeEvent::Created(_)))
+        || !frame.commands.iter().any(|command| {
+            matches!(
+                command,
+                boxddd::DebugDrawCommand::Shape {
+                    handle: Some(_),
+                    ..
+                }
+            )
+        })
+    {
         return Err(ERR_CALLBACK_GUARDRAIL);
     }
     if !is_unsupported_on_wasm(world.try_set_custom_filter(|_, _| true)) {

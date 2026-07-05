@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::env;
 use std::error::Error;
-use std::ffi::OsString;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -22,6 +21,27 @@ const BEVY_WEB_OUT_NAME: &str = "bevy_boxddd_testbed";
 const BEVY_WEB_JS: &str = "bevy_boxddd_testbed.js";
 const BEVY_WEB_WASM: &str = "bevy_boxddd_testbed_bg.wasm";
 const BEVY_PROVIDER_SHIM: &str = "box3d-provider-shim.js";
+const PROVIDER_SMOKE_EXPORTS: &[&str] = &[
+    "boxddd_provider_smoke",
+    "boxddd_provider_drop_millimeters",
+    "boxddd_provider_ray_hit_millimeters",
+    "boxddd_provider_shape_cast_permyriad",
+    "boxddd_provider_joint_error_millimeters",
+];
+const DEBUG_BRIDGE_EXPORTS: &[&str] = &[
+    "boxddd_debug_report_error",
+    "boxddd_debug_shape_create",
+    "boxddd_debug_shape_destroy",
+    "boxddd_debug_draw_shape",
+    "boxddd_debug_draw_segment",
+    "boxddd_debug_draw_transform",
+    "boxddd_debug_draw_point",
+    "boxddd_debug_draw_sphere",
+    "boxddd_debug_draw_capsule",
+    "boxddd_debug_draw_bounds",
+    "boxddd_debug_draw_box",
+    "boxddd_debug_draw_string",
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RegistrySample {
@@ -144,7 +164,7 @@ fn validate_pages() -> Result<()> {
         &pages_dir.join("bevy-testbed").join("index.html"),
         "Bevy Web testbed page",
     )?;
-    ensure_file(
+    let loader = ensure_file(
         &pages_dir.join("bevy-testbed").join("loader.js"),
         "Bevy Web testbed loader",
     )?;
@@ -154,12 +174,32 @@ fn validate_pages() -> Result<()> {
 
     let html = fs::read_to_string(&index)?;
     validate_html_links(&index, &html)?;
+    validate_bevy_loader(&loader)?;
 
     eprintln!(
         "Validated Pages site: {} ({} Bevy examples)",
         pages_dir.display(),
         registry_samples.len()
     );
+    Ok(())
+}
+
+fn validate_bevy_loader(loader: &Path) -> Result<()> {
+    let js = fs::read_to_string(loader)?;
+    for required in [
+        "box3d-provider-shim.js",
+        "setBox3dProvider",
+        "setBoxdddAppExports",
+        "bevyExports",
+    ] {
+        if !js.contains(required) {
+            return Err(format!(
+                "{} is missing required Bevy provider glue `{required}`",
+                loader.display()
+            )
+            .into());
+        }
+    }
     Ok(())
 }
 
@@ -649,14 +689,18 @@ fn build_provider_smoke_app_for(profile: BuildProfile) -> Result<PathBuf> {
     let root = project_root();
     let mut command = Command::new("cargo");
     command
-        .arg("build")
+        .arg("rustc")
         .arg("-p")
         .arg(SMOKE_PACKAGE)
+        .arg("--lib")
         .arg("--target")
         .arg(TARGET)
         .args(profile.cargo_args())
-        .env("BOXDDD_SYS_WASM_MODE", "provider")
-        .env("RUSTFLAGS", provider_rustflags());
+        .env("BOXDDD_SYS_WASM_MODE", "provider");
+    add_wasm_app_link_args(
+        &mut command,
+        &[PROVIDER_SMOKE_EXPORTS, DEBUG_BRIDGE_EXPORTS],
+    );
     run_command(&mut command, "build provider-smoke Rust wasm")?;
 
     let wasm = root
@@ -674,31 +718,11 @@ fn build_provider_smoke_app_for(profile: BuildProfile) -> Result<PathBuf> {
     Ok(wasm)
 }
 
-fn provider_rustflags() -> OsString {
-    append_rustflags(
-        "-C link-arg=--export=boxddd_provider_smoke \
-         -C link-arg=--export=boxddd_provider_drop_millimeters \
-         -C link-arg=--export=boxddd_provider_ray_hit_millimeters \
-         -C link-arg=--export=boxddd_provider_shape_cast_permyriad \
-         -C link-arg=--export=boxddd_provider_joint_error_millimeters",
-    )
-}
-
-fn shared_memory_rustflags() -> OsString {
-    append_rustflags("")
-}
-
-fn append_rustflags(extra: &str) -> OsString {
-    let mut flags = env::var_os("RUSTFLAGS").unwrap_or_default();
-    if !flags.is_empty() {
-        flags.push(" ");
+fn add_wasm_app_link_args(command: &mut Command, export_groups: &[&[&str]]) {
+    command.arg("--").arg("-C").arg("link-arg=--import-memory");
+    for export in export_groups.iter().flat_map(|exports| exports.iter()) {
+        command.arg("-C").arg(format!("link-arg=--export={export}"));
     }
-    flags.push("-C link-arg=--import-memory");
-    if !extra.trim().is_empty() {
-        flags.push(" ");
-        flags.push(extra);
-    }
-    flags
 }
 
 fn collect_provider_imports(wasm: &Path) -> Result<Vec<String>> {
@@ -774,7 +798,7 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
 
     let mut command = Command::new("cargo");
     command
-        .arg("build")
+        .arg("rustc")
         .arg("-p")
         .arg("bevy_boxddd")
         .arg("--features")
@@ -784,8 +808,8 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
         .arg("--target")
         .arg(TARGET)
         .arg("--release")
-        .env("BOXDDD_SYS_WASM_MODE", "provider")
-        .env("RUSTFLAGS", shared_memory_rustflags());
+        .env("BOXDDD_SYS_WASM_MODE", "provider");
+    add_wasm_app_link_args(&mut command, &[DEBUG_BRIDGE_EXPORTS]);
     run_command(&mut command, "build Bevy testbed wasm")?;
 
     let wasm = root
@@ -817,13 +841,24 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
 
 fn patch_bevy_bindgen_imports(js: &Path) -> Result<()> {
     let source = fs::read_to_string(js)?;
-    let patched = source.replace(
+    let patched_imports = source.replace(
         &format!("from \"{PROVIDER_MODULE}\""),
         &format!("from \"./{BEVY_PROVIDER_SHIM}\""),
     );
-    if patched == source {
+    if patched_imports == source {
         return Err(format!(
             "wasm-bindgen output does not import {PROVIDER_MODULE}: {}",
+            js.display()
+        )
+        .into());
+    }
+    let patched = patched_imports.replace(
+        "    wasm = instance.exports;\n",
+        "    wasm = instance.exports;\n    if (typeof import1.setBoxdddAppExports === \"function\") {\n        import1.setBoxdddAppExports(wasm);\n    }\n",
+    );
+    if patched == patched_imports {
+        return Err(format!(
+            "wasm-bindgen output does not assign instance exports: {}",
             js.display()
         )
         .into());
@@ -845,6 +880,13 @@ fn write_browser_provider_shim(out_dir: &Path, imports: &[String]) -> Result<Pat
 
 export function setBox3dProvider(nextProvider) {{
   provider = nextProvider;
+}}
+
+export function setBoxdddAppExports(exports) {{
+  if (!provider) {{
+    throw new Error("Box3D provider is not initialized");
+  }}
+  provider.boxdddAppExports = exports;
 }}
 
 function resolveProviderExport(name) {{
@@ -949,6 +991,10 @@ fn build_box3d_provider(out_dir: &Path, exports_json: &Path) -> Result<PathBuf> 
     let box3d_root = root.join("boxddd-sys").join("third-party").join("box3d");
     let include_dir = box3d_root.join("include");
     let src_dir = box3d_root.join("src");
+    let provider_helper = root
+        .join("boxddd-sys")
+        .join("provider")
+        .join("debug_callbacks.c");
     let provider = out_dir.join("box3d-sys-v0.mjs");
 
     let mut c_files = Vec::new();
@@ -1001,6 +1047,7 @@ fn build_box3d_provider(out_dir: &Path, exports_json: &Path) -> Result<PathBuf> 
     for file in c_files {
         command.arg(file);
     }
+    command.arg(provider_helper);
     command.arg("-o").arg(&provider);
     run_command(&mut command, "build Box3D provider wasm")?;
     Ok(provider)
@@ -1074,6 +1121,7 @@ for (const name of providerImports) {{
 
 const appBytes = fs.readFileSync(join(here, '{app_name}'));
 const {{ instance }} = await WebAssembly.instantiate(appBytes, importObject);
+provider.boxdddAppExports = instance.exports;
 if (typeof instance.exports.boxddd_provider_smoke !== 'function') {{
   throw new Error('boxddd_provider_smoke export is missing from Rust wasm');
 }}

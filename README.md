@@ -173,7 +173,7 @@ The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.m
 
 ## Platform Notes
 
-Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle. Web workers, pthreads, callback-heavy Box3D APIs, and threaded scheduling are still deferred.
+Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle, and debug draw collection is bridged through provider-local callbacks. Web workers, pthreads, callback-heavy Box3D APIs other than debug draw, and threaded scheduling are still deferred.
 
 Normal builds compile the vendored Box3D C sources locally through the Rust `cc` crate and link them into `boxddd-sys`. Users need a working platform C compiler, but they do not need CMake, LLVM, libclang, or bindgen unless they explicitly refresh bindings with `boxddd-sys/bindgen` and `BOXDDD_SYS_FORCE_BINDGEN=1`.
 

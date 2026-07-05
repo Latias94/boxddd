@@ -21,7 +21,11 @@ function generatedUrl(path) {
 
 async function main() {
   const providerGenerated = new URL("../wasm/generated/", import.meta.url);
-  const [{ default: createProvider }, { default: initBevyTestbed }, { setBox3dProvider }] =
+  const [
+    { default: createProvider },
+    { default: initBevyTestbed },
+    { setBox3dProvider, setBoxdddAppExports },
+  ] =
     await Promise.all([
       import(new URL("box3d-sys-v0.mjs", providerGenerated).href),
       import(generatedUrl("generated/bevy_boxddd_testbed.js").href),
@@ -44,10 +48,11 @@ async function main() {
   setBox3dProvider(provider);
   setStatus("loading", `Loading ${sceneName}`, "Starting the Rust Bevy + egui wasm module.");
 
-  await initBevyTestbed({
+  const bevyExports = await initBevyTestbed({
     module_or_path: generatedUrl("generated/bevy_boxddd_testbed_bg.wasm"),
     memory,
   });
+  setBoxdddAppExports(bevyExports);
 
   window.BOXDDD_BEVY_TESTBED_READY = true;
   window.BOXDDD_BEVY_EXAMPLE_READY = true;

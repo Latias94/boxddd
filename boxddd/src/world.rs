@@ -5,6 +5,8 @@ use crate::core::{box3d_lock, callback_state, debug_checks, ffi_vec, task_system
 use crate::debug_draw::DebugShapeRegistry;
 #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 use crate::debug_draw::{create_debug_shape, destroy_debug_shape};
+#[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+use crate::debug_draw::{register_provider_debug_registry, unregister_provider_debug_registry};
 use crate::error::{Error, Result};
 use crate::shapes::{
     BoxHull, Capsule, Compound, HeightField, Hull, MeshData, ShapeDef, ShapeHeightField, ShapeHull,
@@ -234,6 +236,8 @@ pub struct World {
     pub(crate) callbacks: WorldCallbacks,
     task_system: Option<TaskSystem>,
     pub(crate) debug_shapes: Box<DebugShapeRegistry>,
+    #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+    pub(crate) provider_debug_shapes_token: u32,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
@@ -271,6 +275,15 @@ impl World {
                     (&*debug_shapes) as *const DebugShapeRegistry as *mut std::ffi::c_void;
             }
         }
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        let provider_debug_shapes_token = if wasm::is_provider_mode() {
+            let token = register_provider_debug_registry(&debug_shapes)
+                .ok_or(Error::ProviderCallbackFailed)?;
+            unsafe { ffi::boxddd_provider_debug_install_world_def(&mut raw_def, token) };
+            token
+        } else {
+            0
+        };
 
         let _guard = box3d_lock::lock();
         let raw = unsafe { create_world_raw(&raw_def) };
@@ -281,9 +294,15 @@ impl World {
                 callbacks: WorldCallbacks::default(),
                 task_system,
                 debug_shapes,
+                #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+                provider_debug_shapes_token,
                 _not_send_sync: PhantomData,
             })
         } else {
+            #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+            if provider_debug_shapes_token != 0 {
+                unregister_provider_debug_registry(provider_debug_shapes_token);
+            }
             Err(Error::CreateWorldFailed)
         }
     }
@@ -450,9 +469,14 @@ impl Drop for World {
         let _guard = box3d_lock::lock();
         if unsafe { ffi::b3World_IsValid(self.raw) } {
             self.callbacks.clear_raw_callbacks(self.raw);
-            self.debug_shapes.clear_all();
             unsafe { ffi::b3DestroyWorld(self.raw) };
+            self.debug_shapes.clear_all();
             crate::recording::detach_world_recording_locked(self.raw);
+        }
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        if self.provider_debug_shapes_token != 0 {
+            unregister_provider_debug_registry(self.provider_debug_shapes_token);
+            self.provider_debug_shapes_token = 0;
         }
     }
 }

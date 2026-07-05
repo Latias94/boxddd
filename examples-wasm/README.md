@@ -55,8 +55,9 @@ boxddd provider smoke passed: drop_mm=4002, ray_hit_mm=1500, shape_cast_permyria
 `provider-smoke-app` builds the Rust wasm module and records the exact `b3*`
 imports it expects from `box3d-sys-v0`. `provider-smoke` additionally builds the
 Emscripten provider and runs Node with a shared `WebAssembly.Memory`. This smoke
-checks non-callback APIs and asserts that callback-heavy APIs return
-`Error::UnsupportedOnWasm` instead of trapping across wasm module tables.
+checks non-callback APIs, proves provider-backed debug draw frame collection, and
+asserts that the remaining callback-heavy APIs return `Error::UnsupportedOnWasm`
+instead of trapping across wasm module tables.
 
 `build-pages-wasm` publishes two browser surfaces:
 
@@ -67,6 +68,6 @@ checks non-callback APIs and asserts that callback-heavy APIs return
 
 The core probe canvas is not the Bevy renderer. It stays in the site as a compact
 runtime diagnostic while the Bevy page is the user-facing visual example. The
-Bevy page still inherits provider-mode callback limits: callback-heavy features
-such as Box3D debug draw collection report `UnsupportedOnWasm` until cross-module
-callback tables are designed.
+Bevy page uses the provider-backed debug draw bridge; other callback-heavy
+features still keep their explicit `UnsupportedOnWasm` guardrails until each
+bridge is designed and tested.
