@@ -437,8 +437,16 @@ fn validate_target_code_spans(root: &Path, row: &SampleParityRow) -> Result<()> 
         .into());
     }
 
+    if row.mode == "TestOnly" && !targets.iter().any(|target| is_test_target(target)) {
+        return Err(format!(
+            "{}:{} TestOnly target must include at least one nextest-backed `tests/` path",
+            SAMPLE_MATRIX_PATH, row.line_number
+        )
+        .into());
+    }
+
     for target in targets {
-        let path = target.split('#').next().unwrap_or(&target).trim();
+        let path = target_code_span_path(&target);
         if path.is_empty() {
             return Err(format!(
                 "{}:{} target `{target}` has an empty path",
@@ -455,6 +463,15 @@ fn validate_target_code_spans(root: &Path, row: &SampleParityRow) -> Result<()> 
         }
     }
     Ok(())
+}
+
+fn target_code_span_path(target: &str) -> &str {
+    target.split('#').next().unwrap_or(target).trim()
+}
+
+fn is_test_target(target: &str) -> bool {
+    let path = target_code_span_path(target);
+    path.starts_with("tests/") || path.contains("/tests/")
 }
 
 fn extract_code_spans(value: &str) -> Vec<String> {
@@ -1691,5 +1708,85 @@ fn run_command(command: &mut Command, label: &str) -> Result<()> {
         Ok(())
     } else {
         Err(format!("{label} failed with status {status}").into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_root() -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after Unix epoch")
+            .as_nanos();
+        let root =
+            env::temp_dir().join(format!("boxddd-xtask-test-{}-{nanos}", std::process::id()));
+        fs::create_dir_all(&root).expect("failed to create temporary test root");
+        root
+    }
+
+    fn write_empty_file(root: &Path, path: &str) {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("test file should have a parent"))
+            .expect("failed to create temporary test parent");
+        fs::write(path, "").expect("failed to write temporary test file");
+    }
+
+    fn parity_row(mode: &str, target: &str) -> SampleParityRow {
+        SampleParityRow {
+            category: "Collision".to_string(),
+            name: "Shape Cast".to_string(),
+            source: "sample_collision.cpp:1".to_string(),
+            mode: mode.to_string(),
+            target: target.to_string(),
+            notes: "covered by tests".to_string(),
+            line_number: 42,
+        }
+    }
+
+    #[test]
+    fn test_only_parity_rows_require_a_tests_target() {
+        let root = temp_root();
+        write_empty_file(&root, "boxddd/examples/shape_queries.rs");
+
+        let row = parity_row("TestOnly", "`boxddd/examples/shape_queries.rs`");
+        let error = validate_sample_parity_row(&root, &row)
+            .expect_err("TestOnly rows should require a tests/ target")
+            .to_string();
+
+        assert!(error.contains("TestOnly target must include"));
+        fs::remove_dir_all(root).expect("failed to remove temporary test root");
+    }
+
+    #[test]
+    fn test_only_parity_rows_accept_mixed_example_and_tests_targets() {
+        let root = temp_root();
+        write_empty_file(&root, "boxddd/examples/shape_queries.rs");
+        write_empty_file(&root, "boxddd/tests/world_and_queries.rs");
+
+        let row = parity_row(
+            "TestOnly",
+            "`boxddd/examples/shape_queries.rs`, `boxddd/tests/world_and_queries.rs`",
+        );
+
+        validate_sample_parity_row(&root, &row).expect("TestOnly row should accept a tests/ path");
+        fs::remove_dir_all(root).expect("failed to remove temporary test root");
+    }
+
+    #[test]
+    fn visual_parity_rows_do_not_require_tests_targets() {
+        let root = temp_root();
+        write_empty_file(&root, "bevy_boxddd/examples/testbed_3d/scenes.rs");
+
+        let row = parity_row(
+            "TeachingAdaptation",
+            "`bevy_boxddd/examples/testbed_3d/scenes.rs#advanced-colliders`",
+        );
+
+        validate_sample_parity_row(&root, &row)
+            .expect("visual parity rows should only need existing targets");
+        fs::remove_dir_all(root).expect("failed to remove temporary test root");
     }
 }
