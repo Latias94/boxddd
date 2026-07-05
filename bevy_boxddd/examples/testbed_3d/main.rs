@@ -277,12 +277,26 @@ pub(crate) fn switch_scene(
 
 fn log_scene_selection(scene: TestbedScene) {
     let metadata = scene.metadata();
+    let upstream = metadata
+        .upstream
+        .iter()
+        .map(|sample| {
+            format!(
+                "{}/{}:{}",
+                sample.category,
+                sample.name,
+                sample.mode.as_str()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
     bevy::log::info!(
-        "Testbed scene [{}] {} ({}) - {}",
+        "Testbed scene [{}] {} ({}) - {}; upstream: {}",
         metadata.category,
         metadata.name,
         metadata.id,
-        metadata.description
+        metadata.description,
+        upstream
     );
 }
 
