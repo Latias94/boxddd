@@ -126,10 +126,20 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
         assert!(!metadata.name.is_empty());
         assert!(!metadata.description.is_empty());
         assert!(
-            !metadata.upstream.is_empty(),
-            "scene {} should name at least one upstream sample reference",
+            !metadata.upstream.is_empty() || metadata.showcase_lesson.is_some(),
+            "scene {} should name upstream refs or a showcase lesson",
             metadata.id
         );
+        if let Some(lesson) = metadata.showcase_lesson {
+            assert!(
+                !lesson.trim().is_empty(),
+                "scene {} has an empty showcase lesson",
+                metadata.id
+            );
+            assert_eq!(metadata.source_label(), "boxddd showcase");
+        } else {
+            assert_eq!(metadata.source_label(), "official Box3D sample");
+        }
         assert!(
             metadata.id.is_ascii() && !metadata.id.contains(' '),
             "scene id should be an ASCII slug: {}",
@@ -317,6 +327,9 @@ fn ray_picking_scene_uses_dynamic_drag_targets() {
 #[test]
 fn visual_showcase_scenes_cover_representative_concepts() {
     for scene in [
+        TestbedScene::QueryLab,
+        TestbedScene::DebugDrawInspector,
+        TestbedScene::MaterialLab,
         TestbedScene::DominoRun,
         TestbedScene::ArchStack,
         TestbedScene::WindField,
@@ -341,6 +354,26 @@ fn visual_showcase_scenes_cover_representative_concepts() {
                 .any(|shape_id| shape_id.is_valid()),
             "{scene:?} should create native shapes"
         );
+    }
+}
+
+#[test]
+fn original_showcase_scenes_are_not_counted_as_upstream_ports() {
+    for scene in [
+        TestbedScene::QueryLab,
+        TestbedScene::DebugDrawInspector,
+        TestbedScene::MaterialLab,
+    ] {
+        let metadata = scene.metadata();
+        assert!(
+            metadata.upstream.is_empty(),
+            "{scene:?} should not fake upstream references"
+        );
+        assert!(
+            metadata.showcase_lesson.is_some(),
+            "{scene:?} should explain its integration lesson"
+        );
+        assert_eq!(metadata.source_label(), "boxddd showcase");
     }
 }
 

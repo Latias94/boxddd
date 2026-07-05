@@ -283,27 +283,32 @@ fn log_scene_selection(scene: TestbedScene) {
     }
 
     let metadata = scene.metadata();
-    let mut upstream = String::new();
-    for (index, sample) in metadata.upstream.iter().enumerate() {
-        if index > 0 {
-            upstream.push_str(", ");
+    let source = if let Some(lesson) = metadata.showcase_lesson {
+        format!("boxddd showcase: {lesson}")
+    } else {
+        let mut upstream = String::new();
+        for (index, sample) in metadata.upstream.iter().enumerate() {
+            if index > 0 {
+                upstream.push_str(", ");
+            }
+            write!(
+                upstream,
+                "{}/{}:{}",
+                sample.category,
+                sample.name,
+                sample.mode.as_str()
+            )
+            .expect("writing to String cannot fail");
         }
-        write!(
-            upstream,
-            "{}/{}:{}",
-            sample.category,
-            sample.name,
-            sample.mode.as_str()
-        )
-        .expect("writing to String cannot fail");
-    }
+        format!("upstream: {upstream}")
+    };
     bevy::log::info!(
-        "Testbed scene [{}] {} ({}) - {}; upstream: {}",
+        "Testbed scene [{}] {} ({}) - {}; {}",
         metadata.category,
         metadata.name,
         metadata.id,
         metadata.description,
-        upstream
+        source
     );
 }
 

@@ -43,6 +43,20 @@ cargo run -p xtask -- sample-parity --check
 | Tree | 1 | Covered through dynamic tree example and tests. |
 | World | 4 | Deferred until far-origin precision behavior becomes user-facing. |
 
+## Deferred Route Summary
+
+Deferred rows are intentional routing decisions, not untriaged backlog. Use this table when deciding whether a future change should remain deferred, become a benchmark, become a regression test, or become a visual scene.
+
+| Bucket | Deferred rows | Route |
+|---|---:|---|
+| Benchmark stress scenes | 18 | Convert only when `boxddd/benches` has a measured throughput or allocation goal for the specific scenario. Do not turn these into visual examples unless they teach a user-facing workflow. |
+| Upstream issue repros | 7 | Convert to a focused regression test only after the upstream behavior reproduces through safe `boxddd` wrappers. Until then they remain upstream references. |
+| Robustness scenes | 4 | Convert to release-risk tests when scale, mass-ratio, recovery, or debug-color behavior exposes a Rust API contract or bug. |
+| Conveyor scenes | 2 | Convert to a Bevy material/conveyor showcase after tangent velocity or equivalent conveyor authoring is available safely in `bevy_boxddd`. `material-lab` covers material coefficients today, not conveyor motion. |
+| Far-world scenes | 4 | Convert after `boxddd` documents a far-origin precision contract and has a visual or headless assertion worth teaching. |
+| Ragdoll pose | 1 | Convert only when interactive pose editing or rig import becomes part of the Bevy teaching surface; `ragdoll-chain` remains the current lightweight joint-chain adaptation. |
+| Mesh creation benchmark | 1 | Convert with the benchmark bucket when mesh construction throughput has explicit measurement goals. |
+
 ## Official Case Matrix
 
 | Category | Official sample | Source location | Parity mode | Target | Notes |

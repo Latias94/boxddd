@@ -25,6 +25,9 @@ pub enum TestbedScene {
     Contacts,
     RayPicking,
     DebugDraw,
+    QueryLab,
+    DebugDrawInspector,
+    MaterialLab,
     DominoRun,
     ArchStack,
     WindField,
@@ -78,8 +81,19 @@ pub struct TestbedSceneMetadata {
     pub name: &'static str,
     pub description: &'static str,
     pub upstream: &'static [UpstreamSampleRef],
+    pub showcase_lesson: Option<&'static str>,
     pub camera: TestbedCamera,
     spawn: fn(&mut Commands, &mut Assets<Mesh>, &mut Assets<StandardMaterial>),
+}
+
+impl TestbedSceneMetadata {
+    pub const fn source_label(self) -> &'static str {
+        if self.showcase_lesson.is_some() {
+            "boxddd showcase"
+        } else {
+            "official Box3D sample"
+        }
+    }
 }
 
 impl TestbedScene {
@@ -105,7 +119,7 @@ impl TestbedScene {
     }
 }
 
-pub const ALL_SCENES: [TestbedScene; 14] = [
+pub const ALL_SCENES: [TestbedScene; 17] = [
     TestbedScene::FallingStack,
     TestbedScene::AdvancedColliders,
     TestbedScene::BodyControls,
@@ -116,13 +130,16 @@ pub const ALL_SCENES: [TestbedScene; 14] = [
     TestbedScene::Contacts,
     TestbedScene::RayPicking,
     TestbedScene::DebugDraw,
+    TestbedScene::QueryLab,
+    TestbedScene::DebugDrawInspector,
+    TestbedScene::MaterialLab,
     TestbedScene::DominoRun,
     TestbedScene::ArchStack,
     TestbedScene::WindField,
     TestbedScene::RagdollChain,
 ];
 
-pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
     TestbedSceneMetadata {
         scene: TestbedScene::FallingStack,
         id: "falling-stack",
@@ -166,6 +183,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-8.2, 5.7, 9.6], [0.0, 1.5, 0.0]),
         spawn: spawn_falling_stack,
     },
@@ -202,6 +220,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [1.0, 1.2, 0.0]),
         spawn: spawn_advanced_colliders,
     },
@@ -238,6 +257,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_body_controls,
     },
@@ -264,6 +284,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_continuous_collision,
     },
@@ -285,6 +306,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_character_mover,
     },
@@ -316,6 +338,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_materials,
     },
@@ -357,6 +380,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_joints,
     },
@@ -383,6 +407,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_contacts,
     },
@@ -409,6 +434,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_ray_picking,
     },
@@ -430,8 +456,44 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_debug_draw,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::QueryLab,
+        id: "query-lab",
+        category: "Showcase",
+        name: "Query Lab",
+        description: "Editor-style picking bodies driven by Box3D world queries.",
+        upstream: &[],
+        showcase_lesson: Some("Use Box3D query results as the authority for Bevy tool selection."),
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_query_lab,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::DebugDrawInspector,
+        id: "debug-draw-inspector",
+        category: "Showcase",
+        name: "Debug Draw Inspector",
+        description: "Debug draw frame assets rendered through the Bevy testbed overlay.",
+        upstream: &[],
+        showcase_lesson: Some("Inspect persistent debug assets without borrowing native memory."),
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_debug_draw_inspector,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::MaterialLab,
+        id: "material-lab",
+        category: "Showcase",
+        name: "Material Lab",
+        description: "Friction and restitution variants arranged for side-by-side comparison.",
+        upstream: &[],
+        showcase_lesson: Some(
+            "Compare material coefficients in a Bevy scene before building custom tooling.",
+        ),
+        camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
+        spawn: spawn_material_lab,
     },
     TestbedSceneMetadata {
         scene: TestbedScene::DominoRun,
@@ -451,6 +513,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-6.5, 5.3, 8.4], [0.3, 0.9, 0.1]),
         spawn: spawn_domino_run,
     },
@@ -477,6 +540,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.2, 5.4, 8.8], [0.0, 1.6, 0.0]),
         spawn: spawn_arch_stack,
     },
@@ -503,6 +567,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-7.0, 4.8, 8.6], [0.3, 1.2, 0.0]),
         spawn: spawn_wind_field,
     },
@@ -534,6 +599,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 14] = [
                 mode: ParityMode::TeachingAdaptation,
             },
         ],
+        showcase_lesson: None,
         camera: TestbedCamera::new([-6.4, 5.6, 8.0], [0.0, 1.9, 0.0]),
         spawn: spawn_ragdoll_chain,
     },
@@ -1110,6 +1176,30 @@ fn spawn_debug_draw(
         Collider::sphere(0.4),
         TestbedEntity,
     ));
+}
+
+fn spawn_query_lab(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    spawn_ray_picking(commands, meshes, materials);
+}
+
+fn spawn_debug_draw_inspector(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    spawn_debug_draw(commands, meshes, materials);
+}
+
+fn spawn_material_lab(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    spawn_materials(commands, meshes, materials);
 }
 
 fn spawn_domino_run(

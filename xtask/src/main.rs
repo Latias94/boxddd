@@ -53,6 +53,7 @@ struct RegistrySample {
     name: String,
     description: String,
     upstream: Vec<RegistryUpstreamSample>,
+    showcase_lesson: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -133,6 +134,7 @@ struct PageSampleBuilder {
     name: Option<String>,
     description: Option<String>,
     upstream: Vec<RegistryUpstreamSample>,
+    showcase_lesson: Option<String>,
 }
 
 #[derive(Default)]
@@ -697,7 +699,7 @@ fn example_index_page(samples: &[RegistrySample], location: ExampleIndexLocation
                 category = escape_html(&sample.category),
                 name = escape_html(&sample.name),
                 description = escape_html(&sample.description),
-                upstream = upstream_summary(&sample.upstream)
+                upstream = source_summary(sample)
             )
         })
         .collect::<Vec<_>>()
@@ -783,9 +785,17 @@ fn example_page(sample: &RegistrySample) -> String {
         name = escape_html(&sample.name),
         category = escape_html(&sample.category),
         description = escape_html(&sample.description),
-        upstream = upstream_list_html(&sample.upstream),
+        upstream = source_list_html(sample),
         example_page_css = example_page_css()
     )
+}
+
+fn source_summary(sample: &RegistrySample) -> String {
+    if let Some(lesson) = &sample.showcase_lesson {
+        escape_html(&format!("boxddd showcase: {lesson}"))
+    } else {
+        upstream_summary(&sample.upstream)
+    }
 }
 
 fn upstream_summary(upstream: &[RegistryUpstreamSample]) -> String {
@@ -800,19 +810,29 @@ fn upstream_summary(upstream: &[RegistryUpstreamSample]) -> String {
     escape_html(&labels.join(", "))
 }
 
-fn upstream_list_html(upstream: &[RegistryUpstreamSample]) -> String {
-    let items = upstream
-        .iter()
-        .map(|sample| {
-            format!(
-                "<span>{category} / {name} · {mode}</span>",
-                category = escape_html(&sample.category),
-                name = escape_html(&sample.name),
-                mode = escape_html(&parity_mode_label(&sample.mode))
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("");
+fn source_list_html(sample: &RegistrySample) -> String {
+    let mut items = String::new();
+    if let Some(lesson) = &sample.showcase_lesson {
+        items.push_str(&format!(
+            "<span>boxddd showcase · {lesson}</span>",
+            lesson = escape_html(lesson)
+        ));
+    }
+    items.push_str(
+        &sample
+            .upstream
+            .iter()
+            .map(|upstream| {
+                format!(
+                    "<span>{category} / {name} · {mode}</span>",
+                    category = escape_html(&upstream.category),
+                    name = escape_html(&upstream.name),
+                    mode = escape_html(&parity_mode_label(&upstream.mode))
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(""),
+    );
     format!(r#"<div class="upstream-list">{items}</div>"#)
 }
 
@@ -898,12 +918,15 @@ fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
         validate_registry_field(sample, "category", &sample.category)?;
         validate_registry_field(sample, "name", &sample.name)?;
         validate_registry_field(sample, "description", &sample.description)?;
-        if sample.upstream.is_empty() {
+        if sample.upstream.is_empty() && sample.showcase_lesson.is_none() {
             return Err(format!(
-                "testbed registry sample `{}` must include upstream sample references",
+                "testbed registry sample `{}` must include upstream sample references or a showcase lesson",
                 sample.id
             )
             .into());
+        }
+        if let Some(lesson) = &sample.showcase_lesson {
+            validate_registry_field(sample, "showcase_lesson", lesson)?;
         }
 
         if !is_slug(&sample.id) {
@@ -976,6 +999,7 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
     let mut samples = Vec::new();
     let mut current: Option<PageSampleBuilder> = None;
     let mut current_upstream: Option<UpstreamSampleBuilder> = None;
+    let mut pending_showcase_lesson = false;
     let mut in_registry = false;
 
     for line in source.lines() {
@@ -988,6 +1012,21 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
         }
 
         let trimmed = line.trim();
+        if pending_showcase_lesson {
+            if let Some(value) = extract_quoted_string(trimmed) {
+                current
+                    .as_mut()
+                    .ok_or_else(|| {
+                        format!(
+                            "showcase lesson outside registry entry in {}",
+                            scenes.display()
+                        )
+                    })?
+                    .showcase_lesson = Some(value);
+                pending_showcase_lesson = false;
+            }
+            continue;
+        }
         if let Some(upstream) = current_upstream.as_mut() {
             read_upstream_fields(upstream, trimmed);
             if trimmed == "}," || trimmed.ends_with("},") {
@@ -1044,6 +1083,14 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
             builder.name = Some(value);
         } else if let Some(value) = extract_string_field(trimmed, "description") {
             builder.description = Some(value);
+        } else if trimmed.starts_with("showcase_lesson: Some(") {
+            if let Some(Some(value)) = extract_option_string_field(trimmed, "showcase_lesson") {
+                builder.showcase_lesson = Some(value);
+            } else {
+                pending_showcase_lesson = true;
+            }
+        } else if let Some(value) = extract_option_string_field(trimmed, "showcase_lesson") {
+            builder.showcase_lesson = value;
         }
     }
 
@@ -1059,6 +1106,7 @@ impl PageSampleBuilder {
             name: required_registry_field(self.name, "name")?,
             description: required_registry_field(self.description, "description")?,
             upstream: self.upstream,
+            showcase_lesson: self.showcase_lesson,
         })
     }
 }
@@ -1106,6 +1154,23 @@ fn extract_string_field(line: &str, field: &str) -> Option<String> {
     let tail = &line[start..];
     let end = tail.find('"')?;
     Some(tail[..end].to_string())
+}
+
+fn extract_quoted_string(line: &str) -> Option<String> {
+    let tail = line.trim_start().strip_prefix('"')?;
+    let end = tail.find('"')?;
+    Some(tail[..end].to_string())
+}
+
+fn extract_option_string_field(line: &str, field: &str) -> Option<Option<String>> {
+    let some_needle = format!("{field}: Some(\"");
+    if let Some(start) = line.find(&some_needle) {
+        let tail = &line[start + some_needle.len()..];
+        let end = tail.find('"')?;
+        return Some(Some(tail[..end].to_string()));
+    }
+    let none_needle = format!("{field}: None");
+    line.contains(&none_needle).then_some(None)
 }
 
 fn read_upstream_fields(builder: &mut UpstreamSampleBuilder, line: &str) {
@@ -1802,6 +1867,13 @@ mod tests {
         fs::write(path, "").expect("failed to write temporary test file");
     }
 
+    fn write_text_file(root: &Path, path: &str, contents: &str) {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("test file should have a parent"))
+            .expect("failed to create temporary test parent");
+        fs::write(path, contents).expect("failed to write temporary test file");
+    }
+
     fn parity_row(mode: &str, target: &str) -> SampleParityRow {
         SampleParityRow {
             category: "Collision".to_string(),
@@ -1811,6 +1883,20 @@ mod tests {
             target: target.to_string(),
             notes: "covered by tests".to_string(),
             line_number: 42,
+        }
+    }
+
+    fn registry_sample(
+        upstream: Vec<RegistryUpstreamSample>,
+        lesson: Option<&str>,
+    ) -> RegistrySample {
+        RegistrySample {
+            id: "query-lab".to_string(),
+            category: "Showcase".to_string(),
+            name: "Query Lab".to_string(),
+            description: "Box3D query integration".to_string(),
+            upstream,
+            showcase_lesson: lesson.map(ToOwned::to_owned),
         }
     }
 
@@ -1854,5 +1940,70 @@ mod tests {
 
         validate_sample_parity_row(root.path(), &row)
             .expect("visual parity rows should only need existing targets");
+    }
+
+    #[test]
+    fn registry_accepts_showcase_only_samples_with_a_lesson() {
+        let samples = vec![registry_sample(
+            Vec::new(),
+            Some("Use Box3D queries as Bevy editor picking authority."),
+        )];
+
+        validate_registry_catalog(&samples).expect("showcase-only samples should be valid");
+    }
+
+    #[test]
+    fn registry_rejects_samples_without_source_metadata() {
+        let samples = vec![registry_sample(Vec::new(), None)];
+        let error = validate_registry_catalog(&samples)
+            .expect_err("samples need upstream refs or a showcase lesson")
+            .to_string();
+
+        assert!(error.contains("upstream sample references or a showcase lesson"));
+    }
+
+    #[test]
+    fn showcase_source_summary_is_user_facing() {
+        let sample = registry_sample(Vec::new(), Some("Debug draw frame inspection."));
+
+        assert_eq!(
+            source_summary(&sample),
+            "boxddd showcase: Debug draw frame inspection."
+        );
+        assert!(source_list_html(&sample).contains("boxddd showcase"));
+    }
+
+    #[test]
+    fn registry_parser_reads_multiline_showcase_lessons() {
+        let root = temp_root();
+        write_text_file(
+            root.path(),
+            "bevy_boxddd/examples/testbed_3d/scenes.rs",
+            r#"
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 1] = [
+    TestbedSceneMetadata {
+        scene: TestbedScene::MaterialLab,
+        id: "material-lab",
+        category: "Showcase",
+        name: "Material Lab",
+        description: "Material comparison scene.",
+        upstream: &[],
+        showcase_lesson: Some(
+            "Compare material coefficients before building custom tooling.",
+        ),
+        camera: TestbedCamera::new([0.0, 0.0, 1.0], [0.0, 0.0, 0.0]),
+        spawn: spawn_material_lab,
+    },
+];
+"#,
+        );
+
+        let samples = read_testbed_registry(root.path()).expect("registry should parse");
+
+        assert_eq!(samples.len(), 1);
+        assert_eq!(
+            samples[0].showcase_lesson.as_deref(),
+            Some("Compare material coefficients before building custom tooling.")
+        );
     }
 }

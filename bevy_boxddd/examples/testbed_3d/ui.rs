@@ -85,6 +85,14 @@ pub(crate) fn draw_testbed_ui(
 
                             if state.scene_index == index {
                                 ui.label(egui::RichText::new(metadata.description).small());
+                                ui.label(
+                                    egui::RichText::new(metadata.source_label())
+                                        .small()
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                );
+                                if let Some(lesson) = metadata.showcase_lesson {
+                                    ui.label(egui::RichText::new(lesson).small());
+                                }
                             }
                         }
                     });
@@ -96,6 +104,14 @@ pub(crate) fn draw_testbed_ui(
                         .color(egui::Color32::GRAY),
                 );
                 ui.label(metadata.description);
+                ui.label(
+                    egui::RichText::new(metadata.source_label())
+                        .small()
+                        .color(egui::Color32::LIGHT_GRAY),
+                );
+                if let Some(lesson) = metadata.showcase_lesson {
+                    ui.label(egui::RichText::new(lesson).small());
+                }
             }
 
             ui.separator();

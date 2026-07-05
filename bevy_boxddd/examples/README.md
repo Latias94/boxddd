@@ -32,7 +32,9 @@ On Windows, examples default to DX12. Set `WGPU_BACKEND=vulkan` only when you in
 
 The testbed is the primary visual learning surface. Use the left panel to switch scenes and adjust pause, single-step, gravity, solver rate, substeps, sleeping, warm starting, continuous collision, and debug draw presets.
 
-Current scenes: Falling Stack, Advanced Colliders, Body Controls, Continuous Collision, Character Mover, Materials, Joints, Contacts And Sensors, Ray Picking, Debug Draw, Domino Run, Arch Stack, Wind Field, and Ragdoll Chain.
+Current official-parity scenes: Falling Stack, Advanced Colliders, Body Controls, Continuous Collision, Character Mover, Materials, Joints, Contacts And Sensors, Ray Picking, Debug Draw, Domino Run, Arch Stack, Wind Field, and Ragdoll Chain.
+
+Current boxddd showcase scenes: Query Lab, Debug Draw Inspector, and Material Lab. These scenes teach Rust/Bevy integration patterns and are not counted as official Box3D sample ports.
 
 The static demo hub at <https://latias94.github.io/boxddd/> mirrors this scene registry.
 
