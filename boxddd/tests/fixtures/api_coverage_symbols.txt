@@ -2,21 +2,21 @@
 # Format: symbol|status|area|header|note
 # status must be one of: safe, raw, omitted, deferred.
 # Keep this file deterministic; boxddd/tests/api_coverage.rs validates it against vendored headers.
-b3SetAllocator|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
+b3SetAllocator|raw|base|base.h|process-global allocator hook requires a one-time callback ownership policy
 b3GetByteCount|safe|core|base.h|covered by current safe wrapper implementation
-b3SetAssertFcn|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3InternalAssert|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3SetLogFcn|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
+b3SetAssertFcn|raw|base|base.h|process-global assert callback hook has no safe panic/thread ownership policy
+b3InternalAssert|raw|base|base.h|native assertion helper is diagnostic and may abort the process
+b3SetLogFcn|raw|base|base.h|process-global log callback hook needs a subscriber lifetime policy before safe wrapping
 b3GetVersion|safe|core|base.h|covered by current safe wrapper implementation
 b3IsDoublePrecision|safe|core|base.h|covered by current safe wrapper implementation
-b3GetTicks|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3GetMilliseconds|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3GetMillisecondsAndReset|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3Yield|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3Sleep|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3Hash|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3WriteBinaryFile|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
-b3ReadBinaryFile|raw|base|base.h|process-global, file IO, debug dump, or raw pointer policy
+b3GetTicks|raw|base|base.h|native timer helper is platform-specific; Rust time APIs are preferred
+b3GetMilliseconds|raw|base|base.h|native timer helper is platform-specific; Rust time APIs are preferred
+b3GetMillisecondsAndReset|raw|base|base.h|mutable native timer helper owns hidden timing state
+b3Yield|raw|base|base.h|native scheduler helper should be chosen by the host runtime instead
+b3Sleep|raw|base|base.h|native blocking sleep helper should be chosen by std or an async runtime instead
+b3Hash|raw|base|base.h|byte hashing helper over caller memory has no typed safe contract yet
+b3WriteBinaryFile|raw|base|base.h|native binary file helper is replaced by Rust IO in safe APIs
+b3ReadBinaryFile|raw|base|base.h|native binary file helper is replaced by Rust IO in safe APIs
 b3CreateWorld|safe|world|box3d.h|covered by current safe wrapper implementation
 b3DestroyWorld|safe|world|box3d.h|covered by current safe wrapper implementation
 b3GetWorldCount|omitted|core|box3d.h|diagnostic global not part of the safe ownership model
@@ -66,12 +66,12 @@ b3World_SetFrictionCallback|safe|world|box3d.h|covered by current safe wrapper i
 b3World_SetRestitutionCallback|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_SetWorkerCount|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_GetWorkerCount|safe|world|box3d.h|covered by current safe wrapper implementation
-b3World_DumpMemoryStats|raw|world|box3d.h|process-global, file IO, debug dump, or raw pointer policy
-b3World_DumpShapeBounds|raw|world|box3d.h|process-global, file IO, debug dump, or raw pointer policy
+b3World_DumpMemoryStats|raw|world|box3d.h|native diagnostic dump has no stable Rust data model
+b3World_DumpShapeBounds|raw|world|box3d.h|native diagnostic dump has no stable Rust data model
 b3World_RebuildStaticTree|safe|world|box3d.h|covered by current safe wrapper implementation
 b3World_EnableSpeculative|safe|world|box3d.h|covered by current safe wrapper implementation
-b3World_DumpAwake|raw|world|box3d.h|process-global, file IO, debug dump, or raw pointer policy
-b3World_Dump|raw|world|box3d.h|process-global, file IO, debug dump, or raw pointer policy
+b3World_DumpAwake|raw|world|box3d.h|native diagnostic dump has no stable Rust data model
+b3World_Dump|raw|world|box3d.h|native diagnostic dump has no stable Rust data model
 b3CreateRecording|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3DestroyRecording|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3Recording_GetData|safe|recording|box3d.h|covered by current safe wrapper implementation
@@ -101,7 +101,7 @@ b3RecPlayer_GetKeyframeInterval|safe|recording|box3d.h|covered by current safe w
 b3RecPlayer_GetKeyframeBytes|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_GetBodyCount|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_GetBodyId|safe|recording|box3d.h|covered by current safe wrapper implementation
-b3RecPlayer_SetDebugShapeCallbacks|raw|recording|box3d.h|process-global, file IO, debug dump, or raw pointer policy
+b3RecPlayer_SetDebugShapeCallbacks|raw|recording|box3d.h|raw replay callback lifetime layer; safe replay drawing uses DebugDrawFrame data
 b3RecPlayer_DrawFrameQueries|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_GetFrameQueryCount|safe|recording|box3d.h|covered by current safe wrapper implementation
 b3RecPlayer_GetFrameQuery|safe|recording|box3d.h|covered by current safe wrapper implementation
@@ -452,8 +452,8 @@ b3DynamicTree_GetProxyCount|safe|dynamic_tree|collision.h|covered by current saf
 b3DynamicTree_Rebuild|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
 b3DynamicTree_GetByteCount|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
 b3DynamicTree_ValidateNoEnlarged|safe|dynamic_tree|collision.h|covered by current safe wrapper implementation
-b3DynamicTree_Save|raw|dynamic_tree|collision.h|process-global, file IO, debug dump, or raw pointer policy
-b3DynamicTree_Load|raw|dynamic_tree|collision.h|process-global, file IO, debug dump, or raw pointer policy
+b3DynamicTree_Save|raw|dynamic_tree|collision.h|native file serialization helper lacks a Rust-owned portable format contract
+b3DynamicTree_Load|raw|dynamic_tree|collision.h|native file deserialization helper lacks a Rust-owned portable format contract
 b3CreateCylinder|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateCone|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateRock|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
@@ -480,8 +480,8 @@ b3CreateHeightField|safe|geometry_resources|collision.h|covered by current safe 
 b3CreateGrid|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3CreateWave|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3DestroyHeightField|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
-b3DumpHeightData|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
-b3LoadHeightField|raw|geometry_resources|collision.h|process-global, file IO, debug dump, or raw pointer policy
+b3DumpHeightData|raw|geometry_resources|collision.h|native height-field file dump lacks a Rust-owned portable format contract
+b3LoadHeightField|raw|geometry_resources|collision.h|native height-field file load lacks a Rust-owned portable format contract
 b3GetCompoundChild|safe|geometry_resources|collision.h|covered by current safe wrapper implementation
 b3QueryCompound|safe|geometry_resources|collision.h|Compound::query_aabb and visit_query_aabb provide callback-contained child queries
 b3GetCompoundCapsule|safe|geometry_resources|collision.h|covered by current safe wrapper implementation

@@ -143,6 +143,17 @@ fn coverage_fixture_has_policy_buckets_and_high_priority_symbols() {
             entry.symbol
         );
     }
+
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.status == CoverageStatus::Raw)
+    {
+        assert!(
+            !is_placeholder_raw_note(&entry.note),
+            "{} has a placeholder raw-boundary note",
+            entry.symbol
+        );
+    }
 }
 
 #[test]
@@ -222,6 +233,12 @@ fn is_placeholder_deferred_note(note: &str) -> bool {
     lower.contains("known upstream api awaiting safe design or implementation")
         || lower.contains("planned safe wrapper in api completion work")
         || lower.contains("todo")
+}
+
+fn is_placeholder_raw_note(note: &str) -> bool {
+    let lower = note.to_ascii_lowercase();
+    lower.contains("process-global, file io, debug dump, or raw pointer policy")
+        || lower.contains("raw pointer policy")
 }
 
 fn status_counts(entries: &[CoverageEntry]) -> BTreeMap<CoverageStatus, usize> {
