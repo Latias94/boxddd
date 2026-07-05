@@ -101,7 +101,7 @@ jobs:
             local crate="$1"
             local needle="$2"
             local readme
-            readme="$(tar -tf "$crate" | grep -E '^[^/]+/README\.md$' | head -n 1)"
+            readme="$(tar -tf "$crate" | awk '/^[^/]+\/README\.md$/ && !found { print; found=1 }')"
             if [ -z "$readme" ]; then
               echo "::error::$crate is missing its root README.md"
               exit 1

@@ -176,7 +176,7 @@ assert_root_readme_contains() {
   local crate="$1"
   local needle="$2"
   local readme
-  readme="$(tar -tf "$crate" | grep -E '^[^/]+/README\.md$' | head -n 1)"
+  readme="$(tar -tf "$crate" | awk '/^[^/]+\/README\.md$/ && !found { print; found=1 }')"
   test -n "$readme"
   tar -xOf "$crate" "$readme" | grep -F "$needle" >/dev/null
 }
