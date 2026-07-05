@@ -233,7 +233,7 @@ pub struct World {
     resources: HashMap<ShapeId, ShapeResource>,
     pub(crate) callbacks: WorldCallbacks,
     task_system: Option<TaskSystem>,
-    _debug_shapes: Box<DebugShapeRegistry>,
+    pub(crate) debug_shapes: Box<DebugShapeRegistry>,
     _not_send_sync: PhantomData<Rc<()>>,
 }
 
@@ -280,7 +280,7 @@ impl World {
                 resources: HashMap::new(),
                 callbacks: WorldCallbacks::default(),
                 task_system,
-                _debug_shapes: debug_shapes,
+                debug_shapes,
                 _not_send_sync: PhantomData,
             })
         } else {
@@ -450,6 +450,7 @@ impl Drop for World {
         let _guard = box3d_lock::lock();
         if unsafe { ffi::b3World_IsValid(self.raw) } {
             self.callbacks.clear_raw_callbacks(self.raw);
+            self.debug_shapes.clear_all();
             unsafe { ffi::b3DestroyWorld(self.raw) };
             crate::recording::detach_world_recording_locked(self.raw);
         }

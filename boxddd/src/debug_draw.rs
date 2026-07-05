@@ -3,14 +3,20 @@
 use crate::core::{box3d_lock, callback_state};
 use crate::error::{Error, Result};
 use crate::shapes::ShapeType;
-use crate::types::{Aabb, Pos, ShapeId, Vec3, WorldTransform};
+use crate::types::{Aabb, Plane, Pos, ShapeId, Transform, Vec3, WorldTransform};
 use crate::world::World;
 use boxddd_sys::ffi;
+use std::cell::RefCell;
 use std::ffi::{CStr, c_void};
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::mem;
+use std::slice;
 
-/// Packed RGB color used by Box3D debug drawing.
+/// Packed Box3D debug color.
+///
+/// Box3D stores RGB in the low 24 bits and may use the high byte for a debug
+/// material preset. Use [`HexColor::rgb_u32`] when only the visible color is
+/// needed, and [`HexColor::raw_u32`] when preserving renderer metadata.
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
@@ -40,43 +46,218 @@ impl HexColor {
         Self(rgb & 0x00ff_ffff)
     }
 
-    /// Converts a raw Box3D color into `HexColor`.
+    /// Creates a color from a raw Box3D debug color payload.
     #[inline]
-    pub const fn from_raw(raw: ffi::b3HexColor) -> Self {
-        Self::from_rgb_u32(raw as u32)
+    pub const fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    /// Returns the full raw payload, including the high material byte.
+    #[inline]
+    pub const fn raw_u32(self) -> u32 {
+        self.0
     }
 
     /// Returns this color as a packed `0xRRGGBB` value.
     #[inline]
     pub const fn rgb_u32(self) -> u32 {
+        self.0 & 0x00ff_ffff
+    }
+
+    /// Returns the full raw Box3D color payload.
+    #[inline]
+    pub const fn into_raw(self) -> u32 {
         self.0
     }
 
-    /// Converts this color into the raw Box3D color type.
     #[inline]
-    pub const fn into_raw(self) -> ffi::b3HexColor {
-        self.0 as ffi::b3HexColor
+    fn from_ffi(raw: ffi::b3HexColor) -> Self {
+        Self(raw as u32)
     }
 }
 
-/// Opaque debug shape handle managed by Box3D callbacks.
+/// Stable typed handle for a persistent Box3D debug shape asset.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct DebugShape {
-    /// Shape associated with the result.
-    pub shape_id: ShapeId,
-    /// Shape type reported by Box3D, when available.
-    pub shape_type: Option<ShapeType>,
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DebugShapeHandle {
+    /// Slot index owned by the debug shape store.
+    pub index: u32,
+    /// Generation used to reject stale renderer cache entries.
+    pub generation: u32,
 }
 
-/// Debug draw command emitted by Box3D.
+impl DebugShapeHandle {
+    /// Creates a handle. Generation zero is reserved as invalid.
+    #[inline]
+    pub const fn new(index: u32, generation: u32) -> Option<Self> {
+        if generation == 0 {
+            None
+        } else {
+            Some(Self { index, generation })
+        }
+    }
+
+    /// Returns whether this handle is non-zero and usable as a renderer cache key.
+    #[inline]
+    pub const fn is_valid(self) -> bool {
+        self.generation != 0
+    }
+}
+
+/// Owned asset emitted when Box3D creates a persistent debug shape.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugShapeAsset {
+    /// Stable handle referenced by subsequent shape draw commands.
+    pub handle: DebugShapeHandle,
+    /// Box3D shape that produced this debug asset.
+    pub shape_id: ShapeId,
+    /// Box3D shape kind.
+    pub shape_type: ShapeType,
+    /// Owned renderer-agnostic geometry snapshot.
+    pub geometry: DebugShapeGeometry,
+}
+
+/// Lifecycle event for persistent debug shape assets.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub enum DebugShapeEvent {
+    /// A new renderer asset should be created or refreshed.
+    Created(DebugShapeAsset),
+    /// A previously emitted asset should be removed from renderer caches.
+    Destroyed {
+        /// Retired handle.
+        handle: DebugShapeHandle,
+    },
+    /// The owning world has invalidated every debug handle.
+    ClearAll,
+}
+
+/// Diagnostic captured while collecting a debug draw frame.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DebugDrawDiagnostic {
+    /// Human-readable message.
+    pub message: String,
+}
+
+/// Face polygon copied from a convex hull.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugHullFace {
+    /// Indices into [`DebugShapeGeometry::Hull::points`].
+    pub indices: Vec<u32>,
+    /// Local plane for the face.
+    pub plane: Plane,
+}
+
+/// Owned triangle mesh snapshot used by mesh-like debug geometry.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugMesh {
+    /// Local-space bounds.
+    pub bounds: Aabb,
+    /// Mesh vertices.
+    pub vertices: Vec<Vec3>,
+    /// Mesh triangles.
+    pub triangles: Vec<DebugMeshTriangle>,
+    /// Number of material slots stored by the source shape.
+    pub material_count: i32,
+}
+
+/// Triangle copied from cooked mesh-like data.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct DebugMeshTriangle {
+    /// Indices into [`DebugMesh::vertices`].
+    pub indices: [u32; 3],
+    /// Optional per-triangle material index.
+    pub material_index: Option<u8>,
+}
+
+/// Owned child geometry inside a compound debug shape.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugCompoundChild {
+    /// Transform from compound-local space to child-local space.
+    pub transform: Transform,
+    /// Material indices reported by Box3D for this child.
+    pub material_indices: [i32; ffi::B3_MAX_COMPOUND_MESH_MATERIALS as usize],
+    /// Owned child geometry.
+    pub geometry: DebugShapeGeometry,
+}
+
+/// Renderer-agnostic owned geometry for persistent debug shapes.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+pub enum DebugShapeGeometry {
+    /// Sphere geometry in the shape's local space.
+    Sphere {
+        /// Local center.
+        center: Vec3,
+        /// Radius.
+        radius: f32,
+    },
+    /// Capsule geometry in the shape's local space.
+    Capsule {
+        /// First local endpoint.
+        center1: Vec3,
+        /// Second local endpoint.
+        center2: Vec3,
+        /// Radius.
+        radius: f32,
+    },
+    /// Convex hull geometry.
+    Hull {
+        /// Local-space bounds.
+        aabb: Aabb,
+        /// Hull points.
+        points: Vec<Vec3>,
+        /// Convex faces as point index polygons.
+        faces: Vec<DebugHullFace>,
+    },
+    /// Cooked triangle mesh geometry.
+    Mesh {
+        /// Owned mesh data.
+        mesh: DebugMesh,
+        /// Per-shape scale.
+        scale: Vec3,
+    },
+    /// Height-field data expanded into a mesh snapshot.
+    HeightField {
+        /// Owned mesh data.
+        mesh: DebugMesh,
+    },
+    /// Compound geometry flattened into owned children.
+    Compound {
+        /// Flattened child shapes.
+        children: Vec<DebugCompoundChild>,
+    },
+}
+
+impl DebugShapeGeometry {
+    /// Returns the Box3D shape type represented by this geometry.
+    #[inline]
+    pub const fn shape_type(&self) -> Option<ShapeType> {
+        match self {
+            Self::Sphere { .. } => Some(ShapeType::Sphere),
+            Self::Capsule { .. } => Some(ShapeType::Capsule),
+            Self::Hull { .. } => Some(ShapeType::Hull),
+            Self::Mesh { .. } => Some(ShapeType::Mesh),
+            Self::HeightField { .. } => Some(ShapeType::HeightField),
+            Self::Compound { .. } => Some(ShapeType::Compound),
+        }
+    }
+}
+
+/// Debug draw command emitted for one frame.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum DebugDrawCommand {
-    /// Draw a shape outline.
+    /// Draw a persistent shape asset.
     Shape {
-        /// Optional shape handle associated with the draw command.
-        shape: Option<DebugShape>,
+        /// Optional persistent debug shape handle.
+        handle: Option<DebugShapeHandle>,
         /// World transform of the shape.
         transform: WorldTransform,
         /// Shape color.
@@ -153,18 +334,37 @@ pub enum DebugDrawCommand {
     },
 }
 
-/// Trait implemented by debug draw sinks.
+/// Complete data collected from one debug draw pass.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DebugDrawFrame {
+    /// Persistent shape lifecycle events emitted since the previous drain.
+    pub events: Vec<DebugShapeEvent>,
+    /// Immediate draw commands for the current frame.
+    pub commands: Vec<DebugDrawCommand>,
+    /// Non-fatal diagnostics captured while copying debug shape data.
+    pub diagnostics: Vec<DebugDrawDiagnostic>,
+}
+
+impl DebugDrawFrame {
+    /// Clears all events, commands, and diagnostics while preserving capacity.
+    pub fn clear(&mut self) {
+        self.events.clear();
+        self.commands.clear();
+        self.diagnostics.clear();
+    }
+}
+
+/// Trait implemented by low-level debug draw sinks.
 ///
-/// Box3D calls these methods while walking the world for debug output. All
-/// positions and transforms are in world coordinates. The callbacks run inside
-/// Box3D callback context, so safe `World` APIs called reentrantly return
-/// [`Error::InCallback`], and a panic is caught and reported by
-/// [`World::try_debug_draw`] as [`Error::CallbackPanicked`].
+/// Most users should prefer [`World::try_debug_draw_frame`], which exposes a
+/// lifecycle-correct data model. This trait remains useful for internal helpers
+/// such as recording query visualization and panic containment tests.
 pub trait DebugDraw {
-    /// Draws a shape outline.
+    /// Draws a persistent shape outline.
     fn draw_shape(
         &mut self,
-        _shape: Option<DebugShape>,
+        _handle: Option<DebugShapeHandle>,
         _transform: WorldTransform,
         _color: HexColor,
     ) {
@@ -260,22 +460,142 @@ impl Default for DebugDrawOptions {
 
 #[derive(Default)]
 pub(crate) struct DebugShapeRegistry {
-    created: AtomicUsize,
-    destroyed: AtomicUsize,
+    inner: RefCell<DebugShapeStore>,
+}
+
+#[derive(Default)]
+struct DebugShapeStore {
+    slots: Vec<DebugShapeSlot>,
+    free: Vec<usize>,
+    events: Vec<DebugShapeEvent>,
+    diagnostics: Vec<DebugDrawDiagnostic>,
+    cleared: bool,
+}
+
+#[derive(Debug)]
+struct DebugShapeSlot {
+    generation: u32,
+    asset: Option<DebugShapeAsset>,
 }
 
 impl fmt::Debug for DebugShapeRegistry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let inner = self.inner.borrow();
         f.debug_struct("DebugShapeRegistry")
-            .field("created", &self.created.load(Ordering::Relaxed))
-            .field("destroyed", &self.destroyed.load(Ordering::Relaxed))
+            .field("slots", &inner.slots.len())
+            .field("free", &inner.free.len())
+            .field("pending_events", &inner.events.len())
+            .field("pending_diagnostics", &inner.diagnostics.len())
             .finish()
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 struct DebugShapeResource {
-    shape: DebugShape,
+    handle: DebugShapeHandle,
+}
+
+impl DebugShapeRegistry {
+    fn create_native_resource(&self, raw: &ffi::b3DebugShape) -> *mut c_void {
+        let mut store = self.inner.borrow_mut();
+        let snapshot = match unsafe { snapshot_debug_shape(raw) } {
+            Ok(snapshot) => snapshot,
+            Err(message) => {
+                store.diagnostics.push(DebugDrawDiagnostic {
+                    message: message.to_owned(),
+                });
+                return std::ptr::null_mut();
+            }
+        };
+        let handle = store.alloc_handle();
+        let asset = DebugShapeAsset {
+            handle,
+            shape_id: snapshot.shape_id,
+            shape_type: snapshot.shape_type,
+            geometry: snapshot.geometry,
+        };
+        store.slots[handle.index as usize].asset = Some(asset.clone());
+        store.events.push(DebugShapeEvent::Created(asset));
+        Box::into_raw(Box::new(DebugShapeResource { handle })) as *mut c_void
+    }
+
+    fn destroy_native_resource(&self, resource: DebugShapeResource) {
+        self.inner.borrow_mut().destroy_handle(resource.handle);
+    }
+
+    pub(crate) fn drain_into(&self, frame: &mut DebugDrawFrame) {
+        let mut store = self.inner.borrow_mut();
+        frame.events.extend(store.events.drain(..));
+        frame.diagnostics.extend(store.diagnostics.drain(..));
+    }
+
+    pub(crate) fn clear_all(&self) {
+        let mut store = self.inner.borrow_mut();
+        for slot in &mut store.slots {
+            if slot.asset.take().is_some() {
+                slot.generation = next_generation(slot.generation);
+            }
+        }
+        let slot_len = store.slots.len();
+        store.free.clear();
+        store.free.extend(0..slot_len);
+        store.events.clear();
+        store.diagnostics.clear();
+        store.events.push(DebugShapeEvent::ClearAll);
+        store.cleared = true;
+    }
+}
+
+impl DebugShapeStore {
+    fn alloc_handle(&mut self) -> DebugShapeHandle {
+        self.cleared = false;
+        if let Some(index) = self.free.pop() {
+            let generation = self.slots[index].generation;
+            DebugShapeHandle {
+                index: index as u32,
+                generation,
+            }
+        } else {
+            let index = self.slots.len();
+            self.slots.push(DebugShapeSlot {
+                generation: 1,
+                asset: None,
+            });
+            DebugShapeHandle {
+                index: index as u32,
+                generation: 1,
+            }
+        }
+    }
+
+    fn destroy_handle(&mut self, handle: DebugShapeHandle) {
+        let Some(slot) = self.slots.get_mut(handle.index as usize) else {
+            self.diagnostics.push(DebugDrawDiagnostic {
+                message: "debug shape destroy referenced an unknown handle".to_owned(),
+            });
+            return;
+        };
+        if slot.generation != handle.generation || slot.asset.is_none() {
+            if self.cleared {
+                return;
+            }
+            self.diagnostics.push(DebugDrawDiagnostic {
+                message: "debug shape destroy referenced a stale handle".to_owned(),
+            });
+            return;
+        }
+
+        slot.asset = None;
+        slot.generation = next_generation(slot.generation);
+        self.events.push(DebugShapeEvent::Destroyed { handle });
+        self.free.push(handle.index as usize);
+    }
+}
+
+#[inline]
+const fn next_generation(current: u32) -> u32 {
+    let next = current.wrapping_add(1);
+    if next == 0 { 1 } else { next }
 }
 
 #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
@@ -283,20 +603,11 @@ pub(crate) unsafe extern "C" fn create_debug_shape(
     debug_shape: *const ffi::b3DebugShape,
     user_context: *mut c_void,
 ) -> *mut c_void {
-    if debug_shape.is_null() {
+    if debug_shape.is_null() || user_context.is_null() {
         return std::ptr::null_mut();
     }
-    if !user_context.is_null() {
-        let registry = unsafe { &*(user_context as *const DebugShapeRegistry) };
-        registry.created.fetch_add(1, Ordering::Relaxed);
-    }
-
-    let raw = unsafe { &*debug_shape };
-    let shape = DebugShape {
-        shape_id: ShapeId::from_raw(raw.shapeId),
-        shape_type: ShapeType::from_raw(raw.type_),
-    };
-    Box::into_raw(Box::new(DebugShapeResource { shape })) as *mut c_void
+    let registry = unsafe { &*(user_context as *const DebugShapeRegistry) };
+    registry.create_native_resource(unsafe { &*debug_shape })
 }
 
 #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
@@ -304,13 +615,373 @@ pub(crate) unsafe extern "C" fn destroy_debug_shape(
     user_shape: *mut c_void,
     user_context: *mut c_void,
 ) {
+    if user_shape.is_null() {
+        return;
+    }
+    let resource = unsafe { *Box::from_raw(user_shape as *mut DebugShapeResource) };
     if !user_context.is_null() {
         let registry = unsafe { &*(user_context as *const DebugShapeRegistry) };
-        registry.destroyed.fetch_add(1, Ordering::Relaxed);
+        registry.destroy_native_resource(resource);
     }
-    if !user_shape.is_null() {
-        drop(unsafe { Box::from_raw(user_shape as *mut DebugShapeResource) });
+}
+
+struct DebugShapeSnapshot {
+    shape_id: ShapeId,
+    shape_type: ShapeType,
+    geometry: DebugShapeGeometry,
+}
+
+type SnapshotResult<T> = std::result::Result<T, &'static str>;
+
+unsafe fn snapshot_debug_shape(raw: &ffi::b3DebugShape) -> SnapshotResult<DebugShapeSnapshot> {
+    let shape_type = ShapeType::from_raw(raw.type_).ok_or("debug shape has unknown shape type")?;
+    let geometry = unsafe {
+        match shape_type {
+            ShapeType::Sphere => snapshot_sphere_ptr(raw.__bindgen_anon_1.sphere)?,
+            ShapeType::Capsule => snapshot_capsule_ptr(raw.__bindgen_anon_1.capsule)?,
+            ShapeType::Hull => snapshot_hull_ptr(raw.__bindgen_anon_1.hull)?,
+            ShapeType::Mesh => snapshot_mesh_ptr(raw.__bindgen_anon_1.mesh)?,
+            ShapeType::HeightField => snapshot_height_field_ptr(raw.__bindgen_anon_1.heightField)?,
+            ShapeType::Compound => snapshot_compound_ptr(raw.__bindgen_anon_1.compound)?,
+        }
+    };
+    Ok(DebugShapeSnapshot {
+        shape_id: ShapeId::from_raw(raw.shapeId),
+        shape_type,
+        geometry,
+    })
+}
+
+unsafe fn snapshot_child_shape(raw: ffi::b3ChildShape) -> SnapshotResult<DebugShapeGeometry> {
+    unsafe {
+        match ShapeType::from_raw(raw.type_).ok_or("compound child has unknown shape type")? {
+            ShapeType::Sphere => Ok(snapshot_sphere(raw.__bindgen_anon_1.sphere)),
+            ShapeType::Capsule => Ok(snapshot_capsule(raw.__bindgen_anon_1.capsule)),
+            ShapeType::Hull => snapshot_hull_ptr(raw.__bindgen_anon_1.hull),
+            ShapeType::Mesh => {
+                let mesh = raw.__bindgen_anon_1.mesh;
+                snapshot_mesh(&mesh)
+            }
+            ShapeType::Compound => Err("nested compound debug child is not supported by Box3D"),
+            ShapeType::HeightField => Err("height-field debug child is not supported by Box3D"),
+        }
     }
+}
+
+unsafe fn snapshot_sphere_ptr(ptr: *const ffi::b3Sphere) -> SnapshotResult<DebugShapeGeometry> {
+    let sphere = unsafe { ptr.as_ref() }.ok_or("debug sphere pointer was null")?;
+    Ok(snapshot_sphere(*sphere))
+}
+
+fn snapshot_sphere(raw: ffi::b3Sphere) -> DebugShapeGeometry {
+    DebugShapeGeometry::Sphere {
+        center: Vec3::from_raw(raw.center),
+        radius: raw.radius,
+    }
+}
+
+unsafe fn snapshot_capsule_ptr(ptr: *const ffi::b3Capsule) -> SnapshotResult<DebugShapeGeometry> {
+    let capsule = unsafe { ptr.as_ref() }.ok_or("debug capsule pointer was null")?;
+    Ok(snapshot_capsule(*capsule))
+}
+
+fn snapshot_capsule(raw: ffi::b3Capsule) -> DebugShapeGeometry {
+    DebugShapeGeometry::Capsule {
+        center1: Vec3::from_raw(raw.center1),
+        center2: Vec3::from_raw(raw.center2),
+        radius: raw.radius,
+    }
+}
+
+unsafe fn snapshot_hull_ptr(ptr: *const ffi::b3HullData) -> SnapshotResult<DebugShapeGeometry> {
+    let hull = unsafe { ptr.as_ref() }.ok_or("debug hull pointer was null")?;
+    unsafe { snapshot_hull(hull) }
+}
+
+unsafe fn snapshot_hull(hull: &ffi::b3HullData) -> SnapshotResult<DebugShapeGeometry> {
+    let points = unsafe {
+        trailing_slice::<ffi::b3Vec3>(
+            hull as *const _ as *const u8,
+            hull.byteCount,
+            hull.pointOffset,
+            hull.vertexCount,
+        )?
+    }
+    .iter()
+    .copied()
+    .map(Vec3::from_raw)
+    .collect();
+    let edges = unsafe {
+        trailing_slice::<ffi::b3HullHalfEdge>(
+            hull as *const _ as *const u8,
+            hull.byteCount,
+            hull.edgeOffset,
+            hull.edgeCount,
+        )?
+    };
+    let raw_faces = unsafe {
+        trailing_slice::<ffi::b3HullFace>(
+            hull as *const _ as *const u8,
+            hull.byteCount,
+            hull.faceOffset,
+            hull.faceCount,
+        )?
+    };
+    let planes = unsafe {
+        trailing_slice::<ffi::b3Plane>(
+            hull as *const _ as *const u8,
+            hull.byteCount,
+            hull.planeOffset,
+            hull.faceCount,
+        )?
+    };
+
+    let mut faces = Vec::with_capacity(raw_faces.len());
+    for (face, plane) in raw_faces.iter().zip(planes) {
+        let start = face.edge as usize;
+        if start >= edges.len() {
+            return Err("debug hull face edge index was out of range");
+        }
+        let mut indices = Vec::new();
+        let mut edge_index = start;
+        for _ in 0..=edges.len() {
+            let edge = edges
+                .get(edge_index)
+                .ok_or("debug hull edge index was out of range")?;
+            indices.push(edge.origin as u32);
+            edge_index = edge.next as usize;
+            if edge_index == start {
+                break;
+            }
+        }
+        if edge_index != start {
+            return Err("debug hull face did not form a closed loop");
+        }
+        faces.push(DebugHullFace {
+            indices,
+            plane: Plane::from_raw(*plane),
+        });
+    }
+
+    Ok(DebugShapeGeometry::Hull {
+        aabb: Aabb::from_raw(hull.aabb),
+        points,
+        faces,
+    })
+}
+
+unsafe fn snapshot_mesh_ptr(ptr: *const ffi::b3Mesh) -> SnapshotResult<DebugShapeGeometry> {
+    let mesh = unsafe { ptr.as_ref() }.ok_or("debug mesh pointer was null")?;
+    unsafe { snapshot_mesh(mesh) }
+}
+
+unsafe fn snapshot_mesh(mesh: &ffi::b3Mesh) -> SnapshotResult<DebugShapeGeometry> {
+    let data = unsafe { mesh.data.as_ref() }.ok_or("debug mesh data pointer was null")?;
+    let raw_vertices = unsafe {
+        trailing_slice::<ffi::b3Vec3>(
+            data as *const _ as *const u8,
+            data.byteCount,
+            data.vertexOffset,
+            data.vertexCount,
+        )?
+    };
+    let raw_triangles = unsafe {
+        trailing_slice::<ffi::b3MeshTriangle>(
+            data as *const _ as *const u8,
+            data.byteCount,
+            data.triangleOffset,
+            data.triangleCount,
+        )?
+    };
+    let raw_material_indices = if data.materialOffset == 0 {
+        &[]
+    } else {
+        unsafe {
+            trailing_slice::<u8>(
+                data as *const _ as *const u8,
+                data.byteCount,
+                data.materialOffset,
+                data.triangleCount,
+            )?
+        }
+    };
+
+    let vertices: Vec<_> = raw_vertices.iter().copied().map(Vec3::from_raw).collect();
+    let mut triangles = Vec::with_capacity(raw_triangles.len());
+    for (index, triangle) in raw_triangles.iter().enumerate() {
+        let indices = [triangle.index1, triangle.index2, triangle.index3];
+        if indices
+            .iter()
+            .any(|index| *index < 0 || *index as usize >= vertices.len())
+        {
+            return Err("debug mesh triangle index was out of range");
+        }
+        triangles.push(DebugMeshTriangle {
+            indices: [indices[0] as u32, indices[1] as u32, indices[2] as u32],
+            material_index: raw_material_indices.get(index).copied(),
+        });
+    }
+
+    Ok(DebugShapeGeometry::Mesh {
+        mesh: DebugMesh {
+            bounds: Aabb::from_raw(data.bounds),
+            vertices,
+            triangles,
+            material_count: data.materialCount,
+        },
+        scale: Vec3::from_raw(mesh.scale),
+    })
+}
+
+unsafe fn snapshot_height_field_ptr(
+    ptr: *const ffi::b3HeightFieldData,
+) -> SnapshotResult<DebugShapeGeometry> {
+    let height_field = unsafe { ptr.as_ref() }.ok_or("debug height-field pointer was null")?;
+    unsafe { snapshot_height_field(height_field) }
+}
+
+unsafe fn snapshot_height_field(
+    height_field: &ffi::b3HeightFieldData,
+) -> SnapshotResult<DebugShapeGeometry> {
+    let sample_count = checked_grid_count(height_field.rowCount, height_field.columnCount)?;
+    let cell_count = checked_grid_count(height_field.rowCount - 1, height_field.columnCount - 1)?;
+    let triangle_count = cell_count
+        .checked_mul(2)
+        .ok_or("debug height-field triangle count overflowed")?;
+    let compressed_heights = unsafe {
+        trailing_slice::<u16>(
+            height_field as *const _ as *const u8,
+            height_field.byteCount,
+            height_field.heightsOffset,
+            sample_count as i32,
+        )?
+    };
+    let material_indices = unsafe {
+        trailing_slice::<u8>(
+            height_field as *const _ as *const u8,
+            height_field.byteCount,
+            height_field.materialOffset,
+            cell_count as i32,
+        )?
+    };
+
+    let mut vertices = Vec::with_capacity(sample_count);
+    for row in 0..height_field.rowCount {
+        for column in 0..height_field.columnCount {
+            let index = (row * height_field.columnCount + column) as usize;
+            let height = height_field.minHeight
+                + height_field.heightScale * compressed_heights[index] as f32;
+            vertices.push(Vec3::new(
+                column as f32 * height_field.scale.x,
+                height * height_field.scale.y,
+                row as f32 * height_field.scale.z,
+            ));
+        }
+    }
+
+    let mut triangles = Vec::with_capacity(triangle_count);
+    for row in 0..height_field.rowCount - 1 {
+        for column in 0..height_field.columnCount - 1 {
+            let cell_index = (row * (height_field.columnCount - 1) + column) as usize;
+            let material_index = material_indices
+                .get(cell_index)
+                .copied()
+                .ok_or("debug height-field material index was out of range")?;
+            if material_index == ffi::B3_HEIGHT_FIELD_HOLE as u8 {
+                continue;
+            }
+            let index11 = (row * height_field.columnCount + column) as u32;
+            let index12 = index11 + 1;
+            let index21 = ((row + 1) * height_field.columnCount + column) as u32;
+            let index22 = index21 + 1;
+            let first = if height_field.clockwise {
+                [index11, index12, index21]
+            } else {
+                [index11, index21, index12]
+            };
+            let second = if height_field.clockwise {
+                [index22, index21, index12]
+            } else {
+                [index22, index12, index21]
+            };
+            triangles.push(DebugMeshTriangle {
+                indices: first,
+                material_index: Some(material_index),
+            });
+            triangles.push(DebugMeshTriangle {
+                indices: second,
+                material_index: Some(material_index),
+            });
+        }
+    }
+
+    Ok(DebugShapeGeometry::HeightField {
+        mesh: DebugMesh {
+            bounds: Aabb::from_raw(height_field.aabb),
+            vertices,
+            triangles,
+            material_count: 256,
+        },
+    })
+}
+
+unsafe fn snapshot_compound_ptr(
+    ptr: *const ffi::b3CompoundData,
+) -> SnapshotResult<DebugShapeGeometry> {
+    let compound = unsafe { ptr.as_ref() }.ok_or("debug compound pointer was null")?;
+    let total = compound
+        .capsuleCount
+        .checked_add(compound.hullCount)
+        .and_then(|count| count.checked_add(compound.meshCount))
+        .and_then(|count| count.checked_add(compound.sphereCount))
+        .ok_or("debug compound child count overflowed")?;
+    if total < 0 {
+        return Err("debug compound child count was negative");
+    }
+
+    let mut children = Vec::with_capacity(total as usize);
+    for index in 0..total {
+        let child = unsafe { ffi::b3GetCompoundChild(compound, index) };
+        children.push(DebugCompoundChild {
+            transform: Transform::from_raw(child.transform),
+            material_indices: child.materialIndices,
+            geometry: unsafe { snapshot_child_shape(child)? },
+        });
+    }
+    Ok(DebugShapeGeometry::Compound { children })
+}
+
+fn checked_grid_count(rows: i32, columns: i32) -> SnapshotResult<usize> {
+    if rows <= 0 || columns <= 0 {
+        return Err("debug height-field dimensions were invalid");
+    }
+    (rows as usize)
+        .checked_mul(columns as usize)
+        .ok_or("debug height-field dimensions overflowed")
+}
+
+unsafe fn trailing_slice<'a, T>(
+    base: *const u8,
+    byte_count: i32,
+    offset: i32,
+    count: i32,
+) -> SnapshotResult<&'a [T]> {
+    if base.is_null() || byte_count <= 0 || offset <= 0 || count < 0 {
+        return Err("debug shape trailing storage was invalid");
+    }
+    let start = offset as usize;
+    let len = count as usize;
+    let bytes = len
+        .checked_mul(mem::size_of::<T>())
+        .ok_or("debug shape trailing storage length overflowed")?;
+    let end = start
+        .checked_add(bytes)
+        .ok_or("debug shape trailing storage end overflowed")?;
+    if end > byte_count as usize {
+        return Err("debug shape trailing storage exceeded its allocation");
+    }
+    let ptr = unsafe { base.add(start) as *const T };
+    Ok(unsafe { slice::from_raw_parts(ptr, len) })
 }
 
 struct DebugDrawContext<'a> {
@@ -339,11 +1010,11 @@ fn run_debug_draw_callback<R>(
     }
 }
 
-fn debug_shape_from_user_shape(user_shape: *mut c_void) -> Option<DebugShape> {
+fn debug_shape_handle_from_user_shape(user_shape: *mut c_void) -> Option<DebugShapeHandle> {
     if user_shape.is_null() {
         None
     } else {
-        Some(unsafe { (*(user_shape as *const DebugShapeResource)).shape })
+        Some(unsafe { (*(user_shape as *const DebugShapeResource)).handle })
     }
 }
 
@@ -395,12 +1066,12 @@ impl<'a> CollectDebugDraw<'a> {
 impl DebugDraw for CollectDebugDraw<'_> {
     fn draw_shape(
         &mut self,
-        shape: Option<DebugShape>,
+        handle: Option<DebugShapeHandle>,
         transform: WorldTransform,
         color: HexColor,
     ) {
         self.replace_or_push(DebugDrawCommand::Shape {
-            shape,
+            handle,
             transform,
             color,
         });
@@ -484,9 +1155,9 @@ unsafe extern "C" fn draw_shape(
     let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
     run_debug_draw_callback(context, (), |drawer| {
         drawer.draw_shape(
-            debug_shape_from_user_shape(user_shape),
+            debug_shape_handle_from_user_shape(user_shape),
             WorldTransform::from_raw(transform),
-            HexColor::from_raw(color),
+            HexColor::from_ffi(color),
         );
     });
     !context.panicked
@@ -503,7 +1174,7 @@ unsafe extern "C" fn draw_segment(
         drawer.draw_segment(
             Pos::from_raw(p1),
             Pos::from_raw(p2),
-            HexColor::from_raw(color),
+            HexColor::from_ffi(color),
         );
     });
 }
@@ -523,7 +1194,7 @@ unsafe extern "C" fn draw_point(
 ) {
     let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
     run_debug_draw_callback(context, (), |drawer| {
-        drawer.draw_point(Pos::from_raw(position), size, HexColor::from_raw(color));
+        drawer.draw_point(Pos::from_raw(position), size, HexColor::from_ffi(color));
     });
 }
 
@@ -539,7 +1210,7 @@ unsafe extern "C" fn draw_sphere(
         drawer.draw_sphere(
             Pos::from_raw(center),
             radius,
-            HexColor::from_raw(color),
+            HexColor::from_ffi(color),
             alpha,
         );
     });
@@ -559,7 +1230,7 @@ unsafe extern "C" fn draw_capsule(
             Pos::from_raw(p1),
             Pos::from_raw(p2),
             radius,
-            HexColor::from_raw(color),
+            HexColor::from_ffi(color),
             alpha,
         );
     });
@@ -568,7 +1239,7 @@ unsafe extern "C" fn draw_capsule(
 unsafe extern "C" fn draw_bounds(aabb: ffi::b3AABB, color: ffi::b3HexColor, context: *mut c_void) {
     let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
     run_debug_draw_callback(context, (), |drawer| {
-        drawer.draw_bounds(Aabb::from_raw(aabb), HexColor::from_raw(color));
+        drawer.draw_bounds(Aabb::from_raw(aabb), HexColor::from_ffi(color));
     });
 }
 
@@ -583,7 +1254,7 @@ unsafe extern "C" fn draw_box(
         drawer.draw_box(
             Vec3::from_raw(extents),
             WorldTransform::from_raw(transform),
-            HexColor::from_raw(color),
+            HexColor::from_ffi(color),
         );
     });
 }
@@ -600,7 +1271,7 @@ unsafe extern "C" fn draw_string(
     let context = unsafe { &mut *(context as *mut DebugDrawContext<'_>) };
     let text = unsafe { CStr::from_ptr(text) }.to_string_lossy();
     run_debug_draw_callback(context, (), |drawer| {
-        drawer.draw_string(Pos::from_raw(position), &text, HexColor::from_raw(color));
+        drawer.draw_string(Pos::from_raw(position), &text, HexColor::from_ffi(color));
     });
 }
 
@@ -617,12 +1288,7 @@ pub(crate) fn with_debug_draw(
     }
     #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
     {
-        if !options.force_scale.is_finite()
-            || !options.joint_scale.is_finite()
-            || !options.drawing_bounds.is_valid()
-        {
-            return Err(Error::InvalidArgument);
-        }
+        validate_options(options)?;
 
         let mut context = DebugDrawContext {
             drawer,
@@ -649,7 +1315,51 @@ pub(crate) fn with_debug_draw(
     }
 }
 
+fn validate_options(options: DebugDrawOptions) -> Result<()> {
+    if options.force_scale.is_finite()
+        && options.joint_scale.is_finite()
+        && options.drawing_bounds.is_valid()
+    {
+        Ok(())
+    } else {
+        Err(Error::InvalidArgument)
+    }
+}
+
 impl World {
+    /// Collects a lifecycle-aware debug draw frame or panics if Box3D rejects the draw.
+    pub fn debug_draw_frame(&mut self, options: DebugDrawOptions) -> DebugDrawFrame {
+        self.try_debug_draw_frame(options)
+            .expect("Box3D debug draw failed")
+    }
+
+    /// Tries to collect a lifecycle-aware debug draw frame.
+    pub fn try_debug_draw_frame(&mut self, options: DebugDrawOptions) -> Result<DebugDrawFrame> {
+        let mut frame = DebugDrawFrame::default();
+        self.try_debug_draw_frame_into(&mut frame, options)?;
+        Ok(frame)
+    }
+
+    /// Collects a debug draw frame into `out` or panics if Box3D rejects the draw.
+    pub fn debug_draw_frame_into(&mut self, out: &mut DebugDrawFrame, options: DebugDrawOptions) {
+        self.try_debug_draw_frame_into(out, options)
+            .expect("Box3D debug draw failed");
+    }
+
+    /// Tries to collect a debug draw frame into `out`.
+    pub fn try_debug_draw_frame_into(
+        &mut self,
+        out: &mut DebugDrawFrame,
+        options: DebugDrawOptions,
+    ) -> Result<()> {
+        out.clear();
+        let mut collector = CollectDebugDraw::new(&mut out.commands);
+        let result = self.try_debug_draw(&mut collector, options);
+        collector.finish();
+        self.debug_shapes.drain_into(out);
+        result
+    }
+
     /// Collects debug draw commands or panics if Box3D rejects the draw.
     pub fn debug_draw_collect(&mut self, options: DebugDrawOptions) -> Vec<DebugDrawCommand> {
         self.try_debug_draw_collect(options)
@@ -682,10 +1392,13 @@ impl World {
         out: &mut Vec<DebugDrawCommand>,
         options: DebugDrawOptions,
     ) -> Result<()> {
-        let mut collector = CollectDebugDraw::new(out);
-        self.try_debug_draw(&mut collector, options)?;
-        collector.finish();
-        Ok(())
+        let mut frame = DebugDrawFrame {
+            commands: mem::take(out),
+            ..DebugDrawFrame::default()
+        };
+        let result = self.try_debug_draw_frame_into(&mut frame, options);
+        *out = frame.commands;
+        result
     }
 
     /// Runs debug drawing or panics if Box3D rejects the draw.

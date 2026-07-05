@@ -74,7 +74,11 @@ pub use collision::{
     time_of_impact,
 };
 pub use core::task_system::{TaskSystem, TaskSystemStats};
-pub use debug_draw::{DebugDraw, DebugDrawCommand, DebugDrawOptions, DebugShape, HexColor};
+pub use debug_draw::{
+    DebugCompoundChild, DebugDraw, DebugDrawCommand, DebugDrawDiagnostic, DebugDrawFrame,
+    DebugDrawOptions, DebugHullFace, DebugMesh, DebugMeshTriangle, DebugShapeAsset,
+    DebugShapeEvent, DebugShapeGeometry, DebugShapeHandle, HexColor,
+};
 pub use dynamic_tree::{
     DynamicTree, DynamicTreeBoxCastHit, DynamicTreeCastControl, DynamicTreeClosestHit,
     DynamicTreeClosestResult, DynamicTreeFilter, DynamicTreeHit, DynamicTreeProxy,
