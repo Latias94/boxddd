@@ -55,4 +55,4 @@ cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example t
 
 ## Upstream Parity
 
-The examples follow the official Box3D sample parity map in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md). The goal is representative, readable Rust and Bevy teaching coverage, not a line-by-line clone of every upstream sample.
+The examples follow the case-level official Box3D sample matrix in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md). The goal is readable Rust and Bevy teaching coverage with honest labels for faithful ports, teaching adaptations, test-only proofs, deferred cases, and upstream references.

@@ -21,6 +21,16 @@ const BEVY_WEB_OUT_NAME: &str = "bevy_boxddd_testbed";
 const BEVY_WEB_JS: &str = "bevy_boxddd_testbed.js";
 const BEVY_WEB_WASM: &str = "bevy_boxddd_testbed_bg.wasm";
 const BEVY_PROVIDER_SHIM: &str = "box3d-provider-shim.js";
+const SAMPLE_MATRIX_PATH: &str = "docs/upstream-parity/box3d-sample-matrix.md";
+const SAMPLE_CASE_TABLE_HEADER: &str =
+    "| Category | Official sample | Source location | Parity mode | Target | Notes |";
+const SAMPLE_PARITY_MODES: &[&str] = &[
+    "FaithfulPort",
+    "TeachingAdaptation",
+    "TestOnly",
+    "Deferred",
+    "UpstreamReference",
+];
 const PROVIDER_SMOKE_EXPORTS: &[&str] = &[
     "boxddd_provider_smoke",
     "boxddd_provider_drop_millimeters",
@@ -49,6 +59,24 @@ struct RegistrySample {
     category: String,
     name: String,
     description: String,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct OfficialSample {
+    category: String,
+    name: String,
+    source: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SampleParityRow {
+    category: String,
+    name: String,
+    source: String,
+    mode: String,
+    target: String,
+    notes: String,
+    line_number: usize,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -97,6 +125,7 @@ fn run() -> Result<()> {
         "build-pages-wasm" => build_pages_wasm(),
         "generate-pages" => generate_pages(),
         "validate-pages" => validate_pages(),
+        "sample-parity" => sample_parity(args.collect()),
         "help" | "-h" | "--help" => {
             print_help();
             Ok(())
@@ -107,7 +136,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build Bevy example WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build Bevy example WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site\n  sample-parity        Validate the official Box3D sample parity matrix"
     );
 }
 
@@ -141,6 +170,304 @@ fn pages_bevy_examples_dir() -> PathBuf {
         .join("docs")
         .join("pages")
         .join(BEVY_EXAMPLES_DIR)
+}
+
+fn sample_parity(args: Vec<String>) -> Result<()> {
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        eprintln!("Usage: cargo run -p xtask -- sample-parity [--check]");
+        return Ok(());
+    }
+    if !args.is_empty() && args != ["--check"] {
+        return Err(format!("unknown sample-parity arguments: {}", args.join(" ")).into());
+    }
+
+    let root = project_root();
+    let official_samples = read_official_samples(&root)?;
+    let parity_rows = read_sample_parity_rows(&root)?;
+    validate_sample_parity(&root, &official_samples, &parity_rows)?;
+
+    eprintln!(
+        "Validated official sample parity matrix: {} cases",
+        official_samples.len()
+    );
+    Ok(())
+}
+
+fn read_official_samples(root: &Path) -> Result<Vec<OfficialSample>> {
+    let samples_dir = root
+        .join("boxddd-sys")
+        .join("third-party")
+        .join("box3d")
+        .join("samples");
+    let mut files = fs::read_dir(&samples_dir)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<io::Result<Vec<_>>>()?;
+    files.retain(|path| {
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("sample_") && name.ends_with(".cpp"))
+    });
+    files.sort();
+
+    let mut samples = Vec::new();
+    for path in files {
+        let source = fs::read_to_string(&path)?;
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| format!("invalid UTF-8 sample path: {}", path.display()))?;
+        for (line_index, line) in source.lines().enumerate() {
+            if let Some((category, name)) = parse_sample_registration(line) {
+                samples.push(OfficialSample {
+                    category,
+                    name,
+                    source: format!("{file_name}:{}", line_index + 1),
+                });
+            }
+        }
+    }
+
+    if samples.is_empty() {
+        Err(format!(
+            "no official sample registrations found under {}",
+            samples_dir.display()
+        )
+        .into())
+    } else {
+        Ok(samples)
+    }
+}
+
+fn parse_sample_registration(line: &str) -> Option<(String, String)> {
+    let tail = if let Some(index) = line.find("RegisterSample(") {
+        &line[index + "RegisterSample(".len()..]
+    } else if let Some(index) = line.find("RegisterReplay(") {
+        &line[index + "RegisterReplay(".len()..]
+    } else {
+        return None;
+    };
+
+    let (category, tail) = parse_cpp_string_literal(tail)?;
+    let tail = tail.trim_start();
+    let tail = tail.strip_prefix(',')?;
+    let (name, _) = parse_cpp_string_literal(tail)?;
+    Some((category, name))
+}
+
+fn parse_cpp_string_literal(input: &str) -> Option<(String, &str)> {
+    let input = input.trim_start();
+    let input = input.strip_prefix('"')?;
+    let end = input.find('"')?;
+    Some((input[..end].to_string(), &input[end + 1..]))
+}
+
+fn read_sample_parity_rows(root: &Path) -> Result<Vec<SampleParityRow>> {
+    let matrix = root.join(SAMPLE_MATRIX_PATH);
+    let source = fs::read_to_string(&matrix)?;
+    let mut rows = Vec::new();
+    let mut in_case_table = false;
+
+    for (line_index, line) in source.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed == SAMPLE_CASE_TABLE_HEADER {
+            in_case_table = true;
+            continue;
+        }
+        if !in_case_table {
+            continue;
+        }
+        if trimmed.starts_with("|---") {
+            continue;
+        }
+        if !trimmed.starts_with('|') {
+            if !rows.is_empty() {
+                break;
+            }
+            continue;
+        }
+
+        let cells = split_markdown_table_row(trimmed);
+        if cells.len() != 6 {
+            return Err(format!(
+                "{}:{} has {} cells, expected 6",
+                matrix.display(),
+                line_index + 1,
+                cells.len()
+            )
+            .into());
+        }
+        rows.push(SampleParityRow {
+            category: cells[0].clone(),
+            name: cells[1].clone(),
+            source: strip_code_ticks(&cells[2]),
+            mode: cells[3].clone(),
+            target: cells[4].clone(),
+            notes: cells[5].clone(),
+            line_number: line_index + 1,
+        });
+    }
+
+    if rows.is_empty() {
+        Err(format!(
+            "{} is missing the official case table header `{SAMPLE_CASE_TABLE_HEADER}`",
+            matrix.display()
+        )
+        .into())
+    } else {
+        Ok(rows)
+    }
+}
+
+fn split_markdown_table_row(row: &str) -> Vec<String> {
+    row.trim_matches('|')
+        .split('|')
+        .map(|cell| cell.trim().to_string())
+        .collect()
+}
+
+fn strip_code_ticks(value: &str) -> String {
+    value.trim().trim_matches('`').to_string()
+}
+
+fn validate_sample_parity(
+    root: &Path,
+    official_samples: &[OfficialSample],
+    parity_rows: &[SampleParityRow],
+) -> Result<()> {
+    let official_keys = official_samples.iter().collect::<BTreeSet<_>>();
+    let mut row_keys = BTreeSet::new();
+    for row in parity_rows {
+        validate_sample_parity_row(root, row)?;
+        let key = OfficialSample {
+            category: row.category.clone(),
+            name: row.name.clone(),
+            source: row.source.clone(),
+        };
+        if !row_keys.insert(key) {
+            return Err(format!(
+                "{}:{} duplicates sample `{}` / `{}` at `{}`",
+                SAMPLE_MATRIX_PATH, row.line_number, row.category, row.name, row.source
+            )
+            .into());
+        }
+    }
+
+    let missing = official_samples
+        .iter()
+        .filter(|sample| !row_keys.contains(*sample))
+        .collect::<Vec<_>>();
+    if !missing.is_empty() {
+        return Err(format!(
+            "{} is missing {} official sample case(s): {}",
+            SAMPLE_MATRIX_PATH,
+            missing.len(),
+            format_sample_key_list(&missing)
+        )
+        .into());
+    }
+
+    let extra = row_keys
+        .iter()
+        .filter(|sample| !official_keys.contains(sample))
+        .collect::<Vec<_>>();
+    if !extra.is_empty() {
+        return Err(format!(
+            "{} contains {} unknown sample case(s): {}",
+            SAMPLE_MATRIX_PATH,
+            extra.len(),
+            format_sample_key_list(&extra)
+        )
+        .into());
+    }
+
+    Ok(())
+}
+
+fn validate_sample_parity_row(root: &Path, row: &SampleParityRow) -> Result<()> {
+    if row.category.is_empty() || row.name.is_empty() || row.source.is_empty() {
+        return Err(format!(
+            "{}:{} has an empty category, sample, or source field",
+            SAMPLE_MATRIX_PATH, row.line_number
+        )
+        .into());
+    }
+    if !SAMPLE_PARITY_MODES.contains(&row.mode.as_str()) {
+        return Err(format!(
+            "{}:{} uses unknown parity mode `{}`",
+            SAMPLE_MATRIX_PATH, row.line_number, row.mode
+        )
+        .into());
+    }
+    if row.target.is_empty() || row.notes.is_empty() {
+        return Err(format!(
+            "{}:{} has an empty target or notes field",
+            SAMPLE_MATRIX_PATH, row.line_number
+        )
+        .into());
+    }
+    if row.mode != "Deferred" && row.mode != "UpstreamReference" {
+        validate_target_code_spans(root, row)?;
+    }
+    Ok(())
+}
+
+fn validate_target_code_spans(root: &Path, row: &SampleParityRow) -> Result<()> {
+    let targets = extract_code_spans(&row.target);
+    if targets.is_empty() {
+        return Err(format!(
+            "{}:{} target must contain at least one repo-relative code span",
+            SAMPLE_MATRIX_PATH, row.line_number
+        )
+        .into());
+    }
+
+    for target in targets {
+        let path = target.split('#').next().unwrap_or(&target).trim();
+        if path.is_empty() {
+            return Err(format!(
+                "{}:{} target `{target}` has an empty path",
+                SAMPLE_MATRIX_PATH, row.line_number
+            )
+            .into());
+        }
+        if !root.join(path).exists() {
+            return Err(format!(
+                "{}:{} target path does not exist: `{path}`",
+                SAMPLE_MATRIX_PATH, row.line_number
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
+fn extract_code_spans(value: &str) -> Vec<String> {
+    let mut spans = Vec::new();
+    let mut rest = value;
+    while let Some(start) = rest.find('`') {
+        let after_start = &rest[start + 1..];
+        let Some(end) = after_start.find('`') else {
+            break;
+        };
+        spans.push(after_start[..end].to_string());
+        rest = &after_start[end + 1..];
+    }
+    spans
+}
+
+fn format_sample_key_list<T>(samples: &[T]) -> String
+where
+    T: std::borrow::Borrow<OfficialSample>,
+{
+    samples
+        .iter()
+        .take(10)
+        .map(|sample| {
+            let sample = sample.borrow();
+            format!("{}/{} ({})", sample.category, sample.name, sample.source)
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn generate_pages() -> Result<()> {

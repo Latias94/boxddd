@@ -98,7 +98,7 @@ The plugin registers Bevy messages for errors, body moves, contact begin/end/hit
 
 ## Examples
 
-The visible examples complement the core headless examples and follow the official Box3D sample parity map in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md). The complete catalog lives in [`examples/README.md`](examples/README.md).
+The visible examples complement the core headless examples and follow the case-level official Box3D sample matrix in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md). The complete catalog lives in [`examples/README.md`](examples/README.md).
 
 | Example | Run command | Purpose |
 |---|---|---|

@@ -33,6 +33,7 @@ than a single workspace smoke test:
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
 - explicit headless Bevy testbed scene validation through `bevy_boxddd/tests/testbed.rs`
 - static GitHub Pages validation that checks linked assets, builds the direct Bevy Web example assets, and mirrors the Bevy testbed scene registry
+- official Box3D sample parity validation that keeps `docs/upstream-parity/box3d-sample-matrix.md` synchronized with vendored sample registrations
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
 - no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
@@ -60,8 +61,20 @@ cargo check -p bevy_boxddd --examples
 cargo check -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 cargo nextest run -p bevy_boxddd --test testbed
 cargo run -p xtask -- validate-pages
+cargo run -p xtask -- sample-parity --check
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
+
+## Official Sample Parity
+
+The official sample parity matrix is case-level: every vendored Box3D sample registration has one row with its source location, parity mode, target artifact, and rationale.
+Run this gate after updating the vendored Box3D subtree or changing example coverage:
+
+```bash
+cargo run -p xtask -- sample-parity --check
+```
+
+The check scans `boxddd-sys/third-party/box3d/samples/sample_*.cpp` for `RegisterSample` and `RegisterReplay` calls, then compares them with `docs/upstream-parity/box3d-sample-matrix.md`.
 
 ## Bevy Testbed Validation
 

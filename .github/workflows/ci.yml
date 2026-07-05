@@ -212,6 +212,9 @@ jobs:
       - name: Validate Pages content
         run: cargo run -p xtask -- validate-pages
 
+      - name: Validate official sample parity matrix
+        run: cargo run -p xtask -- sample-parity --check
+
       - name: Check boxddd-sys docs.rs path
         run: cargo doc -p boxddd-sys --no-deps --no-default-features
         env:
