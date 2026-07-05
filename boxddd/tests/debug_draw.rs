@@ -1,7 +1,7 @@
 use boxddd::{
     Aabb, BodyDef, BodyType, BoxHull, Capsule, Compound, DebugDrawCommand, DebugDrawOptions,
-    DebugShapeEvent, DebugShapeGeometry, Error, HeightField, HexColor, MeshData, ShapeDef, Sphere,
-    SurfaceMaterial, Vec3, World, WorldDef,
+    DebugShape, DebugShapeEvent, DebugShapeGeometry, Error, HeightField, HexColor, MeshData,
+    ShapeDef, Sphere, SurfaceMaterial, Vec3, World, WorldDef,
 };
 
 fn debug_world() -> World {
@@ -57,6 +57,9 @@ fn debug_draw_frame_emits_shape_asset_events_and_reuses_handles() {
     assert!(first.commands.iter().any(|command| {
         matches!(command, DebugDrawCommand::Shape { handle: Some(seen), .. } if *seen == handle)
     }));
+    let legacy = DebugShape::from_asset(created[0]);
+    assert_eq!(legacy.shape_id, created[0].shape_id);
+    assert_eq!(legacy.shape_type, Some(created[0].shape_type));
 
     let second = world
         .try_debug_draw_frame(DebugDrawOptions::default())

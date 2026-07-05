@@ -34,7 +34,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 
 ### Migration Notes
 
-- `DebugDrawCommand::Shape { shape, .. }` has changed to `DebugDrawCommand::Shape { handle, .. }`. Look up owned geometry through `DebugDrawFrame` events and cached `DebugShapeAsset` values. The old `boxddd::DebugShape` metadata type remains as a deprecated migration aid for stored metadata, but it is no longer emitted by frame commands.
+- `DebugDrawCommand::Shape { shape, .. }` has changed to `DebugDrawCommand::Shape { handle, .. }`. Look up owned geometry through `DebugDrawFrame` events and cached `DebugShapeAsset` values. The old `boxddd::DebugShape` metadata type remains as a migration aid for stored metadata, but it is no longer emitted by frame commands.
 - Prefer `World::debug_draw_frame`, `try_debug_draw_frame`, or `try_debug_draw_frame_into` when a renderer needs stable shape geometry across frames. The older command collection helpers remain for simpler command-only consumers.
 - `Error::ProviderCallbackFailed` is a new public error variant. Exhaustive matches on `boxddd::Error` need a new arm; existing variant order is otherwise preserved for compatibility.
 - `HullDescriptor` gained the `Cylinder` variant and is now non-exhaustive. Exhaustive matches in `bevy_boxddd` apps need to add a wildcard arm.

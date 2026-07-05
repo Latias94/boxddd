@@ -1,4 +1,3 @@
-#[allow(deprecated)]
 pub use crate::{
     Aabb, ApiError, ApiResult, BodyCastHit, BodyClosestPoint, BodyDef, BodyDefBuilder, BodyId,
     BodyMoveEvent, BodyType, BoxCastInput, BoxHull, Capsule, CollisionPlane, Compound,
