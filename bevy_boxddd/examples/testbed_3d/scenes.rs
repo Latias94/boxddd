@@ -13,6 +13,9 @@ pub struct MoverProbe {
     pub delta: Vec3,
 }
 
+#[derive(Component, Copy, Clone, Debug, Eq, PartialEq)]
+pub struct MaterialLabTarget;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TestbedScene {
     FallingStack,
@@ -1017,6 +1020,7 @@ fn spawn_materials(
                 restitution: 0.02,
                 ..default()
             },
+            MaterialLabTarget,
             TestbedEntity,
         ));
     }
@@ -1036,6 +1040,7 @@ fn spawn_materials(
                 enable_hit_events: true,
                 ..default()
             },
+            MaterialLabTarget,
             TestbedEntity,
         ));
     }

@@ -15,6 +15,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 ### Added
 
 - Browser demo pages now expose direct Bevy + egui examples from the shared `testbed_3d` scene registry at <https://frankorz.com/boxddd/>.
+- Query Lab, Debug Draw Inspector, and Material Lab now have live Bevy + egui controls and diagnostics instead of acting as static showcase routes.
 - The Bevy testbed now includes `boxddd` showcase entries for query integration, debug draw inspection, and material comparison.
 - Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics. This makes renderer integration more practical than consuming command lists alone.
 - The Bevy testbed now covers more official Box3D teaching scenarios, including dominoes, arch stacks, wind fields, ragdoll-style joint chains, and cylinder stacks.

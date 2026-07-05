@@ -1,4 +1,5 @@
 mod control;
+mod lab;
 mod picking;
 mod scenes;
 #[path = "../support/mod.rs"]
@@ -49,6 +50,7 @@ fn main() {
             enabled: false,
             options: boxddd::DebugDrawOptions::default(),
         })
+        .insert_resource(lab::LabDiagnostics::default())
         .insert_resource(picking::PhysicsDragState::default())
         .add_plugins(support::teaching_default_plugins("boxddd Bevy Testbed"))
         .add_plugins(EguiPlugin::default())
@@ -61,7 +63,10 @@ fn main() {
             (
                 handle_input,
                 apply_testbed_settings,
+                lab::apply_material_lab_controls,
+                lab::update_lab_diagnostics,
                 draw_debug_gizmos,
+                lab::draw_lab_overlays,
                 draw_mover_probe,
                 picking::update_physics_drag,
                 picking::draw_physics_pick,

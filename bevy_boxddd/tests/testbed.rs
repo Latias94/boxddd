@@ -1,6 +1,9 @@
 #[path = "../examples/testbed_3d/control.rs"]
 #[allow(dead_code)]
 mod control;
+#[path = "../examples/testbed_3d/lab.rs"]
+#[allow(dead_code)]
+mod lab;
 #[path = "../examples/testbed_3d/picking.rs"]
 #[allow(dead_code)]
 mod picking;
@@ -15,8 +18,12 @@ use bevy_ecs::message::Messages;
 use bevy_ecs::system::RunSystemOnce;
 use bevy_time::{TimePlugin, TimeUpdateStrategy};
 use control::{
-    DEFAULT_HERTZ, DEFAULT_SUB_STEPS, DebugDrawPreset, MAX_HERTZ, MAX_SUB_STEPS, MIN_HERTZ,
-    MIN_SUB_STEPS, TestbedState,
+    DEFAULT_HERTZ, DEFAULT_MATERIAL_FRICTION, DEFAULT_MATERIAL_RESTITUTION,
+    DEFAULT_QUERY_AABB_HALF_EXTENT, DEFAULT_QUERY_RAY_LENGTH, DEFAULT_SUB_STEPS, DebugDrawPreset,
+    MAX_HERTZ, MAX_MATERIAL_FRICTION, MAX_MATERIAL_RESTITUTION, MAX_QUERY_AABB_HALF_EXTENT,
+    MAX_QUERY_RAY_LENGTH, MAX_SUB_STEPS, MIN_HERTZ, MIN_MATERIAL_FRICTION,
+    MIN_MATERIAL_RESTITUTION, MIN_QUERY_AABB_HALF_EXTENT, MIN_QUERY_RAY_LENGTH, MIN_SUB_STEPS,
+    TestbedState,
 };
 use scenes::{
     ALL_SCENES, MoverProbe, ParityMode, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene,
@@ -33,6 +40,8 @@ fn physics_app(scene: TestbedScene) -> App {
     app.add_plugins(TimePlugin)
         .insert_resource(TimeUpdateStrategy::FixedTimesteps(1))
         .insert_resource(SelectedScene(scene))
+        .insert_resource(TestbedState::launch(scene.index(), false))
+        .init_resource::<lab::LabDiagnostics>()
         .init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<StandardMaterial>>()
         .add_plugins(BoxdddPhysicsPlugin::new(BoxdddPhysicsSettings::default()));
@@ -283,21 +292,50 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     let mut state = TestbedState {
         hertz: 1.0,
         sub_step_count: 0,
+        query_lab_ray_length: -1.0,
+        query_lab_aabb_half_extent: -1.0,
+        material_lab_friction: -1.0,
+        material_lab_restitution: -1.0,
         ..Default::default()
     };
     state.clamp_controls();
     assert_eq!(state.hertz, MIN_HERTZ);
     assert_eq!(state.sub_step_count, MIN_SUB_STEPS);
+    assert_eq!(state.query_lab_ray_length, MIN_QUERY_RAY_LENGTH);
+    assert_eq!(state.query_lab_aabb_half_extent, MIN_QUERY_AABB_HALF_EXTENT);
+    assert_eq!(state.material_lab_friction, MIN_MATERIAL_FRICTION);
+    assert_eq!(state.material_lab_restitution, MIN_MATERIAL_RESTITUTION);
 
     state.hertz = 10_000.0;
     state.sub_step_count = 10_000;
+    state.query_lab_ray_length = 10_000.0;
+    state.query_lab_aabb_half_extent = 10_000.0;
+    state.material_lab_friction = 10_000.0;
+    state.material_lab_restitution = 10_000.0;
     state.clamp_controls();
     assert_eq!(state.hertz, MAX_HERTZ);
     assert_eq!(state.sub_step_count, MAX_SUB_STEPS);
+    assert_eq!(state.query_lab_ray_length, MAX_QUERY_RAY_LENGTH);
+    assert_eq!(state.query_lab_aabb_half_extent, MAX_QUERY_AABB_HALF_EXTENT);
+    assert_eq!(state.material_lab_friction, MAX_MATERIAL_FRICTION);
+    assert_eq!(state.material_lab_restitution, MAX_MATERIAL_RESTITUTION);
 
     let default_state = TestbedState::default();
     assert_eq!(default_state.hertz, DEFAULT_HERTZ);
     assert_eq!(default_state.sub_step_count, DEFAULT_SUB_STEPS);
+    assert_eq!(default_state.query_lab_ray_length, DEFAULT_QUERY_RAY_LENGTH);
+    assert_eq!(
+        default_state.query_lab_aabb_half_extent,
+        DEFAULT_QUERY_AABB_HALF_EXTENT
+    );
+    assert_eq!(
+        default_state.material_lab_friction,
+        DEFAULT_MATERIAL_FRICTION
+    );
+    assert_eq!(
+        default_state.material_lab_restitution,
+        DEFAULT_MATERIAL_RESTITUTION
+    );
     assert!((default_state.fixed_timestep_seconds() - 1.0 / DEFAULT_HERTZ).abs() < f64::EPSILON);
 }
 
@@ -332,6 +370,33 @@ fn ray_picking_scene_uses_dynamic_drag_targets() {
 }
 
 #[test]
+fn query_lab_diagnostics_track_native_queries() {
+    let mut app = physics_app(TestbedScene::QueryLab);
+    spawn_scene_once(&mut app, TestbedScene::QueryLab);
+    run_fixed_frames(&mut app, 3);
+
+    {
+        let mut state = app.world_mut().resource_mut::<TestbedState>();
+        state.query_lab_ray_length = DEFAULT_QUERY_RAY_LENGTH;
+        state.query_lab_aabb_half_extent = DEFAULT_QUERY_AABB_HALF_EXTENT;
+    }
+    app.world_mut()
+        .run_system_once(lab::update_lab_diagnostics)
+        .unwrap();
+
+    let diagnostics = app.world().resource::<lab::LabDiagnostics>();
+    assert!(
+        diagnostics.query_ray_hit_count > 0,
+        "QueryLab should report ray hits from Box3D"
+    );
+    assert!(
+        diagnostics.query_overlap_hit_count > 0,
+        "QueryLab should report overlap hits from Box3D"
+    );
+    assert!(diagnostics.query_closest_fraction.is_some());
+}
+
+#[test]
 fn debug_draw_inspector_scene_collects_debug_commands() {
     let mut app = physics_app(TestbedScene::DebugDrawInspector);
     app.insert_resource(BoxdddDebugDrawSettings {
@@ -349,6 +414,13 @@ fn debug_draw_inspector_scene_collects_debug_commands() {
             .any(|command| matches!(command, boxddd::DebugDrawCommand::Shape { .. })),
         "DebugDrawInspector should collect native shape debug commands"
     );
+
+    app.world_mut()
+        .run_system_once(lab::update_lab_diagnostics)
+        .unwrap();
+    let diagnostics = app.world().resource::<lab::LabDiagnostics>();
+    assert!(diagnostics.debug_command_count > 0);
+    assert_eq!(diagnostics.query_ray_hit_count, 0);
 }
 
 #[test]
@@ -566,6 +638,41 @@ fn materials_scene_contains_friction_and_restitution_variants() {
             materials.iter().any(|material| material.restitution >= 0.8),
             "{scene:?} should include a high-restitution material"
         );
+    }
+}
+
+#[test]
+fn material_lab_controls_update_native_target_shapes() {
+    let mut app = physics_app(TestbedScene::MaterialLab);
+    spawn_scene_once(&mut app, TestbedScene::MaterialLab);
+    run_fixed_frames(&mut app, 3);
+
+    {
+        let mut state = app.world_mut().resource_mut::<TestbedState>();
+        state.material_lab_friction = 1.4;
+        state.material_lab_restitution = 0.25;
+    }
+    app.world_mut()
+        .run_system_once(lab::apply_material_lab_controls)
+        .unwrap();
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&BoxdddShape, With<scenes::MaterialLabTarget>>();
+    let shape_ids = query
+        .iter(app.world())
+        .map(|shape| shape.id())
+        .collect::<Vec<_>>();
+    assert!(!shape_ids.is_empty());
+
+    let diagnostics = app.world().resource::<lab::LabDiagnostics>();
+    assert_eq!(diagnostics.material_shape_count, shape_ids.len());
+
+    let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
+    let world = context.world().unwrap();
+    for shape_id in shape_ids {
+        assert!((world.try_shape_friction(shape_id).unwrap() - 1.4).abs() < 1.0e-5);
+        assert!((world.try_shape_restitution(shape_id).unwrap() - 0.25).abs() < 1.0e-5);
     }
 }
 

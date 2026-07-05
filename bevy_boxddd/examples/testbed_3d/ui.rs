@@ -1,5 +1,6 @@
 use crate::control::{DebugDrawPreset, TestbedState};
-use crate::scenes::{SCENE_REGISTRY, TestbedEntity};
+use crate::lab::LabDiagnostics;
+use crate::scenes::{SCENE_REGISTRY, TestbedEntity, TestbedScene};
 use crate::{TestbedCamera, switch_scene};
 use bevy::prelude::*;
 use bevy_egui::egui::{LayerId, Ui, UiBuilder};
@@ -13,6 +14,7 @@ pub(crate) fn draw_testbed_ui(
     mut camera: Query<&mut Transform, With<TestbedCamera>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    diagnostics: Res<LabDiagnostics>,
 ) -> Result {
     let mut requested_scene = None;
 
@@ -144,6 +146,8 @@ pub(crate) fn draw_testbed_ui(
                         ui.selectable_value(&mut state.debug_preset, preset, preset.label());
                     }
                 });
+
+            draw_scene_lab_controls(ui, state.as_mut(), &diagnostics);
         });
 
     if let Some(scene_index) = requested_scene {
@@ -159,4 +163,85 @@ pub(crate) fn draw_testbed_ui(
     }
 
     Ok(())
+}
+
+fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &LabDiagnostics) {
+    match crate::lab::current_scene(state) {
+        TestbedScene::QueryLab => {
+            ui.separator();
+            ui.label(egui::RichText::new("Query Lab").strong());
+            ui.add(
+                egui::Slider::new(
+                    &mut state.query_lab_ray_length,
+                    crate::control::MIN_QUERY_RAY_LENGTH..=crate::control::MAX_QUERY_RAY_LENGTH,
+                )
+                .text("Ray length"),
+            );
+            ui.add(
+                egui::Slider::new(
+                    &mut state.query_lab_aabb_half_extent,
+                    crate::control::MIN_QUERY_AABB_HALF_EXTENT
+                        ..=crate::control::MAX_QUERY_AABB_HALF_EXTENT,
+                )
+                .text("AABB half extent"),
+            );
+            ui.label(format!("Ray hits: {}", diagnostics.query_ray_hit_count));
+            ui.label(format!(
+                "Overlap hits: {}",
+                diagnostics.query_overlap_hit_count
+            ));
+            ui.label(match diagnostics.query_closest_fraction {
+                Some(fraction) => format!("Closest fraction: {fraction:.3}"),
+                None => "Closest fraction: none".to_string(),
+            });
+        }
+        TestbedScene::DebugDrawInspector => {
+            ui.separator();
+            ui.label(egui::RichText::new("Debug Draw Inspector").strong());
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("Shapes").clicked() {
+                    state.debug_preset = DebugDrawPreset::Shapes;
+                }
+                if ui.button("Joints").clicked() {
+                    state.debug_preset = DebugDrawPreset::ShapesAndJoints;
+                }
+                if ui.button("Contacts").clicked() {
+                    state.debug_preset = DebugDrawPreset::Contacts;
+                }
+                if ui.button("Bounds").clicked() {
+                    state.debug_preset = DebugDrawPreset::Bounds;
+                }
+            });
+            ui.label(format!("Commands: {}", diagnostics.debug_command_count));
+            ui.label(format!("Events: {}", diagnostics.debug_event_count));
+            ui.label(format!(
+                "Diagnostics: {}",
+                diagnostics.debug_diagnostic_count
+            ));
+        }
+        TestbedScene::MaterialLab => {
+            ui.separator();
+            ui.label(egui::RichText::new("Material Lab").strong());
+            ui.add(
+                egui::Slider::new(
+                    &mut state.material_lab_friction,
+                    crate::control::MIN_MATERIAL_FRICTION..=crate::control::MAX_MATERIAL_FRICTION,
+                )
+                .text("Friction"),
+            );
+            ui.add(
+                egui::Slider::new(
+                    &mut state.material_lab_restitution,
+                    crate::control::MIN_MATERIAL_RESTITUTION
+                        ..=crate::control::MAX_MATERIAL_RESTITUTION,
+                )
+                .text("Restitution"),
+            );
+            ui.label(format!(
+                "Native shapes: {}",
+                diagnostics.material_shape_count
+            ));
+        }
+        _ => {}
+    }
 }
