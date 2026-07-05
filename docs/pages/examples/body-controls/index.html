@@ -43,6 +43,9 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .card strong { font-size: 18px; }
 .card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.card em { color: #d4d4d8; font-size: 12px; font-style: normal; line-height: 1.45; }
+.upstream-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.upstream-list span { border: 1px solid var(--border); border-radius: 999px; background: rgba(39, 39, 42, 0.7); padding: 4px 7px; color: #d4d4d8; font-size: 12px; line-height: 1.2; text-transform: none; }
 </style>
 </head>
 <body>
@@ -52,6 +55,7 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
         <a href="../../">boxddd Examples</a>
         <h1>Body Controls</h1>
         <p><span>Bodies</span>Body settings, force, impulse, kinematic motion, and gravity scale.</p>
+        <div class="upstream-list"><span>Bodies / Body Type · teaching adaptation</span><span>Bodies / Disable · teaching adaptation</span><span>Bodies / Kinematic · teaching adaptation</span><span>Bodies / Fixed Rotation · teaching adaptation</span><span>Joints / Motion Locks · teaching adaptation</span></div>
       </div>
       <nav>
         <a href="../">All Bevy examples</a>

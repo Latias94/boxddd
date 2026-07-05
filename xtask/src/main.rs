@@ -59,6 +59,14 @@ struct RegistrySample {
     category: String,
     name: String,
     description: String,
+    upstream: Vec<RegistryUpstreamSample>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RegistryUpstreamSample {
+    category: String,
+    name: String,
+    mode: String,
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -97,6 +105,14 @@ struct PageSampleBuilder {
     category: Option<String>,
     name: Option<String>,
     description: Option<String>,
+    upstream: Vec<RegistryUpstreamSample>,
+}
+
+#[derive(Default)]
+struct UpstreamSampleBuilder {
+    category: Option<String>,
+    name: Option<String>,
+    mode: Option<String>,
 }
 
 fn main() {
@@ -607,11 +623,12 @@ fn example_index_page(samples: &[RegistrySample], location: ExampleIndexLocation
         .iter()
         .map(|sample| {
             format!(
-                "        <a class=\"card\" href=\"{href}\"><span>{category}</span><strong>{name}</strong><small>{description}</small></a>",
+                "        <a class=\"card\" href=\"{href}\"><span>{category}</span><strong>{name}</strong><small>{description}</small><em>{upstream}</em></a>",
                 href = location.scene_href(&sample.id),
                 category = escape_html(&sample.category),
                 name = escape_html(&sample.name),
-                description = escape_html(&sample.description)
+                description = escape_html(&sample.description),
+                upstream = upstream_summary(&sample.upstream)
             )
         })
         .collect::<Vec<_>>()
@@ -674,6 +691,7 @@ fn example_page(sample: &RegistrySample) -> String {
         <a href="../../">boxddd Examples</a>
         <h1>{name}</h1>
         <p><span>{category}</span>{description}</p>
+        {upstream}
       </div>
       <nav>
         <a href="../">All Bevy examples</a>
@@ -696,8 +714,48 @@ fn example_page(sample: &RegistrySample) -> String {
         name = escape_html(&sample.name),
         category = escape_html(&sample.category),
         description = escape_html(&sample.description),
+        upstream = upstream_list_html(&sample.upstream),
         example_page_css = example_page_css()
     )
+}
+
+fn upstream_summary(upstream: &[RegistryUpstreamSample]) -> String {
+    let mut labels = upstream
+        .iter()
+        .take(3)
+        .map(|sample| format!("{} / {}", sample.category, sample.name))
+        .collect::<Vec<_>>();
+    if upstream.len() > labels.len() {
+        labels.push(format!("+{} more", upstream.len() - labels.len()));
+    }
+    escape_html(&labels.join(", "))
+}
+
+fn upstream_list_html(upstream: &[RegistryUpstreamSample]) -> String {
+    let items = upstream
+        .iter()
+        .map(|sample| {
+            format!(
+                "<span>{category} / {name} · {mode}</span>",
+                category = escape_html(&sample.category),
+                name = escape_html(&sample.name),
+                mode = escape_html(&parity_mode_label(&sample.mode))
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    format!(r#"<div class="upstream-list">{items}</div>"#)
+}
+
+fn parity_mode_label(mode: &str) -> String {
+    let mut label = String::new();
+    for (index, ch) in mode.chars().enumerate() {
+        if index > 0 && ch.is_ascii_uppercase() {
+            label.push(' ');
+        }
+        label.push(ch.to_ascii_lowercase());
+    }
+    label
 }
 
 fn example_page_css() -> &'static str {
@@ -738,6 +796,9 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .card strong { font-size: 18px; }
 .card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.card em { color: #d4d4d8; font-size: 12px; font-style: normal; line-height: 1.45; }
+.upstream-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.upstream-list span { border: 1px solid var(--border); border-radius: 999px; background: rgba(39, 39, 42, 0.7); padding: 4px 7px; color: #d4d4d8; font-size: 12px; line-height: 1.2; text-transform: none; }
 "#
 }
 
@@ -768,6 +829,13 @@ fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
         validate_registry_field(sample, "category", &sample.category)?;
         validate_registry_field(sample, "name", &sample.name)?;
         validate_registry_field(sample, "description", &sample.description)?;
+        if sample.upstream.is_empty() {
+            return Err(format!(
+                "testbed registry sample `{}` must include upstream sample references",
+                sample.id
+            )
+            .into());
+        }
 
         if !is_slug(&sample.id) {
             return Err(format!(
@@ -778,6 +846,30 @@ fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
         }
         if !seen.insert(sample.id.as_str()) {
             return Err(format!("duplicate testbed registry id `{}`", sample.id).into());
+        }
+
+        let mut upstream_seen = BTreeSet::new();
+        for upstream in &sample.upstream {
+            validate_registry_field(sample, "upstream.category", &upstream.category)?;
+            validate_registry_field(sample, "upstream.name", &upstream.name)?;
+            validate_registry_field(sample, "upstream.mode", &upstream.mode)?;
+            if !matches!(
+                upstream.mode.as_str(),
+                "FaithfulPort" | "TeachingAdaptation"
+            ) {
+                return Err(format!(
+                    "testbed registry sample `{}` uses unsupported upstream parity mode `{}`",
+                    sample.id, upstream.mode
+                )
+                .into());
+            }
+            if !upstream_seen.insert((upstream.category.as_str(), upstream.name.as_str())) {
+                return Err(format!(
+                    "testbed registry sample `{}` duplicates upstream ref `{}` / `{}`",
+                    sample.id, upstream.category, upstream.name
+                )
+                .into());
+            }
         }
     }
 
@@ -814,6 +906,7 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
     let source = fs::read_to_string(&scenes)?;
     let mut samples = Vec::new();
     let mut current: Option<PageSampleBuilder> = None;
+    let mut current_upstream: Option<UpstreamSampleBuilder> = None;
     let mut in_registry = false;
 
     for line in source.lines() {
@@ -826,6 +919,25 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
         }
 
         let trimmed = line.trim();
+        if let Some(upstream) = current_upstream.as_mut() {
+            read_upstream_fields(upstream, trimmed);
+            if trimmed == "}," || trimmed.ends_with("},") {
+                let upstream = current_upstream
+                    .take()
+                    .expect("upstream builder should be present");
+                current
+                    .as_mut()
+                    .ok_or_else(|| {
+                        format!(
+                            "upstream sample outside registry entry in {}",
+                            scenes.display()
+                        )
+                    })?
+                    .upstream
+                    .push(upstream.build()?);
+            }
+            continue;
+        }
         if trimmed == "];" {
             break;
         }
@@ -847,7 +959,15 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
         let Some(builder) = current.as_mut() else {
             continue;
         };
-        if let Some(value) = extract_string_field(trimmed, "id") {
+        if trimmed.starts_with("UpstreamSampleRef {") {
+            let mut upstream = UpstreamSampleBuilder::default();
+            read_upstream_fields(&mut upstream, trimmed);
+            if trimmed.ends_with("},") {
+                builder.upstream.push(upstream.build()?);
+            } else {
+                current_upstream = Some(upstream);
+            }
+        } else if let Some(value) = extract_string_field(trimmed, "id") {
             builder.id = Some(value);
         } else if let Some(value) = extract_string_field(trimmed, "category") {
             builder.category = Some(value);
@@ -869,6 +989,17 @@ impl PageSampleBuilder {
             category: required_registry_field(self.category, "category")?,
             name: required_registry_field(self.name, "name")?,
             description: required_registry_field(self.description, "description")?,
+            upstream: self.upstream,
+        })
+    }
+}
+
+impl UpstreamSampleBuilder {
+    fn build(self) -> Result<RegistryUpstreamSample> {
+        Ok(RegistryUpstreamSample {
+            category: required_registry_field(self.category, "upstream.category")?,
+            name: required_registry_field(self.name, "upstream.name")?,
+            mode: required_registry_field(self.mode, "upstream.mode")?,
         })
     }
 }
@@ -905,6 +1036,28 @@ fn extract_string_field(line: &str, field: &str) -> Option<String> {
     let start = line.find(&needle)? + needle.len();
     let tail = &line[start..];
     let end = tail.find('"')?;
+    Some(tail[..end].to_string())
+}
+
+fn read_upstream_fields(builder: &mut UpstreamSampleBuilder, line: &str) {
+    if let Some(value) = extract_string_field(line, "category") {
+        builder.category = Some(value);
+    }
+    if let Some(value) = extract_string_field(line, "name") {
+        builder.name = Some(value);
+    }
+    if let Some(value) = extract_parity_mode_field(line) {
+        builder.mode = Some(value);
+    }
+}
+
+fn extract_parity_mode_field(line: &str) -> Option<String> {
+    let needle = "mode: ParityMode::";
+    let start = line.find(needle)? + needle.len();
+    let tail = &line[start..];
+    let end = tail
+        .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .unwrap_or(tail.len());
     Some(tail[..end].to_string())
 }
 

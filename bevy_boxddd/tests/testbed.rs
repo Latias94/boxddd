@@ -7,6 +7,8 @@ mod picking;
 #[path = "../examples/testbed_3d/scenes.rs"]
 mod scenes;
 
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 use bevy_boxddd::prelude::*;
 use bevy_ecs::message::Messages;
@@ -16,7 +18,12 @@ use control::{
     DEFAULT_HERTZ, DEFAULT_SUB_STEPS, DebugDrawPreset, MAX_HERTZ, MAX_SUB_STEPS, MIN_HERTZ,
     MIN_SUB_STEPS, TestbedState,
 };
-use scenes::{ALL_SCENES, MoverProbe, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene};
+use scenes::{
+    ALL_SCENES, MoverProbe, ParityMode, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene,
+};
+
+const SAMPLE_CASE_TABLE_HEADER: &str =
+    "| Category | Official sample | Source location | Parity mode | Target | Notes |";
 
 #[derive(Resource)]
 struct SelectedScene(TestbedScene);
@@ -119,6 +126,11 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
         assert!(!metadata.name.is_empty());
         assert!(!metadata.description.is_empty());
         assert!(
+            !metadata.upstream.is_empty(),
+            "scene {} should name at least one upstream sample reference",
+            metadata.id
+        );
+        assert!(
             metadata.id.is_ascii() && !metadata.id.contains(' '),
             "scene id should be an ASCII slug: {}",
             metadata.id
@@ -143,6 +155,35 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
             "camera transform should be finite for {}",
             metadata.id
         );
+
+        let mut upstream_refs = BTreeSet::new();
+        for upstream in metadata.upstream {
+            assert!(
+                !upstream.category.is_empty() && !upstream.name.is_empty(),
+                "scene {} has an empty upstream sample ref",
+                metadata.id
+            );
+            assert!(
+                matches!(
+                    upstream.mode,
+                    ParityMode::FaithfulPort | ParityMode::TeachingAdaptation
+                ),
+                "scene {} should only reference visual parity modes",
+                metadata.id
+            );
+            assert!(
+                !upstream.mode.as_str().is_empty(),
+                "scene {} has an invalid upstream parity mode",
+                metadata.id
+            );
+            assert!(
+                upstream_refs.insert((upstream.category, upstream.name)),
+                "scene {} has duplicate upstream ref {}/{}",
+                metadata.id,
+                upstream.category,
+                upstream.name
+            );
+        }
     }
 
     for (left_index, left) in SCENE_REGISTRY.iter().enumerate() {
@@ -151,6 +192,53 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
             assert_ne!(left.scene, right.scene, "duplicate scene {:?}", left.scene);
         }
     }
+}
+
+#[test]
+fn testbed_upstream_refs_exist_in_official_sample_matrix() {
+    let matrix = include_str!("../../docs/upstream-parity/box3d-sample-matrix.md");
+    let matrix_cases = official_sample_cases(matrix);
+
+    for metadata in SCENE_REGISTRY {
+        for upstream in metadata.upstream {
+            assert!(
+                matrix_cases.contains(&(upstream.category, upstream.name)),
+                "scene {} references unknown upstream sample {}/{}",
+                metadata.id,
+                upstream.category,
+                upstream.name
+            );
+        }
+    }
+}
+
+fn official_sample_cases(matrix: &str) -> BTreeSet<(&str, &str)> {
+    let mut cases = BTreeSet::new();
+    let mut in_table = false;
+    for line in matrix.lines() {
+        let trimmed = line.trim();
+        if trimmed == SAMPLE_CASE_TABLE_HEADER {
+            in_table = true;
+            continue;
+        }
+        if !in_table || trimmed.starts_with("|---") {
+            continue;
+        }
+        if !trimmed.starts_with('|') {
+            if !cases.is_empty() {
+                break;
+            }
+            continue;
+        }
+        let cells = trimmed
+            .trim_matches('|')
+            .split('|')
+            .map(str::trim)
+            .collect::<Vec<_>>();
+        assert_eq!(cells.len(), 6, "sample matrix row should have 6 cells");
+        cases.insert((cells[0], cells[1]));
+    }
+    cases
 }
 
 #[test]

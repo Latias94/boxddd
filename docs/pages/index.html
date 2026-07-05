@@ -43,6 +43,9 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .card strong { font-size: 18px; }
 .card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.card em { color: #d4d4d8; font-size: 12px; font-style: normal; line-height: 1.45; }
+.upstream-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.upstream-list span { border: 1px solid var(--border); border-radius: 999px; background: rgba(39, 39, 42, 0.7); padding: 4px 7px; color: #d4d4d8; font-size: 12px; line-height: 1.2; text-transform: none; }
 </style>
 </head>
 <body>
@@ -59,20 +62,20 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
       <h1>Run a Box3D scene</h1>
       <p class="lead">Each entry opens a dedicated Bevy + egui WASM page backed by the same Box3D provider runtime.</p>
       <section class="card-grid">
-        <a class="card" href="examples/falling-stack/"><span>Basics</span><strong>Falling Stack</strong><small>Dynamic boxes falling onto a static floor.</small></a>
-        <a class="card" href="examples/advanced-colliders/"><span>Colliders</span><strong>Advanced Colliders</strong><small>Mesh, height-field, compound, sphere, and hull colliders.</small></a>
-        <a class="card" href="examples/body-controls/"><span>Bodies</span><strong>Body Controls</strong><small>Body settings, force, impulse, kinematic motion, and gravity scale.</small></a>
-        <a class="card" href="examples/continuous-collision/"><span>Collision</span><strong>Continuous Collision</strong><small>Bullet-style fast bodies colliding with thin obstacles.</small></a>
-        <a class="card" href="examples/character-mover/"><span>Character</span><strong>Character Mover</strong><small>Capsule mover casts and obstacle probes.</small></a>
-        <a class="card" href="examples/materials/"><span>Materials</span><strong>Materials</strong><small>Friction and restitution variants shown with dynamic shapes.</small></a>
-        <a class="card" href="examples/joints/"><span>Joints</span><strong>Joints</strong><small>Public joint variants authored as Bevy entities.</small></a>
-        <a class="card" href="examples/contacts/"><span>Events</span><strong>Contacts And Sensors</strong><small>Contact and sensor messages emitted from the physics step.</small></a>
-        <a class="card" href="examples/ray-picking/"><span>Queries</span><strong>Ray Picking</strong><small>Camera rays resolved through Box3D world queries.</small></a>
-        <a class="card" href="examples/debug-draw/"><span>Debug</span><strong>Debug Draw</strong><small>Native Box3D debug draw commands rendered through Bevy gizmos.</small></a>
-        <a class="card" href="examples/domino-run/"><span>Stacking</span><strong>Domino Run</strong><small>A curved line of dynamic dominoes started by a moving sphere.</small></a>
-        <a class="card" href="examples/arch-stack/"><span>Stacking</span><strong>Arch Stack</strong><small>Dynamic blocks arranged as a simple arch over static pillars.</small></a>
-        <a class="card" href="examples/wind-field/"><span>Forces</span><strong>Wind Field</strong><small>Continuous external forces push light bodies through obstacles.</small></a>
-        <a class="card" href="examples/ragdoll-chain/"><span>Joints</span><strong>Ragdoll Chain</strong><small>A lightweight joint chain made from capsule bodies.</small></a>
+        <a class="card" href="examples/falling-stack/"><span>Basics</span><strong>Falling Stack</strong><small>Dynamic boxes falling onto a static floor.</small><em>Stacking / Single Box, Stacking / Box Stack, Stacking / Pyramid2D, +1 more</em></a>
+        <a class="card" href="examples/advanced-colliders/"><span>Colliders</span><strong>Advanced Colliders</strong><small>Mesh, height-field, compound, sphere, and hull colliders.</small><em>Compound / Simple, Compound / Mesh Tile, Mesh / Grid, +2 more</em></a>
+        <a class="card" href="examples/body-controls/"><span>Bodies</span><strong>Body Controls</strong><small>Body settings, force, impulse, kinematic motion, and gravity scale.</small><em>Bodies / Body Type, Bodies / Disable, Bodies / Kinematic, +2 more</em></a>
+        <a class="card" href="examples/continuous-collision/"><span>Collision</span><strong>Continuous Collision</strong><small>Bullet-style fast bodies colliding with thin obstacles.</small><em>Continuous / Thin Wall, Continuous / Bullet vs Stack, Collision / Time of Impact</em></a>
+        <a class="card" href="examples/character-mover/"><span>Character</span><strong>Character Mover</strong><small>Capsule mover casts and obstacle probes.</small><em>Character / Mover, Character / Rigid Body</em></a>
+        <a class="card" href="examples/materials/"><span>Materials</span><strong>Materials</strong><small>Friction and restitution variants shown with dynamic shapes.</small><em>Shapes / Inclined Plane, Shapes / Rolling Resistance, Shapes / High Resistance, +1 more</em></a>
+        <a class="card" href="examples/joints/"><span>Joints</span><strong>Joints</strong><small>Public joint variants authored as Bevy entities.</small><em>Joints / Distance Joint, Joints / Prismatic, Joints / Spherical, +3 more</em></a>
+        <a class="card" href="examples/contacts/"><span>Events</span><strong>Contacts And Sensors</strong><small>Contact and sensor messages emitted from the physics step.</small><em>Events / Hit, Events / Persistent Contact, Events / Sensor Hits</em></a>
+        <a class="card" href="examples/ray-picking/"><span>Queries</span><strong>Ray Picking</strong><small>Camera rays resolved through Box3D world queries.</small><em>Collision / Ray Curtain, Collision / Cast World, Collision / Overlap World</em></a>
+        <a class="card" href="examples/debug-draw/"><span>Debug</span><strong>Debug Draw</strong><small>Native Box3D debug draw commands rendered through Bevy gizmos.</small><em>Collision / Shape Cast Debug, Collision / Distance Debug</em></a>
+        <a class="card" href="examples/domino-run/"><span>Stacking</span><strong>Domino Run</strong><small>A curved line of dynamic dominoes started by a moving sphere.</small><em>Stacking / Dominoes, Stacking / Double Domino</em></a>
+        <a class="card" href="examples/arch-stack/"><span>Stacking</span><strong>Arch Stack</strong><small>Dynamic blocks arranged as a simple arch over static pillars.</small><em>Stacking / Arch, Stacking / Wedge, Stacking / Card House</em></a>
+        <a class="card" href="examples/wind-field/"><span>Forces</span><strong>Wind Field</strong><small>Continuous external forces push light bodies through obstacles.</small><em>Shapes / Wind, Shapes / Wind Drop, Shapes / Wind Flap</em></a>
+        <a class="card" href="examples/ragdoll-chain/"><span>Joints</span><strong>Ragdoll Chain</strong><small>A lightweight joint chain made from capsule bodies.</small><em>Ragdoll / Box, Ragdoll / Pile, Ragdoll / Incline, +1 more</em></a>
       </section>
     </main>
   </div>
