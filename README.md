@@ -22,7 +22,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 
 ## Status
 
-`boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today. The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](docs/api-coverage.md).
+`boxddd` is an experimental `0.1.0` binding while Box3D itself is new. The native desktop path is the main supported runtime surface today. The safe API covers the primary simulation path and tracks the remaining public Box3D surface in a tested coverage inventory; see [`docs/api-coverage.md`](https://github.com/Latias94/boxddd/blob/main/docs/api-coverage.md).
 
 | Surface | Status |
 |---|---|
@@ -45,9 +45,9 @@ The `0.1.0` vendored source includes a local single-thread WASM timer portabilit
 
 | Crate | Purpose |
 |---|---|
-| [`boxddd-sys`](boxddd-sys/README.md) | Low-level FFI for the vendored Box3D C API. |
-| [`boxddd`](boxddd) | Safe Rust wrapper for engine-independent physics code. |
-| [`bevy_boxddd`](bevy_boxddd/README.md) | Bevy 0.19 plugin with ECS components, fixed-step systems, messages, queries, debug drawing, and windowed 3D examples. |
+| [`boxddd-sys`](https://github.com/Latias94/boxddd/blob/main/boxddd-sys/README.md) | Low-level FFI for the vendored Box3D C API. |
+| [`boxddd`](https://github.com/Latias94/boxddd/tree/main/boxddd) | Safe Rust wrapper for engine-independent physics code. |
+| [`bevy_boxddd`](https://github.com/Latias94/boxddd/blob/main/bevy_boxddd/README.md) | Bevy 0.19 plugin with ECS components, fixed-step systems, messages, queries, debug drawing, and windowed 3D examples. |
 
 ## Getting Started
 
@@ -138,7 +138,7 @@ cargo run -p bevy_boxddd --example joint_gallery_3d
 cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d
 ```
 
-See [`bevy_boxddd/README.md`](bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
+See [`bevy_boxddd/README.md`](https://github.com/Latias94/boxddd/blob/main/bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
 The demo hub at <https://frankorz.com/boxddd/> is the maintained example gallery. Browser entries link directly to individual Bevy + egui Web scenes such as Falling Stack and Ray Picking.
 
 ## Examples
@@ -161,7 +161,7 @@ Start here:
 | Native debug viewer | `cargo run -p boxddd --example egui_debug_draw --features egui-example` | Consuming debug draw data in an app-owned renderer |
 | Bevy testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for stacks, advanced colliders, body controls, continuous collision, character mover, materials, joints, contacts, picking, debug draw, dominoes, arch stacks, wind forces, and ragdoll-lite joints |
 
-The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.md) and [`bevy_boxddd/examples/README.md`](bevy_boxddd/examples/README.md). The case-level official Box3D sample support matrix lives in [`docs/upstream-parity/box3d-sample-matrix.md`](docs/upstream-parity/box3d-sample-matrix.md); it labels each upstream case as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
+The full catalog lives in [`boxddd/examples/README.md`](https://github.com/Latias94/boxddd/blob/main/boxddd/examples/README.md) and [`bevy_boxddd/examples/README.md`](https://github.com/Latias94/boxddd/blob/main/bevy_boxddd/examples/README.md). The case-level official Box3D sample support matrix lives in [`docs/upstream-parity/box3d-sample-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-sample-matrix.md); it labels each upstream case as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
 
 ## Design Goals
 
@@ -179,9 +179,9 @@ Normal builds compile the vendored Box3D C sources locally through the Rust `cc`
 
 Read more:
 
-- [`docs/platforms/wasm.md`](docs/platforms/wasm.md) for the detailed WASM support matrix
-- [`docs/development/ci.md`](docs/development/ci.md) for CI jobs, target checks, and maintainer build commands
-- [`docs/upstream-parity/box3d-api-matrix.md`](docs/upstream-parity/box3d-api-matrix.md) for upstream Box3D API parity
+- [`docs/platforms/wasm.md`](https://github.com/Latias94/boxddd/blob/main/docs/platforms/wasm.md) for the detailed WASM support matrix
+- [`docs/development/ci.md`](https://github.com/Latias94/boxddd/blob/main/docs/development/ci.md) for CI jobs, target checks, and maintainer build commands
+- [`docs/upstream-parity/box3d-api-matrix.md`](https://github.com/Latias94/boxddd/blob/main/docs/upstream-parity/box3d-api-matrix.md) for upstream Box3D API parity
 
 ## Features
 
