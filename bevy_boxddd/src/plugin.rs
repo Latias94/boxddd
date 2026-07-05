@@ -1,7 +1,7 @@
 //! Bevy plugin wiring for `boxddd` fixed-step physics.
 
 use crate::debug_draw::{
-    BoxdddDebugDrawCommands, BoxdddDebugDrawSettings, collect_debug_draw_commands,
+    BoxdddDebugDrawFrame, BoxdddDebugDrawSettings, collect_debug_draw_commands,
 };
 use crate::messages::{
     BoxdddBodyMoveMessage, BoxdddContactBeginMessage, BoxdddContactEndMessage,
@@ -44,7 +44,7 @@ impl Plugin for BoxdddPhysicsPlugin {
 
         app.insert_resource(self.settings.clone());
         app.init_resource::<BoxdddDebugDrawSettings>()
-            .init_resource::<BoxdddDebugDrawCommands>();
+            .init_resource::<BoxdddDebugDrawFrame>();
 
         if let Some(seconds) = self.settings.fixed_timestep_seconds {
             if seconds.is_finite() && seconds > 0.0 {
