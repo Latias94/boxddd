@@ -5,6 +5,8 @@ mod scenes;
 mod support;
 mod ui;
 
+use std::fmt::Write as _;
+
 use bevy::prelude::*;
 use bevy::time::Fixed;
 use bevy_boxddd::prelude::*;
@@ -276,20 +278,25 @@ pub(crate) fn switch_scene(
 }
 
 fn log_scene_selection(scene: TestbedScene) {
+    if !log::log_enabled!(log::Level::Info) {
+        return;
+    }
+
     let metadata = scene.metadata();
-    let upstream = metadata
-        .upstream
-        .iter()
-        .map(|sample| {
-            format!(
-                "{}/{}:{}",
-                sample.category,
-                sample.name,
-                sample.mode.as_str()
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+    let mut upstream = String::new();
+    for (index, sample) in metadata.upstream.iter().enumerate() {
+        if index > 0 {
+            upstream.push_str(", ");
+        }
+        write!(
+            upstream,
+            "{}/{}:{}",
+            sample.category,
+            sample.name,
+            sample.mode.as_str()
+        )
+        .expect("writing to String cannot fail");
+    }
     bevy::log::info!(
         "Testbed scene [{}] {} ({}) - {}; upstream: {}",
         metadata.category,

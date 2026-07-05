@@ -57,7 +57,7 @@ Child collider entities are plugin-owned shapes attached to the nearest parent e
 - `LinearVelocity`, `AngularVelocity`, `ExternalForce`, `ExternalImpulse`: control inputs applied before stepping.
 - `BoxdddBody`, `BoxdddShape`, `BoxdddJoint`: native id components inserted by the plugin after successful creation.
 
-Advanced collider descriptors that create Box3D native resource shapes are static-body only. Attaching them to dynamic bodies emits `BoxdddErrorMessage { operation: CreateShape, error: InvalidArgument, .. }`.
+Mesh, height-field, and compound collider descriptors are static-body only. Attaching those descriptors to dynamic bodies emits `BoxdddErrorMessage { operation: CreateShape, error: InvalidArgument, .. }`. Procedural hull descriptors, including rock and cylinder hulls, may be attached to dynamic bodies.
 
 ## Queries And Picking
 

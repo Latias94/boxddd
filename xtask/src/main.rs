@@ -24,13 +24,6 @@ const BEVY_PROVIDER_SHIM: &str = "box3d-provider-shim.js";
 const SAMPLE_MATRIX_PATH: &str = "docs/upstream-parity/box3d-sample-matrix.md";
 const SAMPLE_CASE_TABLE_HEADER: &str =
     "| Category | Official sample | Source location | Parity mode | Target | Notes |";
-const SAMPLE_PARITY_MODES: &[&str] = &[
-    "FaithfulPort",
-    "TeachingAdaptation",
-    "TestOnly",
-    "Deferred",
-    "UpstreamReference",
-];
 const PROVIDER_SMOKE_EXPORTS: &[&str] = &[
     "boxddd_provider_smoke",
     "boxddd_provider_drop_millimeters",
@@ -81,10 +74,44 @@ struct SampleParityRow {
     category: String,
     name: String,
     source: String,
-    mode: String,
+    mode: SampleParityMode,
     target: String,
     notes: String,
     line_number: usize,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum SampleParityMode {
+    FaithfulPort,
+    TeachingAdaptation,
+    TestOnly,
+    Deferred,
+    UpstreamReference,
+}
+
+impl SampleParityMode {
+    const fn requires_target(self) -> bool {
+        !matches!(self, Self::Deferred | Self::UpstreamReference)
+    }
+
+    const fn requires_test_target(self) -> bool {
+        matches!(self, Self::TestOnly)
+    }
+}
+
+impl TryFrom<&str> for SampleParityMode {
+    type Error = ();
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        match value {
+            "FaithfulPort" => Ok(Self::FaithfulPort),
+            "TeachingAdaptation" => Ok(Self::TeachingAdaptation),
+            "TestOnly" => Ok(Self::TestOnly),
+            "Deferred" => Ok(Self::Deferred),
+            "UpstreamReference" => Ok(Self::UpstreamReference),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -312,11 +339,19 @@ fn read_sample_parity_rows(root: &Path) -> Result<Vec<SampleParityRow>> {
             )
             .into());
         }
+        let mode = SampleParityMode::try_from(cells[3].as_str()).map_err(|()| {
+            format!(
+                "{}:{} uses unknown parity mode `{}`",
+                matrix.display(),
+                line_index + 1,
+                cells[3]
+            )
+        })?;
         rows.push(SampleParityRow {
             category: cells[0].clone(),
             name: cells[1].clone(),
             source: strip_code_ticks(&cells[2]),
-            mode: cells[3].clone(),
+            mode,
             target: cells[4].clone(),
             notes: cells[5].clone(),
             line_number: line_index + 1,
@@ -407,13 +442,6 @@ fn validate_sample_parity_row(root: &Path, row: &SampleParityRow) -> Result<()> 
         )
         .into());
     }
-    if !SAMPLE_PARITY_MODES.contains(&row.mode.as_str()) {
-        return Err(format!(
-            "{}:{} uses unknown parity mode `{}`",
-            SAMPLE_MATRIX_PATH, row.line_number, row.mode
-        )
-        .into());
-    }
     if row.target.is_empty() || row.notes.is_empty() {
         return Err(format!(
             "{}:{} has an empty target or notes field",
@@ -421,7 +449,7 @@ fn validate_sample_parity_row(root: &Path, row: &SampleParityRow) -> Result<()> 
         )
         .into());
     }
-    if row.mode != "Deferred" && row.mode != "UpstreamReference" {
+    if row.mode.requires_target() {
         validate_target_code_spans(root, row)?;
     }
     Ok(())
@@ -437,7 +465,7 @@ fn validate_target_code_spans(root: &Path, row: &SampleParityRow) -> Result<()> 
         .into());
     }
 
-    if row.mode == "TestOnly" && !targets.iter().any(|target| is_test_target(target)) {
+    if row.mode.requires_test_target() && !targets.iter().any(|target| is_test_target(target)) {
         return Err(format!(
             "{}:{} TestOnly target must include at least one nextest-backed `tests/` path",
             SAMPLE_MATRIX_PATH, row.line_number
@@ -466,7 +494,10 @@ fn validate_target_code_spans(root: &Path, row: &SampleParityRow) -> Result<()> 
 }
 
 fn target_code_span_path(target: &str) -> &str {
-    target.split('#').next().unwrap_or(target).trim()
+    target
+        .split_once('#')
+        .map_or(target, |(path, _)| path)
+        .trim()
 }
 
 fn is_test_target(target: &str) -> bool {
@@ -488,17 +519,11 @@ fn extract_code_spans(value: &str) -> Vec<String> {
     spans
 }
 
-fn format_sample_key_list<T>(samples: &[T]) -> String
-where
-    T: std::borrow::Borrow<OfficialSample>,
-{
+fn format_sample_key_list(samples: &[&OfficialSample]) -> String {
     samples
         .iter()
         .take(10)
-        .map(|sample| {
-            let sample = sample.borrow();
-            format!("{}/{} ({})", sample.category, sample.name, sample.source)
-        })
+        .map(|sample| format!("{}/{} ({})", sample.category, sample.name, sample.source))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -1716,15 +1741,31 @@ mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    fn temp_root() -> PathBuf {
+    struct TempRoot {
+        path: PathBuf,
+    }
+
+    impl TempRoot {
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempRoot {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn temp_root() -> TempRoot {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be after Unix epoch")
             .as_nanos();
-        let root =
+        let path =
             env::temp_dir().join(format!("boxddd-xtask-test-{}-{nanos}", std::process::id()));
-        fs::create_dir_all(&root).expect("failed to create temporary test root");
-        root
+        fs::create_dir_all(&path).expect("failed to create temporary test root");
+        TempRoot { path }
     }
 
     fn write_empty_file(root: &Path, path: &str) {
@@ -1739,7 +1780,7 @@ mod tests {
             category: "Collision".to_string(),
             name: "Shape Cast".to_string(),
             source: "sample_collision.cpp:1".to_string(),
-            mode: mode.to_string(),
+            mode: SampleParityMode::try_from(mode).expect("test parity mode should be valid"),
             target: target.to_string(),
             notes: "covered by tests".to_string(),
             line_number: 42,
@@ -1749,44 +1790,42 @@ mod tests {
     #[test]
     fn test_only_parity_rows_require_a_tests_target() {
         let root = temp_root();
-        write_empty_file(&root, "boxddd/examples/shape_queries.rs");
+        write_empty_file(root.path(), "boxddd/examples/shape_queries.rs");
 
         let row = parity_row("TestOnly", "`boxddd/examples/shape_queries.rs`");
-        let error = validate_sample_parity_row(&root, &row)
+        let error = validate_sample_parity_row(root.path(), &row)
             .expect_err("TestOnly rows should require a tests/ target")
             .to_string();
 
         assert!(error.contains("TestOnly target must include"));
-        fs::remove_dir_all(root).expect("failed to remove temporary test root");
     }
 
     #[test]
     fn test_only_parity_rows_accept_mixed_example_and_tests_targets() {
         let root = temp_root();
-        write_empty_file(&root, "boxddd/examples/shape_queries.rs");
-        write_empty_file(&root, "boxddd/tests/world_and_queries.rs");
+        write_empty_file(root.path(), "boxddd/examples/shape_queries.rs");
+        write_empty_file(root.path(), "boxddd/tests/world_and_queries.rs");
 
         let row = parity_row(
             "TestOnly",
             "`boxddd/examples/shape_queries.rs`, `boxddd/tests/world_and_queries.rs`",
         );
 
-        validate_sample_parity_row(&root, &row).expect("TestOnly row should accept a tests/ path");
-        fs::remove_dir_all(root).expect("failed to remove temporary test root");
+        validate_sample_parity_row(root.path(), &row)
+            .expect("TestOnly row should accept a tests/ path");
     }
 
     #[test]
     fn visual_parity_rows_do_not_require_tests_targets() {
         let root = temp_root();
-        write_empty_file(&root, "bevy_boxddd/examples/testbed_3d/scenes.rs");
+        write_empty_file(root.path(), "bevy_boxddd/examples/testbed_3d/scenes.rs");
 
         let row = parity_row(
             "TeachingAdaptation",
             "`bevy_boxddd/examples/testbed_3d/scenes.rs#advanced-colliders`",
         );
 
-        validate_sample_parity_row(&root, &row)
+        validate_sample_parity_row(root.path(), &row)
             .expect("visual parity rows should only need existing targets");
-        fs::remove_dir_all(root).expect("failed to remove temporary test root");
     }
 }
