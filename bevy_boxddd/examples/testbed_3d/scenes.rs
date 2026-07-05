@@ -469,7 +469,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
         upstream: &[],
         showcase_lesson: Some("Use Box3D query results as the authority for Bevy tool selection."),
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
-        spawn: spawn_query_lab,
+        spawn: spawn_ray_picking,
     },
     TestbedSceneMetadata {
         scene: TestbedScene::DebugDrawInspector,
@@ -480,7 +480,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
         upstream: &[],
         showcase_lesson: Some("Inspect persistent debug assets without borrowing native memory."),
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
-        spawn: spawn_debug_draw_inspector,
+        spawn: spawn_debug_draw,
     },
     TestbedSceneMetadata {
         scene: TestbedScene::MaterialLab,
@@ -493,7 +493,7 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
             "Compare material coefficients in a Bevy scene before building custom tooling.",
         ),
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
-        spawn: spawn_material_lab,
+        spawn: spawn_materials,
     },
     TestbedSceneMetadata {
         scene: TestbedScene::DominoRun,
@@ -1176,30 +1176,6 @@ fn spawn_debug_draw(
         Collider::sphere(0.4),
         TestbedEntity,
     ));
-}
-
-fn spawn_query_lab(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-) {
-    spawn_ray_picking(commands, meshes, materials);
-}
-
-fn spawn_debug_draw_inspector(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-) {
-    spawn_debug_draw(commands, meshes, materials);
-}
-
-fn spawn_material_lab(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-) {
-    spawn_materials(commands, meshes, materials);
 }
 
 fn spawn_domino_run(

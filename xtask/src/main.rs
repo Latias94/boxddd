@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::env;
 use std::error::Error;
+use std::fmt::Write as _;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -818,21 +819,16 @@ fn source_list_html(sample: &RegistrySample) -> String {
             lesson = escape_html(lesson)
         ));
     }
-    items.push_str(
-        &sample
-            .upstream
-            .iter()
-            .map(|upstream| {
-                format!(
-                    "<span>{category} / {name} · {mode}</span>",
-                    category = escape_html(&upstream.category),
-                    name = escape_html(&upstream.name),
-                    mode = escape_html(&parity_mode_label(&upstream.mode))
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(""),
-    );
+    for upstream in &sample.upstream {
+        write!(
+            items,
+            "<span>{category} / {name} · {mode}</span>",
+            category = escape_html(&upstream.category),
+            name = escape_html(&upstream.name),
+            mode = escape_html(&parity_mode_label(&upstream.mode))
+        )
+        .expect("writing to String cannot fail");
+    }
     format!(r#"<div class="upstream-list">{items}</div>"#)
 }
 
@@ -1013,17 +1009,29 @@ fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
 
         let trimmed = line.trim();
         if pending_showcase_lesson {
-            if let Some(value) = extract_quoted_string(trimmed) {
-                current
-                    .as_mut()
-                    .ok_or_else(|| {
-                        format!(
-                            "showcase lesson outside registry entry in {}",
-                            scenes.display()
-                        )
-                    })?
-                    .showcase_lesson = Some(value);
-                pending_showcase_lesson = false;
+            let Some(value) = extract_quoted_string(trimmed) else {
+                return Err(format!(
+                    "showcase_lesson continuation in {} must start with a string literal, got `{trimmed}`",
+                    scenes.display()
+                )
+                .into());
+            };
+            current
+                .as_mut()
+                .ok_or_else(|| {
+                    format!(
+                        "showcase lesson outside registry entry in {}",
+                        scenes.display()
+                    )
+                })?
+                .showcase_lesson = Some(value);
+            pending_showcase_lesson = false;
+            if !trimmed.ends_with("\",") {
+                return Err(format!(
+                    "showcase_lesson string literal in {} must end with `\",`",
+                    scenes.display()
+                )
+                .into());
             }
             continue;
         }
@@ -1164,10 +1172,9 @@ fn extract_quoted_string(line: &str) -> Option<String> {
 
 fn extract_option_string_field(line: &str, field: &str) -> Option<Option<String>> {
     let some_needle = format!("{field}: Some(\"");
-    if let Some(start) = line.find(&some_needle) {
-        let tail = &line[start + some_needle.len()..];
-        let end = tail.find('"')?;
-        return Some(Some(tail[..end].to_string()));
+    if line.contains(&some_needle) {
+        let value_start = line.find("Some(")? + "Some(".len();
+        return extract_quoted_string(&line[value_start..]).map(Some);
     }
     let none_needle = format!("{field}: None");
     line.contains(&none_needle).then_some(None)
@@ -1861,10 +1868,7 @@ mod tests {
     }
 
     fn write_empty_file(root: &Path, path: &str) {
-        let path = root.join(path);
-        fs::create_dir_all(path.parent().expect("test file should have a parent"))
-            .expect("failed to create temporary test parent");
-        fs::write(path, "").expect("failed to write temporary test file");
+        write_text_file(root, path, "");
     }
 
     fn write_text_file(root: &Path, path: &str, contents: &str) {
@@ -2005,5 +2009,37 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 1] = [
             samples[0].showcase_lesson.as_deref(),
             Some("Compare material coefficients before building custom tooling.")
         );
+    }
+
+    #[test]
+    fn registry_parser_rejects_bad_multiline_showcase_lessons() {
+        let root = temp_root();
+        write_text_file(
+            root.path(),
+            "bevy_boxddd/examples/testbed_3d/scenes.rs",
+            r#"
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 1] = [
+    TestbedSceneMetadata {
+        scene: TestbedScene::MaterialLab,
+        id: "material-lab",
+        category: "Showcase",
+        name: "Material Lab",
+        description: "Material comparison scene.",
+        upstream: &[],
+        showcase_lesson: Some(
+            format!("not a static string"),
+        ),
+        camera: TestbedCamera::new([0.0, 0.0, 1.0], [0.0, 0.0, 0.0]),
+        spawn: spawn_material_lab,
+    },
+];
+"#,
+        );
+
+        let error = read_testbed_registry(root.path())
+            .expect_err("registry parser should reject non-literal showcase lessons")
+            .to_string();
+
+        assert!(error.contains("must start with a string literal"));
     }
 }

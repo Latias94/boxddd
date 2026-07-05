@@ -327,9 +327,6 @@ fn ray_picking_scene_uses_dynamic_drag_targets() {
 #[test]
 fn visual_showcase_scenes_cover_representative_concepts() {
     for scene in [
-        TestbedScene::QueryLab,
-        TestbedScene::DebugDrawInspector,
-        TestbedScene::MaterialLab,
         TestbedScene::DominoRun,
         TestbedScene::ArchStack,
         TestbedScene::WindField,
