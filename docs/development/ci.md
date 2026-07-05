@@ -156,6 +156,11 @@ cargo package -p bevy_boxddd --locked --config 'patch.crates-io.boxddd.path="box
 
 Audit the generated archives before publishing:
 
+The official sample parity matrix is a repository-level release artifact rather
+than a copied crate-package file. Crate README files link to the GitHub-hosted
+matrix, while `cargo run -p xtask -- sample-parity --check` remains the
+authoritative synchronization gate.
+
 ```bash
 version="$(cargo pkgid -p boxddd | sed -E 's/.*[@#]//')"
 sys_crate="target/package/boxddd-sys-${version}.crate"
@@ -166,6 +171,15 @@ for crate in "$sys_crate" "$core_crate" "$bevy_crate"; do
   tar -tf "$crate" >"${crate}.list"
   ! grep -E '(^|/)(repo-ref|target|\.github)(/|$)|(^|/)docs/plans/' "${crate}.list"
 done
+
+assert_root_readme_contains() {
+  local crate="$1"
+  local needle="$2"
+  local readme
+  readme="$(tar -tf "$crate" | grep -E '^[^/]+/README\.md$' | head -n 1)"
+  test -n "$readme"
+  tar -xOf "$crate" "$readme" | grep -F "$needle" >/dev/null
+}
 
 tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
 tar -tf "$sys_crate" | grep -F '/README.md'
@@ -187,6 +201,9 @@ tar -tf "$bevy_crate" | grep -F '/examples/advanced_colliders_3d.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
 tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/scenes.rs'
+
+assert_root_readme_contains "$core_crate" 'docs/upstream-parity/box3d-sample-matrix.md'
+assert_root_readme_contains "$bevy_crate" 'docs/upstream-parity/box3d-sample-matrix.md'
 ```
 
 ## Release Workflows

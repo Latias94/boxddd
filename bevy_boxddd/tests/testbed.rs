@@ -419,6 +419,7 @@ fn cylinder_hull_descriptor_validates_box3d_constraints() {
         HullDescriptor::cylinder(0.0, 0.3, 16),
         HullDescriptor::cylinder(0.8, 0.0, 16),
         HullDescriptor::cylinder(0.8, 0.3, 2),
+        HullDescriptor::cylinder(0.8, 0.3, 33),
         HullDescriptor::offset_cylinder(0.8, 0.3, f32::NAN, 16),
     ] {
         assert!(

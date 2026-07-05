@@ -24,6 +24,7 @@ fn value_and_resource_geometry_reject_invalid_inputs() {
     );
     assert!(Hull::from_points([Vec3::ZERO, Vec3::X, Vec3::Y], 8).is_err());
     assert!(Hull::cylinder(1.0, 1.0, 0.0, 2).is_err());
+    assert!(Hull::cylinder(1.0, 1.0, 0.0, 33).is_err());
     assert!(MeshData::box_mesh(Vec3::ZERO, [1.0, 0.0, 1.0], true).is_err());
     assert!(
         MeshData::from_triangles(

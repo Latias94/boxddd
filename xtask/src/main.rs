@@ -558,6 +558,11 @@ fn validate_pages() -> Result<()> {
     validate_bevy_example_pages(&pages_dir, &registry_samples)?;
 
     let html = fs::read_to_string(&index)?;
+    validate_generated_page(
+        &index,
+        &html,
+        &example_index_page(&registry_samples, ExampleIndexLocation::Root),
+    )?;
     validate_html_links(&index, &html)?;
     validate_bevy_loader(&loader)?;
 
@@ -615,6 +620,11 @@ fn validate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> 
         "Bevy examples index",
     )?;
     let examples_html = fs::read_to_string(&examples_dir)?;
+    validate_generated_page(
+        &examples_dir,
+        &examples_html,
+        &example_index_page(samples, ExampleIndexLocation::ExamplesDirectory),
+    )?;
     validate_html_links(&examples_dir, &examples_html)?;
 
     for sample in samples {
@@ -626,6 +636,7 @@ fn validate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> 
             &format!("Bevy example page `{}`", sample.id),
         )?;
         let html = fs::read_to_string(&page)?;
+        validate_generated_page(&page, &html, &example_page(sample))?;
         if !html.contains(&format!("data-scene-id=\"{}\"", sample.id)) {
             return Err(format!("{} is missing its scene id", page.display()).into());
         }
@@ -636,6 +647,22 @@ fn validate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> 
     }
 
     Ok(())
+}
+
+fn validate_generated_page(path: &Path, actual: &str, expected: &str) -> Result<()> {
+    if normalize_newlines(actual) == normalize_newlines(expected) {
+        Ok(())
+    } else {
+        Err(format!(
+            "{} is stale; run `cargo run -p xtask -- generate-pages`",
+            path.display()
+        )
+        .into())
+    }
+}
+
+fn normalize_newlines(value: &str) -> String {
+    value.replace("\r\n", "\n")
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

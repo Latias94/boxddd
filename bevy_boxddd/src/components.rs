@@ -228,7 +228,7 @@ impl HullDescriptor {
                 validate_positive_scalar(height)?;
                 validate_positive_scalar(radius)?;
                 validate_scalar(y_offset)?;
-                if sides >= 3 {
+                if (3..=32).contains(&sides) {
                     Ok(())
                 } else {
                     Err(boxddd::Error::InvalidArgument)

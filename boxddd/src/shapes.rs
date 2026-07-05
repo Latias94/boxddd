@@ -648,6 +648,7 @@ impl Hull {
             || radius <= 0.0
             || !y_offset.is_finite()
             || sides < 3
+            || sides > 32
         {
             return Err(Error::InvalidArgument);
         }

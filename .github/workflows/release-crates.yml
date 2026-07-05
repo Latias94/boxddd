@@ -160,6 +160,18 @@ jobs:
             fi
           done
 
+          assert_root_readme_contains() {
+            local crate="$1"
+            local needle="$2"
+            local readme
+            readme="$(tar -tf "$crate" | grep -E '^[^/]+/README\.md$' | head -n 1)"
+            if [ -z "$readme" ]; then
+              echo "::error::$crate is missing its root README.md"
+              exit 1
+            fi
+            tar -xOf "$crate" "$readme" | grep -F "$needle" >/dev/null
+          }
+
           tar -tf "$sys_crate" | grep -F '/README.md'
           tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
           tar -tf "$core_crate" | grep -F '/README.md'
@@ -180,6 +192,9 @@ jobs:
           tar -tf "$bevy_crate" | grep -F '/examples/joint_gallery_3d.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/main.rs'
           tar -tf "$bevy_crate" | grep -F '/examples/testbed_3d/scenes.rs'
+
+          assert_root_readme_contains "$core_crate" 'docs/upstream-parity/box3d-sample-matrix.md'
+          assert_root_readme_contains "$bevy_crate" 'docs/upstream-parity/box3d-sample-matrix.md'
 
   publish:
     name: publish
