@@ -76,7 +76,7 @@ pub use collision::{
 pub use core::task_system::{TaskSystem, TaskSystemStats};
 pub use debug_draw::{
     DebugCompoundChild, DebugDraw, DebugDrawCommand, DebugDrawDiagnostic, DebugDrawFrame,
-    DebugDrawOptions, DebugHullFace, DebugMesh, DebugMeshTriangle, DebugShapeAsset,
+    DebugDrawOptions, DebugHullFace, DebugMesh, DebugMeshTriangle, DebugShape, DebugShapeAsset,
     DebugShapeEvent, DebugShapeGeometry, DebugShapeHandle, HexColor,
 };
 pub use dynamic_tree::{

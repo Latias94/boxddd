@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 pub use crate::{
     Aabb, ApiError, ApiResult, BodyCastHit, BodyClosestPoint, BodyDef, BodyDefBuilder, BodyId,
     BodyMoveEvent, BodyType, BoxCastInput, BoxHull, Capsule, CollisionPlane, Compound,
@@ -5,7 +6,7 @@ pub use crate::{
     CompoundMesh, CompoundQueryHit, CompoundSphere, ContactBeginTouchEvent, ContactData,
     ContactEndTouchEvent, ContactEvents, ContactHitEvent, ContactId, CosSin, Counters,
     DebugCompoundChild, DebugDraw, DebugDrawCommand, DebugDrawDiagnostic, DebugDrawFrame,
-    DebugDrawOptions, DebugHullFace, DebugMesh, DebugMeshTriangle, DebugShapeAsset,
+    DebugDrawOptions, DebugHullFace, DebugMesh, DebugMeshTriangle, DebugShape, DebugShapeAsset,
     DebugShapeEvent, DebugShapeGeometry, DebugShapeHandle, DistanceInput, DistanceJointDef,
     DistanceOutput, DynamicTree, DynamicTreeBoxCastHit, DynamicTreeCastControl,
     DynamicTreeClosestHit, DynamicTreeClosestResult, DynamicTreeFilter, DynamicTreeHit,

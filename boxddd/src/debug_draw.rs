@@ -106,6 +106,31 @@ impl DebugShapeHandle {
     }
 }
 
+/// Legacy shape metadata emitted by the `0.1` debug draw command model.
+///
+/// `0.2` debug drawing uses [`DebugShapeHandle`] for frame commands and
+/// [`DebugShapeAsset`] for owned geometry snapshots. This type remains as a
+/// small migration aid for code that stored the former metadata shape.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct DebugShape {
+    /// Shape associated with the result.
+    pub shape_id: ShapeId,
+    /// Shape type reported by Box3D, when available.
+    pub shape_type: Option<ShapeType>,
+}
+
+impl DebugShape {
+    /// Converts an owned debug shape asset into its `0.1` metadata view.
+    #[inline]
+    pub const fn from_asset(asset: &DebugShapeAsset) -> Self {
+        Self {
+            shape_id: asset.shape_id,
+            shape_type: Some(asset.shape_type),
+        }
+    }
+}
+
 /// Owned asset emitted when Box3D creates a persistent debug shape.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, PartialEq)]

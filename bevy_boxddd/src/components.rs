@@ -169,6 +169,7 @@ pub enum Collider {
 }
 
 /// Reusable hull recipe for collider descriptors.
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum HullDescriptor {
     /// Procedural rock hull with the given approximate radius.

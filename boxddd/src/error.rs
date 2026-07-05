@@ -93,11 +93,11 @@ pub enum Error {
     #[error("Rust callback panicked and native traversal was stopped")]
     CallbackPanicked,
 
-    /// A provider-mode callback bridge failed while collecting debug draw data.
-    #[error("provider callback bridge failed")]
-    ProviderCallbackFailed,
-
     /// All global callback slots are currently in use.
     #[error("no callback slot is available")]
     CallbackSlotsExhausted,
+
+    /// A provider-mode callback bridge failed while collecting debug draw data.
+    #[error("provider callback bridge failed")]
+    ProviderCallbackFailed,
 }
