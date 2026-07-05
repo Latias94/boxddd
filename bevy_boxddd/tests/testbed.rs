@@ -125,9 +125,11 @@ fn testbed_scene_registry_has_complete_unique_metadata() {
         assert!(!metadata.category.is_empty());
         assert!(!metadata.name.is_empty());
         assert!(!metadata.description.is_empty());
+        let has_upstream = !metadata.upstream.is_empty();
+        let has_showcase_lesson = metadata.showcase_lesson.is_some();
         assert!(
-            !metadata.upstream.is_empty() || metadata.showcase_lesson.is_some(),
-            "scene {} should name upstream refs or a showcase lesson",
+            has_upstream ^ has_showcase_lesson,
+            "scene {} should name exactly one source taxonomy",
             metadata.id
         );
         if let Some(lesson) = metadata.showcase_lesson {
@@ -310,18 +312,43 @@ fn physics_drag_helpers_project_and_clamp_throw_velocity() {
 
 #[test]
 fn ray_picking_scene_uses_dynamic_drag_targets() {
-    let mut app = physics_app(TestbedScene::RayPicking);
-    spawn_scene_once(&mut app, TestbedScene::RayPicking);
+    for scene in [TestbedScene::RayPicking, TestbedScene::QueryLab] {
+        let mut app = physics_app(scene);
+        spawn_scene_once(&mut app, scene);
 
-    let mut query = app
-        .world_mut()
-        .query_filtered::<&RigidBody, With<TestbedEntity>>();
-    let dynamic_count = query
-        .iter(app.world())
-        .filter(|body| **body == RigidBody::Dynamic)
-        .count();
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&RigidBody, With<TestbedEntity>>();
+        let dynamic_count = query
+            .iter(app.world())
+            .filter(|body| **body == RigidBody::Dynamic)
+            .count();
 
-    assert!(dynamic_count >= 2);
+        assert!(
+            dynamic_count >= 2,
+            "{scene:?} should expose multiple dynamic drag targets"
+        );
+    }
+}
+
+#[test]
+fn debug_draw_inspector_scene_collects_debug_commands() {
+    let mut app = physics_app(TestbedScene::DebugDrawInspector);
+    app.insert_resource(BoxdddDebugDrawSettings {
+        enabled: true,
+        options: DebugDrawPreset::Shapes.options(),
+    });
+    spawn_scene_once(&mut app, TestbedScene::DebugDrawInspector);
+    run_fixed_frames(&mut app, 2);
+
+    let debug_frame = app.world().resource::<BoxdddDebugDrawFrame>();
+    assert!(
+        debug_frame
+            .commands()
+            .iter()
+            .any(|command| matches!(command, boxddd::DebugDrawCommand::Shape { .. })),
+        "DebugDrawInspector should collect native shape debug commands"
+    );
 }
 
 #[test]
@@ -518,17 +545,28 @@ fn falling_stack_scene_contains_official_stack_shape_variants() {
 
 #[test]
 fn materials_scene_contains_friction_and_restitution_variants() {
-    let mut app = physics_app(TestbedScene::Materials);
-    spawn_scene_once(&mut app, TestbedScene::Materials);
+    for scene in [TestbedScene::Materials, TestbedScene::MaterialLab] {
+        let mut app = physics_app(scene);
+        spawn_scene_once(&mut app, scene);
 
-    let mut query = app
-        .world_mut()
-        .query_filtered::<&PhysicsMaterial, With<TestbedEntity>>();
-    let materials = query.iter(app.world()).copied().collect::<Vec<_>>();
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&PhysicsMaterial, With<TestbedEntity>>();
+        let materials = query.iter(app.world()).copied().collect::<Vec<_>>();
 
-    assert!(materials.iter().any(|material| material.friction <= 0.05));
-    assert!(materials.iter().any(|material| material.friction >= 1.0));
-    assert!(materials.iter().any(|material| material.restitution >= 0.8));
+        assert!(
+            materials.iter().any(|material| material.friction <= 0.05),
+            "{scene:?} should include a low-friction material"
+        );
+        assert!(
+            materials.iter().any(|material| material.friction >= 1.0),
+            "{scene:?} should include a high-friction material"
+        );
+        assert!(
+            materials.iter().any(|material| material.restitution >= 0.8),
+            "{scene:?} should include a high-restitution material"
+        );
+    }
 }
 
 #[test]

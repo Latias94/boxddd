@@ -914,9 +914,18 @@ fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
         validate_registry_field(sample, "category", &sample.category)?;
         validate_registry_field(sample, "name", &sample.name)?;
         validate_registry_field(sample, "description", &sample.description)?;
-        if sample.upstream.is_empty() && sample.showcase_lesson.is_none() {
+        let has_upstream = !sample.upstream.is_empty();
+        let has_showcase_lesson = sample.showcase_lesson.is_some();
+        if !has_upstream && !has_showcase_lesson {
             return Err(format!(
                 "testbed registry sample `{}` must include upstream sample references or a showcase lesson",
+                sample.id
+            )
+            .into());
+        }
+        if has_upstream && has_showcase_lesson {
+            return Err(format!(
+                "testbed registry sample `{}` must not include both upstream sample references and a showcase lesson",
                 sample.id
             )
             .into());
@@ -1964,6 +1973,26 @@ mod tests {
             .to_string();
 
         assert!(error.contains("upstream sample references or a showcase lesson"));
+    }
+
+    #[test]
+    fn registry_rejects_mixed_official_and_showcase_sources() {
+        let samples = vec![registry_sample(
+            vec![RegistryUpstreamSample {
+                category: "Collision".to_string(),
+                name: "Shape Cast".to_string(),
+                mode: "TeachingAdaptation".to_string(),
+            }],
+            Some("Use Box3D queries as Bevy editor picking authority."),
+        )];
+        let error = validate_registry_catalog(&samples)
+            .expect_err("samples should choose exactly one source taxonomy")
+            .to_string();
+
+        assert!(
+            error
+                .contains("must not include both upstream sample references and a showcase lesson")
+        );
     }
 
     #[test]

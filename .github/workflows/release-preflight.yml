@@ -62,6 +62,14 @@ jobs:
           python3 tools/changelog.py extract --version "${{ inputs.version }}" --output release-notes.md
           test -s release-notes.md
 
+      - name: Install cargo-semver-checks
+        if: ${{ inputs.version == '0.2.0' }}
+        run: cargo install cargo-semver-checks --version 0.48.0 --locked
+
+      - name: Audit known 0.2 semver breaks
+        if: ${{ inputs.version == '0.2.0' }}
+        run: python3 tools/semver_audit.py --baseline-rev v0.1.0 --release-type minor
+
       - name: Check formatting
         run: cargo fmt --all --check
 

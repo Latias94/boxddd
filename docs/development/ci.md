@@ -144,6 +144,14 @@ BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features bindgen
 BOXDDD_SYS_FORCE_BINDGEN=1 cargo check -p boxddd-sys --features "bindgen double-precision"
 ```
 
+For the unreleased `0.2.0` line, release preflight also forces
+`cargo-semver-checks` into minor-release mode so `0.x` breaking changes are
+enumerated instead of skipped by the default semver policy:
+
+```bash
+python tools/semver_audit.py --baseline-rev v0.1.0 --release-type minor
+```
+
 When checking release packaging locally, use the same temporary registry patch
 configuration as CI so the unpublished dependency chain can be verified before
 anything is on crates.io.
@@ -213,7 +221,8 @@ publishing workflows.
 
 - `Release Preflight`: manual `workflow_dispatch` check for a version and source
   ref. It verifies the workspace version, changelog release notes, formatting,
-  package archives, and the `boxddd-sys` crates.io dry-run.
+  0.2 semver-break auditing, package archives, and the `boxddd-sys` crates.io
+  dry-run.
 - `GitHub Release`: runs on pushed `v*` tags or manual dispatch. It verifies the
   workspace version, extracts the matching `CHANGELOG.md` section with
   `tools/changelog.py`, rejects manually wrapped changelog prose, and creates or
