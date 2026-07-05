@@ -1,5 +1,6 @@
 //! Renderer-independent physics query helpers for Bevy applications.
 
+use crate::math::{to_bevy_pos, to_bevy_vec3, to_boxddd_pos, to_boxddd_vec3};
 use crate::resources::BoxdddPhysicsContext;
 use bevy_ecs::entity::Entity;
 use bevy_math::Vec3;
@@ -106,20 +107,4 @@ fn map_ray_hit(context: &BoxdddPhysicsContext, hit: boxddd::query::RayHit) -> Ph
         triangle_index: hit.triangle_index,
         child_index: hit.child_index,
     }
-}
-
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::from(to_boxddd_vec3(value))
-}
-
-fn to_bevy_pos(value: boxddd::Pos) -> Vec3 {
-    Vec3::new(value.x as f32, value.y as f32, value.z as f32)
-}
-
-fn to_bevy_vec3(value: boxddd::Vec3) -> Vec3 {
-    Vec3::new(value.x, value.y, value.z)
 }

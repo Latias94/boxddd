@@ -382,14 +382,14 @@ fn draw_mover_probe(
 
     for probe in &probes {
         let mover = boxddd::Capsule::new(
-            to_boxddd_vec3(probe.point1),
-            to_boxddd_vec3(probe.point2),
+            probe.point1.to_boxddd_vec3(),
+            probe.point2.to_boxddd_vec3(),
             probe.radius,
         );
         let Ok(fraction) = world.cast_mover(
-            to_boxddd_pos(probe.origin),
+            probe.origin.to_boxddd_pos(),
             &mover,
-            to_boxddd_vec3(probe.delta),
+            probe.delta.to_boxddd_vec3(),
             boxddd::QueryFilter::default(),
         ) else {
             continue;
@@ -407,12 +407,4 @@ fn draw_mover_probe(
             Color::srgb(0.2, 0.9, 0.45),
         );
     }
-}
-
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
 }

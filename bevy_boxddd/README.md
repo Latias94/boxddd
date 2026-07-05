@@ -75,6 +75,23 @@ let hit = cast_ray_closest(
 
 Hits include both the Box3D `ShapeId` and the mapped Bevy entity when the shape is plugin-owned.
 
+## Math Adapters
+
+`bevy_boxddd::math` provides small conversion helpers and prelude extension traits so Bevy systems do not need local `to_boxddd_vec3` functions:
+
+```rust
+use bevy::prelude::*;
+use bevy_boxddd::prelude::*;
+
+let origin = Vec3::new(-2.0, 1.0, 0.0).to_boxddd_pos();
+let translation = Vec3::X.to_boxddd_vec3();
+let rotation = Quat::IDENTITY.try_to_boxddd_quat()?;
+
+let bevy_point = boxddd::Pos::new(1.0, 2.0, 3.0).to_bevy_vec3();
+```
+
+Transform adapters intentionally ignore Bevy scale when converting into Box3D, and preserve Bevy scale when applying a Box3D transform back onto an existing Bevy `Transform`.
+
 ## Debug Draw
 
 The plugin always exposes `BoxdddDebugDrawSettings` and `BoxdddDebugDrawCommands`. By default collection is disabled. Enable collection without rendering dependencies:

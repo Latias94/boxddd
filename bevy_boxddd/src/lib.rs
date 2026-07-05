@@ -6,6 +6,7 @@
 pub mod components;
 pub mod debug_draw;
 pub mod errors;
+pub mod math;
 pub mod messages;
 pub mod plugin;
 pub mod prelude;
@@ -16,6 +17,7 @@ pub mod systems;
 pub use boxddd;
 pub use components::*;
 pub use debug_draw::*;
+pub use math::*;
 pub use messages::*;
 pub use plugin::BoxdddPhysicsPlugin;
 pub use query::*;

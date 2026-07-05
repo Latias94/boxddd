@@ -116,14 +116,6 @@ fn despawn_testbed_entities(app: &mut App) {
     }
 }
 
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
-}
-
 #[test]
 fn testbed_scene_registry_has_complete_unique_metadata() {
     assert_eq!(SCENE_REGISTRY.len(), ALL_SCENES.len());
@@ -820,15 +812,15 @@ fn character_mover_scene_probe_hits_obstacle() {
     let context = app.world().get_non_send::<BoxdddPhysicsContext>().unwrap();
     let world = context.world().unwrap();
     let mover = boxddd::Capsule::new(
-        to_boxddd_vec3(probe.point1),
-        to_boxddd_vec3(probe.point2),
+        probe.point1.to_boxddd_vec3(),
+        probe.point2.to_boxddd_vec3(),
         probe.radius,
     );
     let fraction = world
         .cast_mover(
-            to_boxddd_pos(probe.origin),
+            probe.origin.to_boxddd_pos(),
             &mover,
-            to_boxddd_vec3(probe.delta),
+            probe.delta.to_boxddd_vec3(),
             boxddd::QueryFilter::default(),
         )
         .unwrap();

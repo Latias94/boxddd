@@ -1,6 +1,8 @@
 //! Debug draw collection and optional Bevy gizmo rendering.
 
 use crate::errors::report_error;
+#[cfg(feature = "debug-gizmos")]
+use crate::math::{to_bevy_pos, to_bevy_quat, to_bevy_transform, to_bevy_vec3};
 use crate::messages::{BoxdddErrorMessage, BoxdddOperation};
 use crate::resources::{BoxdddPhysicsContext, BoxdddPhysicsSettings};
 use bevy_ecs::message::MessageWriter;
@@ -409,25 +411,4 @@ fn to_bevy_color(color: boxddd::HexColor) -> bevy_color::Color {
     let green = ((rgb >> 8) & 0xff) as f32 / 255.0;
     let blue = (rgb & 0xff) as f32 / 255.0;
     bevy_color::Color::srgb(red, green, blue)
-}
-
-#[cfg(feature = "debug-gizmos")]
-fn to_bevy_transform(transform: boxddd::WorldTransform) -> bevy_transform::components::Transform {
-    bevy_transform::components::Transform::from_translation(to_bevy_pos(transform.p))
-        .with_rotation(to_bevy_quat(transform.q))
-}
-
-#[cfg(feature = "debug-gizmos")]
-fn to_bevy_pos(value: boxddd::Pos) -> bevy_math::Vec3 {
-    bevy_math::Vec3::new(value.x as f32, value.y as f32, value.z as f32)
-}
-
-#[cfg(feature = "debug-gizmos")]
-fn to_bevy_vec3(value: boxddd::Vec3) -> bevy_math::Vec3 {
-    bevy_math::Vec3::new(value.x, value.y, value.z)
-}
-
-#[cfg(feature = "debug-gizmos")]
-fn to_bevy_quat(value: boxddd::Quat) -> bevy_math::Quat {
-    bevy_math::Quat::from_xyzw(value.v.x, value.v.y, value.v.z, value.s)
 }

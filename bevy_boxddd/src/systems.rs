@@ -6,6 +6,7 @@ use crate::components::{
     TransformSyncMode,
 };
 use crate::errors::report_error;
+use crate::math::{apply_boxddd_transform, to_boxddd_pos, to_boxddd_quat, to_boxddd_vec3};
 use crate::messages::{
     BoxdddBodyMoveMessage, BoxdddContactBeginMessage, BoxdddContactEndMessage,
     BoxdddContactHitMessage, BoxdddErrorMessage, BoxdddOperation, BoxdddSensorBeginMessage,
@@ -17,14 +18,14 @@ use crate::resources::{
 use bevy_ecs::hierarchy::ChildOf;
 use bevy_ecs::message::MessageWriter;
 use bevy_ecs::prelude::{Changed, Commands, Entity, NonSendMut, Query, Res, With, Without};
-use bevy_math::{Quat, Vec3};
+use bevy_math::Vec3;
 use bevy_time::{Fixed, Time};
 use bevy_transform::components::Transform;
 use boxddd::{
     BodyDef, BodyId, BodyType, BoxHull, Capsule as BoxdddCapsule, Compound, DistanceJointDef,
     HeightField, Hull, JointId, MeshData, PrismaticJointDef, RevoluteJointDef, ShapeDef, ShapeId,
     Sphere as BoxdddSphere, SphericalJointDef, Transform as BoxdddTransform, WeldJointDef,
-    WheelJointDef, WorldTransform as BoxdddWorldTransform,
+    WheelJointDef,
 };
 
 /// Creates native Box3D bodies for entities with [`RigidBody`] but no [`BoxdddBody`].
@@ -1057,18 +1058,6 @@ fn effective_sync_mode(
     })
 }
 
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
-}
-
-fn to_boxddd_quat(value: Quat) -> boxddd::Quat {
-    boxddd::Quat::new(boxddd::Vec3::new(value.x, value.y, value.z), value.w)
-}
-
 fn to_boxddd_local_transform(value: ShapeLocalTransform) -> BoxdddTransform {
     BoxdddTransform::new(
         to_boxddd_vec3(value.translation),
@@ -1078,17 +1067,4 @@ fn to_boxddd_local_transform(value: ShapeLocalTransform) -> BoxdddTransform {
 
 fn transform_local_point(transform: ShapeLocalTransform, point: Vec3) -> Vec3 {
     transform.translation + transform.rotation * point
-}
-
-fn to_bevy_vec3(value: boxddd::Pos) -> Vec3 {
-    Vec3::new(value.x as f32, value.y as f32, value.z as f32)
-}
-
-fn to_bevy_quat(value: boxddd::Quat) -> Quat {
-    Quat::from_xyzw(value.v.x, value.v.y, value.v.z, value.s)
-}
-
-fn apply_boxddd_transform(transform: &mut Transform, boxddd_transform: BoxdddWorldTransform) {
-    transform.translation = to_bevy_vec3(boxddd_transform.p);
-    transform.rotation = to_bevy_quat(boxddd_transform.q);
 }

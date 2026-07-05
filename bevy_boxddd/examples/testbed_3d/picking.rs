@@ -88,7 +88,7 @@ pub(crate) fn update_physics_drag(
         return;
     };
 
-    let body_position = to_bevy_pos(transform.p);
+    let body_position = transform.p.to_bevy_vec3();
     let direction = *ray.direction;
     let depth = (body_position - ray.origin)
         .dot(direction)
@@ -162,7 +162,7 @@ fn update_active_drag(
         point_on_ray(ray.origin, *ray.direction, target.depth) + target.grab_offset;
     let velocity = clamp_throw_velocity((target_position - target.last_position) / dt);
     let world_transform =
-        boxddd::WorldTransform::new(to_boxddd_pos(target_position), target.rotation);
+        boxddd::WorldTransform::new(target_position.to_boxddd_pos(), target.rotation);
 
     let Some(world) = context.world_mut() else {
         return None;
@@ -172,7 +172,7 @@ fn update_active_drag(
         .or_else(|_| {
             world.try_set_body_transform(
                 target.body_id,
-                to_boxddd_pos(target_position),
+                target_position.to_boxddd_pos(),
                 target.rotation,
             )
         })
@@ -180,7 +180,7 @@ fn update_active_drag(
     {
         return None;
     }
-    let _ = world.try_set_body_linear_velocity(target.body_id, to_boxddd_vec3(velocity));
+    let _ = world.try_set_body_linear_velocity(target.body_id, velocity.to_boxddd_vec3());
 
     if let Ok((_, mut transform)) = bodies.get_mut(target.entity) {
         transform.translation = target_position;
@@ -204,7 +204,7 @@ fn finish_drag(target: DragTarget, context: &mut BoxdddPhysicsContext) {
     if target.previous_type == boxddd::BodyType::Dynamic {
         let _ = world.try_set_body_linear_velocity(
             target.body_id,
-            to_boxddd_vec3(clamp_throw_velocity(target.last_velocity)),
+            clamp_throw_velocity(target.last_velocity).to_boxddd_vec3(),
         );
     }
 }
@@ -225,16 +225,4 @@ pub(crate) fn point_on_ray(origin: Vec3, direction: Vec3, depth: f32) -> Vec3 {
 
 pub(crate) fn clamp_throw_velocity(velocity: Vec3) -> Vec3 {
     velocity.clamp_length_max(MAX_THROW_SPEED)
-}
-
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::from(to_boxddd_vec3(value))
-}
-
-fn to_bevy_pos(value: boxddd::Pos) -> Vec3 {
-    Vec3::new(value.x as f32, value.y as f32, value.z as f32)
 }

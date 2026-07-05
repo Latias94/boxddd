@@ -199,10 +199,14 @@ pub(crate) fn draw_lab_overlays(
         }) {
             let hit_center = QUERY_LAB_SHAPE_CAST_ORIGIN + shape_translation * hit.fraction;
             gizmos.sphere(hit_center, shape_radius, Color::srgb(0.98, 0.52, 0.18));
-            gizmos.sphere(to_bevy_pos(hit.point), 0.08, Color::srgb(0.98, 0.52, 0.18));
+            gizmos.sphere(
+                hit.point.to_bevy_vec3(),
+                0.08,
+                Color::srgb(0.98, 0.52, 0.18),
+            );
             gizmos.line(
-                to_bevy_pos(hit.point),
-                to_bevy_pos(hit.point) + to_bevy_vec3(hit.normal) * 0.35,
+                hit.point.to_bevy_vec3(),
+                hit.point.to_bevy_vec3() + hit.normal.to_bevy_vec3() * 0.35,
                 Color::srgb(0.98, 0.52, 0.18),
             );
         }
@@ -292,10 +296,10 @@ fn run_shape_cast(
     let proxy = boxddd::ShapeProxy::sphere(query_lab_shape_cast_radius(state))?;
     let input = boxddd::ShapeCastInput::new(
         proxy,
-        to_boxddd_vec3(query_lab_shape_cast_translation(state)),
+        query_lab_shape_cast_translation(state).to_boxddd_vec3(),
     )?;
     world.cast_shape(
-        to_boxddd_pos(QUERY_LAB_SHAPE_CAST_ORIGIN),
+        QUERY_LAB_SHAPE_CAST_ORIGIN.to_boxddd_pos(),
         input,
         boxddd::QueryFilter::default(),
     )
@@ -309,15 +313,15 @@ fn run_mover_cast(
     let mover = query_lab_mover();
     let translation = query_lab_mover_cast_translation(state);
     let fraction = world.cast_mover(
-        to_boxddd_pos(QUERY_LAB_MOVER_ORIGIN),
+        QUERY_LAB_MOVER_ORIGIN.to_boxddd_pos(),
         &mover,
-        to_boxddd_vec3(translation),
+        translation.to_boxddd_vec3(),
         boxddd::QueryFilter::default(),
     )?;
     let final_origin = QUERY_LAB_MOVER_ORIGIN + translation * fraction;
     let planes = world
         .collide_mover(
-            to_boxddd_pos(final_origin),
+            final_origin.to_boxddd_pos(),
             &mover,
             boxddd::QueryFilter::default(),
         )
@@ -327,8 +331,8 @@ fn run_mover_cast(
 
 fn query_lab_mover() -> boxddd::Capsule {
     boxddd::Capsule::new(
-        to_boxddd_vec3(QUERY_LAB_MOVER_POINT1),
-        to_boxddd_vec3(QUERY_LAB_MOVER_POINT2),
+        QUERY_LAB_MOVER_POINT1.to_boxddd_vec3(),
+        QUERY_LAB_MOVER_POINT2.to_boxddd_vec3(),
         QUERY_LAB_MOVER_RADIUS,
     )
 }
@@ -362,8 +366,8 @@ fn draw_mover_cast(gizmos: &mut Gizmos, context: &BoxdddPhysicsContext, state: &
     draw_capsule(gizmos, safe_end, Color::srgb(0.98, 0.88, 0.20));
 
     for plane in planes {
-        let point = to_bevy_vec3(plane.point);
-        let normal = to_bevy_vec3(plane.plane.normal);
+        let point = plane.point.to_bevy_vec3();
+        let normal = plane.plane.normal.to_bevy_vec3();
         gizmos.line(point, point + normal * 0.45, Color::srgb(0.98, 0.88, 0.20));
     }
 }
@@ -374,20 +378,4 @@ fn draw_capsule(gizmos: &mut Gizmos, origin: Vec3, color: Color) {
     gizmos.line(point1, point2, color);
     gizmos.sphere(point1, QUERY_LAB_MOVER_RADIUS, color);
     gizmos.sphere(point2, QUERY_LAB_MOVER_RADIUS, color);
-}
-
-fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
-    boxddd::Vec3::new(value.x, value.y, value.z)
-}
-
-fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
-    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
-}
-
-fn to_bevy_pos(value: boxddd::Pos) -> Vec3 {
-    Vec3::new(value.x as f32, value.y as f32, value.z as f32)
-}
-
-fn to_bevy_vec3(value: boxddd::Vec3) -> Vec3 {
-    Vec3::new(value.x, value.y, value.z)
 }
