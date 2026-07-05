@@ -23,19 +23,6 @@ const BEVY_WEB_JS: &str = "bevy_boxddd_testbed.js";
 const BEVY_WEB_WASM: &str = "bevy_boxddd_testbed_bg.wasm";
 const BEVY_PROVIDER_SHIM: &str = "box3d-provider-shim.js";
 
-#[derive(Clone, Debug, serde::Deserialize)]
-struct PageSample {
-    id: String,
-    source: String,
-    category: String,
-    name: String,
-    description: String,
-    command: String,
-    display: String,
-    status: String,
-    preview: String,
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RegistrySample {
     id: String,
@@ -100,7 +87,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build browser WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site and sample catalog"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build Bevy example WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site"
     );
 }
 
@@ -153,10 +140,6 @@ fn validate_pages() -> Result<()> {
     let root = project_root();
     let pages_dir = root.join("docs").join("pages");
     let index = ensure_file(&pages_dir.join("index.html"), "Pages index")?;
-    let catalog = ensure_file(
-        &pages_dir.join("sample-catalog.json"),
-        "Pages sample catalog",
-    )?;
     ensure_file(
         &pages_dir.join("bevy-testbed").join("index.html"),
         "Bevy Web testbed page",
@@ -166,33 +149,16 @@ fn validate_pages() -> Result<()> {
         "Bevy Web testbed loader",
     )?;
 
-    let catalog_json = fs::read_to_string(&catalog)?;
-    let catalog_samples: Vec<PageSample> = serde_json::from_str(&catalog_json)?;
-    validate_sample_catalog(&catalog_samples)?;
-
-    let catalog_registry_samples = catalog_samples
-        .iter()
-        .filter(|sample| sample.source == "testbed-scene")
-        .map(PageSample::registry_projection)
-        .collect::<Vec<_>>();
     let registry_samples = read_testbed_registry(&root)?;
-    if catalog_registry_samples != registry_samples {
-        return Err(format!(
-            "docs/pages/sample-catalog.json testbed-scene entries are out of sync with bevy_boxddd/examples/testbed_3d/scenes.rs ({} catalog entries, {} registry entries)",
-            catalog_registry_samples.len(),
-            registry_samples.len()
-        )
-        .into());
-    }
     validate_bevy_example_pages(&pages_dir, &registry_samples)?;
 
     let html = fs::read_to_string(&index)?;
     validate_html_links(&index, &html)?;
 
     eprintln!(
-        "Validated Pages site: {} ({} samples)",
+        "Validated Pages site: {} ({} Bevy examples)",
         pages_dir.display(),
-        catalog_samples.len()
+        registry_samples.len()
     );
     Ok(())
 }
@@ -200,8 +166,14 @@ fn validate_pages() -> Result<()> {
 fn generate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> Result<()> {
     let examples_dir = pages_dir.join(BEVY_EXAMPLES_DIR);
     fs::create_dir_all(&examples_dir)?;
-    let index = example_index_page(samples);
-    fs::write(examples_dir.join("index.html"), index)?;
+    fs::write(
+        pages_dir.join("index.html"),
+        example_index_page(samples, ExampleIndexLocation::Root),
+    )?;
+    fs::write(
+        examples_dir.join("index.html"),
+        example_index_page(samples, ExampleIndexLocation::ExamplesDirectory),
+    )?;
 
     for sample in samples {
         let dir = examples_dir.join(&sample.id);
@@ -241,13 +213,35 @@ fn validate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> 
     Ok(())
 }
 
-fn example_index_page(samples: &[RegistrySample]) -> String {
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum ExampleIndexLocation {
+    Root,
+    ExamplesDirectory,
+}
+
+impl ExampleIndexLocation {
+    fn home_href(self) -> &'static str {
+        match self {
+            Self::Root => "./",
+            Self::ExamplesDirectory => "../",
+        }
+    }
+
+    fn scene_href(self, id: &str) -> String {
+        match self {
+            Self::Root => format!("examples/{id}/"),
+            Self::ExamplesDirectory => format!("{id}/"),
+        }
+    }
+}
+
+fn example_index_page(samples: &[RegistrySample], location: ExampleIndexLocation) -> String {
     let links = samples
         .iter()
         .map(|sample| {
             format!(
-                "        <a class=\"card\" href=\"{id}/\"><span>{category}</span><strong>{name}</strong><small>{description}</small></a>",
-                id = sample.id,
+                "        <a class=\"card\" href=\"{href}\"><span>{category}</span><strong>{name}</strong><small>{description}</small></a>",
+                href = location.scene_href(&sample.id),
                 category = escape_html(&sample.category),
                 name = escape_html(&sample.name),
                 description = escape_html(&sample.description)
@@ -270,7 +264,7 @@ fn example_index_page(samples: &[RegistrySample]) -> String {
 <body>
   <div class="directory">
     <header class="topbar">
-      <a href="../">boxddd Examples</a>
+      <a href="{home_href}">boxddd Examples</a>
       <nav>
         <a href="https://github.com/Latias94/boxddd">GitHub</a>
         <a href="https://docs.rs/boxddd">Docs.rs</a>
@@ -289,6 +283,7 @@ fn example_index_page(samples: &[RegistrySample]) -> String {
 </html>
 "#,
         example_page_css = example_page_css(),
+        home_href = location.home_href(),
         links = links
     )
 }
@@ -395,48 +390,6 @@ fn ensure_file(path: &Path, label: &str) -> Result<PathBuf> {
     }
 }
 
-fn validate_sample_catalog(samples: &[PageSample]) -> Result<()> {
-    if samples.is_empty() {
-        return Err("sample catalog must contain at least one entry".into());
-    }
-
-    let mut seen = BTreeSet::new();
-    for sample in samples {
-        validate_sample_field(sample, "id", &sample.id)?;
-        validate_sample_field(sample, "source", &sample.source)?;
-        validate_sample_field(sample, "category", &sample.category)?;
-        validate_sample_field(sample, "name", &sample.name)?;
-        validate_sample_field(sample, "description", &sample.description)?;
-        validate_sample_field(sample, "command", &sample.command)?;
-        validate_sample_field(sample, "display", &sample.display)?;
-        validate_sample_field(sample, "status", &sample.status)?;
-        validate_sample_field(sample, "preview", &sample.preview)?;
-
-        if !is_slug(&sample.id) {
-            return Err(format!("sample id `{}` must be a lowercase ASCII slug", sample.id).into());
-        }
-        if !is_slug(&sample.source) {
-            return Err(format!(
-                "sample `{}` source must be a lowercase ASCII slug",
-                sample.id
-            )
-            .into());
-        }
-        if !is_slug(&sample.preview) {
-            return Err(format!(
-                "sample `{}` preview must be a lowercase ASCII slug",
-                sample.id
-            )
-            .into());
-        }
-        if !seen.insert(sample.id.as_str()) {
-            return Err(format!("duplicate sample id `{}`", sample.id).into());
-        }
-    }
-
-    Ok(())
-}
-
 fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
     if samples.is_empty() {
         return Err("testbed registry must contain at least one entry".into());
@@ -464,14 +417,6 @@ fn validate_registry_catalog(samples: &[RegistrySample]) -> Result<()> {
     Ok(())
 }
 
-fn validate_sample_field(sample: &PageSample, field: &str, value: &str) -> Result<()> {
-    if value.trim().is_empty() {
-        Err(format!("sample `{}` has an empty `{field}` field", sample.id).into())
-    } else {
-        Ok(())
-    }
-}
-
 fn validate_registry_field(sample: &RegistrySample, field: &str, value: &str) -> Result<()> {
     if value.trim().is_empty() {
         Err(format!(
@@ -491,17 +436,6 @@ fn is_slug(value: &str) -> bool {
         && value
             .bytes()
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-}
-
-impl PageSample {
-    fn registry_projection(&self) -> RegistrySample {
-        RegistrySample {
-            id: self.id.clone(),
-            category: self.category.clone(),
-            name: self.name.clone(),
-            description: self.description.clone(),
-        }
-    }
 }
 
 fn read_testbed_registry(root: &Path) -> Result<Vec<RegistrySample>> {
@@ -827,15 +761,6 @@ fn write_exports_json(out_dir: &Path, imports: &[String]) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn combine_provider_imports(groups: &[&[String]]) -> Vec<String> {
-    groups
-        .iter()
-        .flat_map(|group| group.iter().cloned())
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect()
-}
-
 fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
     ensure_tool(
         "wasm-bindgen",
@@ -993,12 +918,9 @@ fn run_provider_smoke() -> Result<()> {
 
 fn build_pages_wasm() -> Result<()> {
     generate_pages()?;
-    let app_wasm = build_provider_smoke_app_for(BuildProfile::Release)?;
-    let smoke_imports = collect_provider_imports(&app_wasm)?;
     let bevy_artifacts = build_bevy_web_app()?;
-    let imports = combine_provider_imports(&[&smoke_imports, &bevy_artifacts.imports]);
     let out_dir = provider_smoke_dir();
-    let exports = write_exports_json(&out_dir, &imports)?;
+    let exports = write_exports_json(&out_dir, &bevy_artifacts.imports)?;
     let provider = build_box3d_provider(&out_dir, &exports)?;
     let provider_wasm = provider.with_extension("wasm");
     ensure_file(&provider, "Box3D provider module")?;
@@ -1007,18 +929,16 @@ fn build_pages_wasm() -> Result<()> {
     let generated = pages_wasm_generated_dir();
     replace_dir_under(&generated, &project_root().join("docs").join("pages"))?;
 
-    fs::copy(&app_wasm, generated.join(SMOKE_WASM))?;
     fs::copy(&provider, generated.join("box3d-sys-v0.mjs"))?;
     fs::copy(&provider_wasm, generated.join("box3d-sys-v0.wasm"))?;
     copy_bevy_web_artifacts(&bevy_artifacts)?;
 
     eprintln!(
-        "Pages WASM assets ready: {} and {} ({} core imports, {} Bevy imports, {} provider exports)",
+        "Pages WASM assets ready: {} and {} ({} Bevy imports, {} provider exports)",
         generated.display(),
         pages_bevy_generated_dir().display(),
-        smoke_imports.len(),
         bevy_artifacts.imports.len(),
-        imports.len()
+        bevy_artifacts.imports.len()
     );
     Ok(())
 }

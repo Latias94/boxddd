@@ -28,7 +28,7 @@ It is the 3D sibling of [`boxdd`](https://github.com/Latias94/boxdd), not a feat
 |---|---|
 | Core `boxddd` on Windows, Linux, macOS | Supported and tested |
 | `bevy_boxddd` on Windows, Linux, macOS | Supported for native Bevy apps and examples |
-| WASM | Experimental provider-mode support with direct Bevy + egui Web example pages and core provider probes on the demo hub |
+| WASM | Experimental provider-mode support with direct Bevy + egui Web example pages on the demo hub |
 | Mobile | Not a supported runtime target yet |
 
 The core crate MSRV is Rust `1.92`. `bevy_boxddd` currently requires Rust `1.95` because it tracks Bevy 0.19.
@@ -139,7 +139,7 @@ cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example tes
 ```
 
 See [`bevy_boxddd/README.md`](bevy_boxddd/README.md) for components, messages, fixed-step behavior, debug draw, picking, platform notes, and the full example catalog.
-The demo hub at <https://latias94.github.io/boxddd/> opens with the maintained example gallery. Browser entries link directly to individual Bevy + egui Web scenes such as Falling Stack and Ray Picking, and the hub also keeps smaller core provider probes for validating the WASM runtime path.
+The demo hub at <https://latias94.github.io/boxddd/> is the maintained example gallery. Browser entries link directly to individual Bevy + egui Web scenes such as Falling Stack and Ray Picking.
 
 ## Examples
 
@@ -173,7 +173,7 @@ The full catalog lives in [`boxddd/examples/README.md`](boxddd/examples/README.m
 
 ## Platform Notes
 
-Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle, and also runs core provider probes for world stepping, closest-ray queries, shape casts, and distance joints. Web workers, pthreads, callback-heavy Box3D APIs, and threaded scheduling are still deferred.
+Native Windows, Linux, and macOS are the primary runtime targets. WASM support is early and provider-backed: the demo hub publishes direct Bevy + egui Web example pages through the shared `bevy_boxddd/examples/testbed_3d` wasm bundle. Web workers, pthreads, callback-heavy Box3D APIs, and threaded scheduling are still deferred.
 
 Normal builds compile the vendored Box3D C sources locally through the Rust `cc` crate and link them into `boxddd-sys`. Users need a working platform C compiler, but they do not need CMake, LLVM, libclang, or bindgen unless they explicitly refresh bindings with `boxddd-sys/bindgen` and `BOXDDD_SYS_FORCE_BINDGEN=1`.
 

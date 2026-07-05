@@ -4,17 +4,14 @@
 
 - `wasm32-unknown-unknown` is a browser-oriented compile/import target.
 - `wasm32-wasip1` is the first C-backed runtime smoke target.
-- provider mode can run as a Node smoke, as core browser probes, and as the
-  published Bevy + egui Web testbed that
-  share memory between a Rust wasm module and an Emscripten-built Box3D C provider.
+- provider mode can run as a Node smoke and as published Bevy + egui Web
+  examples that share memory between a Rust wasm module and an
+  Emscripten-built Box3D C provider.
 
-The supported runtime tier now has two browser-facing proofs:
+The supported browser-facing runtime proof is:
 
 - direct Bevy + egui example pages backed by the real
-  `bevy_boxddd/examples/testbed_3d` wasm bundle compiled with `wasm-bindgen`;
-- smaller core provider probes that prove Box3D C code, world creation, shape
-  creation, stepping, closest-ray queries, standalone collision helpers,
-  distance joints, and teardown in WebAssembly.
+  `bevy_boxddd/examples/testbed_3d` wasm bundle compiled with `wasm-bindgen`.
 
 It does not claim web workers, pthreads, Atomics, or threaded Box3D scheduling
 yet.
@@ -56,8 +53,7 @@ The browser runtime has two forms:
 
 - `cargo run -p xtask -- provider-smoke` runs the shared-memory smoke under Node.
 - GitHub Pages runs `cargo run -p xtask -- build-pages-wasm` and publishes
-  direct Bevy + egui Web example pages plus a smaller browser canvas with
-  falling-body, closest-ray, shape-cast, and distance-joint core probes.
+  direct Bevy + egui Web example pages.
 
 Prerequisites:
 
@@ -173,15 +169,14 @@ CI separates WASM support into visible jobs:
 - `WASM provider smoke`: installs Emscripten SDK, builds the provider-mode Rust
   smoke and Box3D C provider, and runs the shared-memory Node smoke.
 - `Pages`: installs Emscripten SDK and `wasm-bindgen-cli`, then builds direct
-  Bevy + egui Web example pages and core provider probes for GitHub Pages.
+  Bevy + egui Web example pages for GitHub Pages.
 
 ## Remaining Browser Work
 
 The browser route follows the same shape as `dear-imgui-rs`: a Rust app WASM
 module imports C symbols from a provider module, and both modules share the same
 `WebAssembly.Memory`. The current browser surfaces prove the memory/import part
-of this runtime contract through both direct Bevy + egui Web example pages and a
-minimal core probe UI.
+of this runtime contract through direct Bevy + egui Web example pages.
 
 Callback-heavy APIs need an explicit provider bridge instead of passing Rust
 closure pointers directly into another wasm module. The current design direction

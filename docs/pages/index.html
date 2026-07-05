@@ -3,703 +3,78 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>boxddd Examples - Box3D Rust Bindings</title>
+  <title>boxddd Bevy Examples</title>
   <link rel="icon" href="data:,">
-  <meta name="description" content="Direct Bevy Web examples, native commands, and WASM provider probes for boxddd.">
+  <meta name="description" content="Direct Bevy Web examples for boxddd.">
   <style>
-    :root {
-      color-scheme: dark;
-      --background: #09090b;
-      --foreground: #fafafa;
-      --card: #0f0f12;
-      --popover: #111114;
-      --muted: #a1a1aa;
-      --border: #27272a;
-      --input: #18181b;
-      --accent: #84cc16;
-      --accent-foreground: #111827;
-      --blue: #60a5fa;
-      --orange: #fb923c;
-      --red: #f87171;
-    }
-
-    * { box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      background: var(--background);
-      color: var(--foreground);
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.55;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-      text-underline-offset: 4px;
-    }
-
-    code,
-    .command {
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-    }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid var(--border);
-      background: rgba(9, 9, 11, 0.92);
-      backdrop-filter: blur(12px);
-    }
-
-    .topbar-inner,
-    .hero,
-    .layout,
-    .support,
-    footer {
-      width: min(1220px, calc(100% - 32px));
-      margin: 0 auto;
-    }
-
-    .topbar-inner {
-      display: flex;
-      min-height: 58px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 750;
-    }
-
-    .brand-mark {
-      display: inline-grid;
-      width: 28px;
-      height: 28px;
-      place-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--accent);
-      font-size: 14px;
-    }
-
-    .topbar nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .hero {
-      padding: 56px 0 28px;
-    }
-
-    .eyebrow {
-      margin: 0 0 12px;
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 750;
-      text-transform: uppercase;
-    }
-
-    h1,
-    h2,
-    h3 {
-      margin: 0;
-      letter-spacing: 0;
-      line-height: 1.15;
-    }
-
-    h1 {
-      max-width: 820px;
-      font-size: clamp(38px, 7vw, 70px);
-      line-height: 0.98;
-    }
-
-    h2 { font-size: 26px; }
-
-    h3 { font-size: 17px; }
-
-    .lead {
-      max-width: 820px;
-      margin: 16px 0 0;
-      color: var(--muted);
-      font-size: 17px;
-    }
-
-    .hero-actions,
-    .toolbar,
-    .filter-row,
-    .card-actions,
-    .wasm-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .hero-actions {
-      margin-top: 22px;
-    }
-
-    .button {
-      display: inline-flex;
-      min-height: 38px;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--foreground);
-      padding: 0 13px;
-      font: inherit;
-      font-size: 14px;
-      font-weight: 650;
-      cursor: pointer;
-    }
-
-    .button.primary {
-      border-color: transparent;
-      background: var(--accent);
-      color: var(--accent-foreground);
-    }
-
-    .button[aria-pressed="true"],
-    .button.active {
-      border-color: #3f6212;
-      background: #1a2e05;
-      color: #bef264;
-    }
-
-    .button:disabled {
-      cursor: wait;
-      opacity: 0.62;
-    }
-
-    .featured-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .featured,
-    .sample-card,
-    .wasm-stage,
-    .wasm-copy,
-    .support-card {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-    }
-
-    .featured {
-      display: grid;
-      gap: 10px;
-      min-height: 170px;
-      padding: 16px;
-    }
-
-    .featured span,
-    .badge {
-      width: fit-content;
-      border: 1px solid #365314;
-      border-radius: 999px;
-      background: #1a2e05;
-      color: #bef264;
-      padding: 2px 8px;
-      font-size: 12px;
-      font-weight: 750;
-      text-transform: uppercase;
-    }
-
-    .featured p,
-    .sample-card p,
-    .muted {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 220px minmax(0, 1fr);
-      gap: 26px;
-      padding: 24px 0 46px;
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 78px;
-      align-self: start;
-      max-height: calc(100vh - 96px);
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--popover);
-      padding: 12px;
-    }
-
-    .sidebar strong {
-      display: block;
-      margin: 4px 0 10px;
-      font-size: 13px;
-    }
-
-    .sidebar nav {
-      display: grid;
-      gap: 4px;
-    }
-
-    .sidebar a {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      border-radius: 8px;
-      color: var(--muted);
-      padding: 7px 9px;
-      font-size: 14px;
-    }
-
-    .sidebar a:hover {
-      background: #18181b;
-      color: var(--foreground);
-      text-decoration: none;
-    }
-
-    .examples-head {
-      display: grid;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .toolbar {
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .search {
-      min-height: 40px;
-      width: min(100%, 360px);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--input);
-      color: var(--foreground);
-      padding: 0 12px;
-      font: inherit;
-    }
-
-    .category-section {
-      scroll-margin-top: 84px;
-      margin-top: 28px;
-    }
-
-    .section-title {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .sample-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 12px;
-    }
-
-    .sample-card {
-      display: grid;
-      gap: 12px;
-      min-height: 240px;
-      padding: 16px;
-    }
-
-    .sample-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .source {
-      color: var(--blue);
-      font-size: 12px;
-      font-weight: 750;
-      text-transform: uppercase;
-    }
-
-    .display {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .command {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #050505;
-      color: #e4e4e7;
-      padding: 10px;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    .wasm-section,
-    .support {
-      border-top: 1px solid var(--border);
-      padding: 38px 0;
-    }
-
-    .wasm-inner {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
-      gap: 14px;
-      width: min(1220px, calc(100% - 32px));
-      margin: 0 auto;
-    }
-
-    .wasm-stage {
-      min-height: 300px;
-      padding: 14px;
-    }
-
-    .wasm-stage canvas {
-      display: block;
-      width: 100%;
-      height: 270px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #020617;
-    }
-
-    .wasm-copy {
-      display: grid;
-      align-content: start;
-      gap: 14px;
-      padding: 18px;
-    }
-
-    .support-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .support-card {
-      padding: 14px;
-    }
-
-    footer {
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      padding: 28px 0 46px;
-    }
-
-    @media (max-width: 860px) {
-      .layout,
-      .wasm-inner {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        position: static;
-        max-height: none;
-      }
-
-      .topbar-inner {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 12px 0;
-      }
-    }
-  </style>
+:root {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0f0f12;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #84cc16;
+  --danger: #f87171;
+}
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--foreground); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.shell { display: grid; grid-template-rows: auto minmax(0, 1fr); width: 100%; height: 100%; }
+.topbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(9, 9, 11, 0.94); padding: 14px 18px; }
+.topbar h1 { margin: 4px 0 0; font-size: 20px; line-height: 1.2; letter-spacing: 0; }
+.topbar p { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.topbar p span, .eyebrow { color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 14px; }
+#bevy-app { position: relative; min-width: 0; min-height: 0; background: #020617; }
+#bevy-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+#bevy-status { position: absolute; left: 18px; bottom: 18px; max-width: min(560px, calc(100% - 36px)); border: 1px solid var(--border); border-radius: 8px; background: rgba(15, 15, 18, 0.94); padding: 12px 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+#bevy-status strong { display: block; margin-bottom: 4px; color: var(--foreground); font-size: 15px; }
+#bevy-status[data-state="error"] strong { color: var(--danger); }
+#bevy-status[data-state="running"] { opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.directory { min-height: 100%; }
+.directory-main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 54px 0; }
+.directory-main h1 { margin: 0; font-size: clamp(34px, 6vw, 58px); line-height: 1; letter-spacing: 0; }
+.lead { max-width: 720px; color: var(--muted); font-size: 17px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 28px; }
+.card { display: grid; min-height: 150px; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); padding: 16px; }
+.card:hover { border-color: #52525b; text-decoration: none; }
+.card span { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.card strong { font-size: 18px; }
+.card small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+</style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="./"><span class="brand-mark">3D</span><span>boxddd Examples</span></a>
-      <nav aria-label="Project links">
-        <a href="https://box2d.org/documentation/md_box3d.html">Box3D</a>
+  <div class="directory">
+    <header class="topbar">
+      <a href="./">boxddd Examples</a>
+      <nav>
         <a href="https://github.com/Latias94/boxddd">GitHub</a>
         <a href="https://docs.rs/boxddd">Docs.rs</a>
-        <a href="https://crates.io/crates/boxddd">Crates.io</a>
       </nav>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <p class="eyebrow">Direct Bevy Web examples</p>
-      <h1>Open a Box3D scene from the examples page.</h1>
-      <p class="lead">The browser entries are real Bevy + egui WASM pages backed by the shared Box3D provider runtime. Native and core examples stay visible with the exact commands users can run locally.</p>
-      <div class="hero-actions">
-        <a class="button primary" href="examples/falling-stack/">Run Falling Stack</a>
-        <a class="button" href="#examples">Browse Examples</a>
-        <a class="button" href="#wasm-provider">Core WASM Probes</a>
-      </div>
-      <div class="featured-grid" aria-label="Featured examples">
-        <a class="featured" href="examples/falling-stack/">
-          <span>Bevy Web</span>
-          <h3>Falling Stack</h3>
-          <p>Dynamic cubes falling onto a static Box3D floor in a dedicated browser page.</p>
-        </a>
-        <a class="featured" href="examples/advanced-colliders/">
-          <span>Bevy Web</span>
-          <h3>Advanced Colliders</h3>
-          <p>Mesh, height-field, compound, sphere, and hull colliders in one scene.</p>
-        </a>
-        <a class="featured" href="examples/ray-picking/">
-          <span>Bevy Web</span>
-          <h3>Ray Picking</h3>
-          <p>Camera rays resolved through Box3D queries instead of mesh-only picking.</p>
-        </a>
-      </div>
-    </section>
-
-    <section id="examples" class="layout">
-      <aside class="sidebar" aria-label="Example categories">
-        <strong>Categories</strong>
-        <nav id="category-nav"></nav>
-      </aside>
-      <div>
-        <div class="examples-head">
-          <div>
-            <p class="eyebrow">Example catalog</p>
-            <h2>All examples</h2>
-          </div>
-          <div class="toolbar">
-            <div class="filter-row" aria-label="Filter examples">
-              <button class="button active" type="button" data-source-filter="all">All</button>
-              <button class="button" type="button" data-source-filter="testbed-scene">Browser</button>
-              <button class="button" type="button" data-source-filter="bevy-example">Bevy native</button>
-              <button class="button" type="button" data-source-filter="core-example">Core</button>
-              <button class="button" type="button" data-source-filter="wasm-example">WASM</button>
-            </div>
-            <input id="sample-search" class="search" type="search" placeholder="Search examples" aria-label="Search examples">
-          </div>
-          <p id="sample-count" class="muted" aria-live="polite"></p>
-        </div>
-        <div id="sample-sections"></div>
-      </div>
-    </section>
-
-    <section id="wasm-provider" class="wasm-section">
-      <div class="wasm-inner">
-        <div class="wasm-stage">
-          <canvas id="wasm-canvas" width="640" height="360" aria-label="Core WASM provider probe visualization"></canvas>
-        </div>
-        <div class="wasm-copy">
-          <span class="badge">Core WASM probe</span>
-          <h2 id="wasm-status">Ready to run</h2>
-          <p id="wasm-detail" class="muted">These probes call real Rust wasm plus the Emscripten-built Box3D provider and draw JavaScript diagnostics from returned metrics. They are not Bevy renderer screenshots.</p>
-          <div class="wasm-actions" aria-label="Core WASM provider probe selector">
-            <button class="button primary" type="button" data-wasm-demo="drop" aria-pressed="true">Falling body</button>
-            <button class="button" type="button" data-wasm-demo="ray" aria-pressed="false">Ray query</button>
-            <button class="button" type="button" data-wasm-demo="cast" aria-pressed="false">Shape cast</button>
-            <button class="button" type="button" data-wasm-demo="joint" aria-pressed="false">Distance joint</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="support">
-      <p class="eyebrow">Support snapshot</p>
-      <h2>What the examples prove</h2>
-      <div class="support-grid">
-        <div class="support-card"><strong>Bevy Web</strong><br><span class="muted">Direct example pages share one Bevy + egui WASM bundle and select the scene from the URL.</span></div>
-        <div class="support-card"><strong>Native Desktop</strong><br><span class="muted">Windows, Linux, and macOS run the same Rust examples through CI checks.</span></div>
-        <div class="support-card"><strong>Core WASM</strong><br><span class="muted">Provider probes validate shared-memory calls into the Box3D C provider.</span></div>
-        <div class="support-card"><strong>Box3D</strong><br><span class="muted">The bindings target upstream Box3D v0.1.0.</span></div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    MIT OR Apache-2.0. Vendored Box3D is MIT-licensed.
-  </footer>
-
-  <script>
-    const sections = document.querySelector("#sample-sections");
-    const categoryNav = document.querySelector("#category-nav");
-    const search = document.querySelector("#sample-search");
-    const count = document.querySelector("#sample-count");
-    const filterButtons = Array.from(document.querySelectorAll("[data-source-filter]"));
-    let catalog = [];
-    let activeSource = "all";
-
-    const sourceLabels = {
-      "core-example": "Core",
-      "bevy-example": "Bevy native",
-      "testbed-scene": "Bevy Web",
-      "wasm-example": "WASM",
-    };
-
-    function slug(value) {
-      return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    }
-
-    function sampleHref(sample) {
-      if (sample.source === "testbed-scene") {
-        return `examples/${sample.id}/`;
-      }
-      if (sample.id === "wasm-provider-smoke") {
-        return "#wasm-provider";
-      }
-      return null;
-    }
-
-    function sampleStatus(sample) {
-      if (sample.source === "testbed-scene") {
-        return "Runs as a direct Bevy Web example page. The native command opens the same scene registry locally.";
-      }
-      return sample.status;
-    }
-
-    function copyCommand(command, button) {
-      navigator.clipboard?.writeText(command).then(() => {
-        const previous = button.textContent;
-        button.textContent = "Copied";
-        window.setTimeout(() => {
-          button.textContent = previous;
-        }, 1200);
-      }).catch(() => {
-        window.prompt("Copy command", command);
-      });
-    }
-
-    function sampleCard(sample) {
-      const card = document.createElement("article");
-      card.className = "sample-card";
-
-      const meta = document.createElement("div");
-      meta.className = "sample-meta";
-      const source = document.createElement("span");
-      source.className = "source";
-      source.textContent = sourceLabels[sample.source] || sample.source;
-      const display = document.createElement("span");
-      display.className = "display";
-      display.textContent = sample.display;
-      meta.append(source, display);
-
-      const title = document.createElement("h3");
-      title.textContent = sample.name;
-
-      const description = document.createElement("p");
-      description.textContent = sample.description;
-
-      const status = document.createElement("p");
-      status.textContent = sampleStatus(sample);
-
-      const command = document.createElement("div");
-      command.className = "command";
-      command.textContent = sample.command;
-
-      const actions = document.createElement("div");
-      actions.className = "card-actions";
-      const href = sampleHref(sample);
-      if (href) {
-        const run = document.createElement("a");
-        run.className = "button primary";
-        run.href = href;
-        run.textContent = sample.source === "testbed-scene" ? "Run" : "Open";
-        actions.append(run);
-      }
-      const copy = document.createElement("button");
-      copy.className = "button";
-      copy.type = "button";
-      copy.textContent = "Copy command";
-      copy.addEventListener("click", () => copyCommand(sample.command, copy));
-      actions.append(copy);
-
-      card.append(meta, title, description, status, command, actions);
-      return card;
-    }
-
-    function render(samples) {
-      count.textContent = `${samples.length} examples shown`;
-      const grouped = new Map();
-      for (const sample of samples) {
-        const group = grouped.get(sample.category) || [];
-        group.push(sample);
-        grouped.set(sample.category, group);
-      }
-
-      categoryNav.replaceChildren(...Array.from(grouped, ([category, group]) => {
-        const link = document.createElement("a");
-        link.href = `#category-${slug(category)}`;
-        link.innerHTML = `<span>${category}</span><span>${group.length}</span>`;
-        return link;
-      }));
-
-      sections.replaceChildren(...Array.from(grouped, ([category, group]) => {
-        const section = document.createElement("section");
-        section.className = "category-section";
-        section.id = `category-${slug(category)}`;
-
-        const header = document.createElement("div");
-        header.className = "section-title";
-        const title = document.createElement("h2");
-        title.textContent = category;
-        const meta = document.createElement("span");
-        meta.className = "muted";
-        meta.textContent = `${group.length} examples`;
-        header.append(title, meta);
-
-        const grid = document.createElement("div");
-        grid.className = "sample-grid";
-        grid.replaceChildren(...group.map(sampleCard));
-        section.append(header, grid);
-        return section;
-      }));
-    }
-
-    function applyFilters() {
-      const query = search.value.trim().toLowerCase();
-      const samples = catalog.filter((sample) => {
-        if (sample.id === "bevy-web-testbed") {
-          return false;
-        }
-        const sourceMatches = activeSource === "all" || sample.source === activeSource;
-        const haystack = `${sample.category} ${sample.name} ${sample.description} ${sample.command}`.toLowerCase();
-        return sourceMatches && (!query || haystack.includes(query));
-      });
-      render(samples);
-    }
-
-    filterButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        activeSource = button.dataset.sourceFilter;
-        filterButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
-        applyFilters();
-      });
-    });
-    search.addEventListener("input", applyFilters);
-
-    fetch("sample-catalog.json")
-      .then((response) => response.json())
-      .then((samples) => {
-        catalog = samples;
-        applyFilters();
-      })
-      .catch(() => {
-        sections.textContent = "Sample catalog failed to load.";
-      });
-  </script>
-  <script type="module" src="wasm/live-smoke.js"></script>
+    </header>
+    <main class="directory-main">
+      <p class="eyebrow">Bevy Web examples</p>
+      <h1>Run a Box3D scene</h1>
+      <p class="lead">Each entry opens a dedicated Bevy + egui WASM page backed by the same Box3D provider runtime.</p>
+      <section class="card-grid">
+        <a class="card" href="examples/falling-stack/"><span>Basics</span><strong>Falling Stack</strong><small>Dynamic boxes falling onto a static floor.</small></a>
+        <a class="card" href="examples/advanced-colliders/"><span>Colliders</span><strong>Advanced Colliders</strong><small>Mesh, height-field, compound, sphere, and hull colliders.</small></a>
+        <a class="card" href="examples/body-controls/"><span>Bodies</span><strong>Body Controls</strong><small>Body settings, force, impulse, kinematic motion, and gravity scale.</small></a>
+        <a class="card" href="examples/continuous-collision/"><span>Collision</span><strong>Continuous Collision</strong><small>Bullet-style fast bodies colliding with thin obstacles.</small></a>
+        <a class="card" href="examples/character-mover/"><span>Character</span><strong>Character Mover</strong><small>Capsule mover casts and obstacle probes.</small></a>
+        <a class="card" href="examples/materials/"><span>Materials</span><strong>Materials</strong><small>Friction and restitution variants shown with dynamic shapes.</small></a>
+        <a class="card" href="examples/joints/"><span>Joints</span><strong>Joints</strong><small>Public joint variants authored as Bevy entities.</small></a>
+        <a class="card" href="examples/contacts/"><span>Events</span><strong>Contacts And Sensors</strong><small>Contact and sensor messages emitted from the physics step.</small></a>
+        <a class="card" href="examples/ray-picking/"><span>Queries</span><strong>Ray Picking</strong><small>Camera rays resolved through Box3D world queries.</small></a>
+        <a class="card" href="examples/debug-draw/"><span>Debug</span><strong>Debug Draw</strong><small>Native Box3D debug draw commands rendered through Bevy gizmos.</small></a>
+        <a class="card" href="examples/domino-run/"><span>Stacking</span><strong>Domino Run</strong><small>A curved line of dynamic dominoes started by a moving sphere.</small></a>
+        <a class="card" href="examples/arch-stack/"><span>Stacking</span><strong>Arch Stack</strong><small>Dynamic blocks arranged as a simple arch over static pillars.</small></a>
+        <a class="card" href="examples/wind-field/"><span>Forces</span><strong>Wind Field</strong><small>Continuous external forces push light bodies through obstacles.</small></a>
+        <a class="card" href="examples/ragdoll-chain/"><span>Joints</span><strong>Ragdoll Chain</strong><small>A lightweight joint chain made from capsule bodies.</small></a>
+      </section>
+    </main>
+  </div>
 </body>
 </html>

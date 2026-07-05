@@ -16,7 +16,7 @@ support, or vendored Box3D build.
 | `aarch64-apple-ios` | compile-only | Rust wrapper and pregenerated bindings are type-checked. Native C linking is skipped. |
 | `aarch64-apple-ios-sim` | compile-only | Simulator compile sentinel. Native C linking is skipped. |
 | `aarch64-linux-android` | compile-only | Android compile sentinel. Native C linking is skipped. |
-| `wasm32-unknown-unknown` | compile-only + provider smoke + Pages build | Browser-oriented target. Default checks skip Box3D C; provider mode imports Box3D from module `box3d-sys-v0`; CI runs a shared-memory smoke and Pages publishes direct Bevy + egui Web examples plus core provider probes. |
+| `wasm32-unknown-unknown` | compile-only + provider smoke + Pages build | Browser-oriented target. Default checks skip Box3D C; provider mode imports Box3D from module `box3d-sys-v0`; CI runs a shared-memory smoke and Pages publishes direct Bevy + egui Web examples. |
 | `wasm32-wasip1` | runtime smoke | CI builds vendored Box3D C with WASI SDK and runs `boxddd/examples/wasm_smoke.rs` under wasmtime. |
 
 See [`../platforms/wasm.md`](../platforms/wasm.md) for the exact WASM matrix.
@@ -32,7 +32,7 @@ than a single workspace smoke test:
 - double-precision `boxddd-sys` ABI checks and layout tests
 - Bevy example compile checks, including debug draw, picking, and the 3D testbed
 - explicit headless Bevy testbed scene validation through `bevy_boxddd/tests/testbed.rs`
-- static GitHub Pages validation that checks linked assets, builds the direct Bevy Web example assets and core WASM probe assets, and mirrors the Bevy testbed scene registry
+- static GitHub Pages validation that checks linked assets, builds the direct Bevy Web example assets, and mirrors the Bevy testbed scene registry
 - docs.rs paths for `boxddd-sys`, `boxddd`, and `bevy_boxddd`
 - no-default-feature checks, optional math interop `nextest` checks, and direct math interop example runs
 - package checks for all publishable crates
@@ -84,10 +84,10 @@ until there is a renderer path stable enough for unattended CI.
 
 ## Pages Static Site
 
-The GitHub Pages site under `docs/pages` is the public example hub. It links
-users to crate docs, direct Bevy + egui Web example pages backed by the shared
-`bevy_boxddd/examples/testbed_3d` wasm bundle, and smaller core WASM provider
-probes. The testbed scene subset in the catalog must mirror `SCENE_REGISTRY` in
+The GitHub Pages site under `docs/pages` is the public example hub. Its root
+page is the Bevy example index, and each card opens a direct Bevy + egui Web
+example backed by the shared `bevy_boxddd/examples/testbed_3d` wasm bundle.
+The generated pages must mirror `SCENE_REGISTRY` in
 `bevy_boxddd/examples/testbed_3d/scenes.rs`.
 
 ```bash
