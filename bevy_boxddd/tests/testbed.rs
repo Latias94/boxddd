@@ -19,11 +19,14 @@ use bevy_ecs::system::RunSystemOnce;
 use bevy_time::{TimePlugin, TimeUpdateStrategy};
 use control::{
     DEFAULT_HERTZ, DEFAULT_MATERIAL_FRICTION, DEFAULT_MATERIAL_RESTITUTION,
-    DEFAULT_QUERY_AABB_HALF_EXTENT, DEFAULT_QUERY_RAY_LENGTH, DEFAULT_SUB_STEPS, DebugDrawPreset,
-    MAX_HERTZ, MAX_MATERIAL_FRICTION, MAX_MATERIAL_RESTITUTION, MAX_QUERY_AABB_HALF_EXTENT,
-    MAX_QUERY_RAY_LENGTH, MAX_SUB_STEPS, MIN_HERTZ, MIN_MATERIAL_FRICTION,
-    MIN_MATERIAL_RESTITUTION, MIN_QUERY_AABB_HALF_EXTENT, MIN_QUERY_RAY_LENGTH, MIN_SUB_STEPS,
-    TestbedState,
+    DEFAULT_QUERY_AABB_HALF_EXTENT, DEFAULT_QUERY_MOVER_CAST_LENGTH, DEFAULT_QUERY_RAY_LENGTH,
+    DEFAULT_QUERY_SHAPE_CAST_LENGTH, DEFAULT_QUERY_SHAPE_CAST_RADIUS, DEFAULT_SUB_STEPS,
+    DebugDrawPreset, MAX_HERTZ, MAX_MATERIAL_FRICTION, MAX_MATERIAL_RESTITUTION,
+    MAX_QUERY_AABB_HALF_EXTENT, MAX_QUERY_MOVER_CAST_LENGTH, MAX_QUERY_RAY_LENGTH,
+    MAX_QUERY_SHAPE_CAST_LENGTH, MAX_QUERY_SHAPE_CAST_RADIUS, MAX_SUB_STEPS, MIN_HERTZ,
+    MIN_MATERIAL_FRICTION, MIN_MATERIAL_RESTITUTION, MIN_QUERY_AABB_HALF_EXTENT,
+    MIN_QUERY_MOVER_CAST_LENGTH, MIN_QUERY_RAY_LENGTH, MIN_QUERY_SHAPE_CAST_LENGTH,
+    MIN_QUERY_SHAPE_CAST_RADIUS, MIN_SUB_STEPS, TestbedState,
 };
 use scenes::{
     ALL_SCENES, MoverProbe, ParityMode, SCENE_REGISTRY, TestbedEntity, TestbedScene, spawn_scene,
@@ -294,6 +297,9 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
         sub_step_count: 0,
         query_lab_ray_length: -1.0,
         query_lab_aabb_half_extent: -1.0,
+        query_lab_shape_cast_length: -1.0,
+        query_lab_shape_cast_radius: -1.0,
+        query_lab_mover_cast_length: -1.0,
         material_lab_friction: -1.0,
         material_lab_restitution: -1.0,
         ..Default::default()
@@ -303,6 +309,18 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     assert_eq!(state.sub_step_count, MIN_SUB_STEPS);
     assert_eq!(state.query_lab_ray_length, MIN_QUERY_RAY_LENGTH);
     assert_eq!(state.query_lab_aabb_half_extent, MIN_QUERY_AABB_HALF_EXTENT);
+    assert_eq!(
+        state.query_lab_shape_cast_length,
+        MIN_QUERY_SHAPE_CAST_LENGTH
+    );
+    assert_eq!(
+        state.query_lab_shape_cast_radius,
+        MIN_QUERY_SHAPE_CAST_RADIUS
+    );
+    assert_eq!(
+        state.query_lab_mover_cast_length,
+        MIN_QUERY_MOVER_CAST_LENGTH
+    );
     assert_eq!(state.material_lab_friction, MIN_MATERIAL_FRICTION);
     assert_eq!(state.material_lab_restitution, MIN_MATERIAL_RESTITUTION);
 
@@ -310,6 +328,9 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     state.sub_step_count = 10_000;
     state.query_lab_ray_length = 10_000.0;
     state.query_lab_aabb_half_extent = 10_000.0;
+    state.query_lab_shape_cast_length = 10_000.0;
+    state.query_lab_shape_cast_radius = 10_000.0;
+    state.query_lab_mover_cast_length = 10_000.0;
     state.material_lab_friction = 10_000.0;
     state.material_lab_restitution = 10_000.0;
     state.clamp_controls();
@@ -317,6 +338,18 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     assert_eq!(state.sub_step_count, MAX_SUB_STEPS);
     assert_eq!(state.query_lab_ray_length, MAX_QUERY_RAY_LENGTH);
     assert_eq!(state.query_lab_aabb_half_extent, MAX_QUERY_AABB_HALF_EXTENT);
+    assert_eq!(
+        state.query_lab_shape_cast_length,
+        MAX_QUERY_SHAPE_CAST_LENGTH
+    );
+    assert_eq!(
+        state.query_lab_shape_cast_radius,
+        MAX_QUERY_SHAPE_CAST_RADIUS
+    );
+    assert_eq!(
+        state.query_lab_mover_cast_length,
+        MAX_QUERY_MOVER_CAST_LENGTH
+    );
     assert_eq!(state.material_lab_friction, MAX_MATERIAL_FRICTION);
     assert_eq!(state.material_lab_restitution, MAX_MATERIAL_RESTITUTION);
 
@@ -327,6 +360,18 @@ fn testbed_controls_clamp_solver_settings_to_safe_ranges() {
     assert_eq!(
         default_state.query_lab_aabb_half_extent,
         DEFAULT_QUERY_AABB_HALF_EXTENT
+    );
+    assert_eq!(
+        default_state.query_lab_shape_cast_length,
+        DEFAULT_QUERY_SHAPE_CAST_LENGTH
+    );
+    assert_eq!(
+        default_state.query_lab_shape_cast_radius,
+        DEFAULT_QUERY_SHAPE_CAST_RADIUS
+    );
+    assert_eq!(
+        default_state.query_lab_mover_cast_length,
+        DEFAULT_QUERY_MOVER_CAST_LENGTH
     );
     assert_eq!(
         default_state.material_lab_friction,
@@ -379,6 +424,9 @@ fn query_lab_diagnostics_track_native_queries() {
         let mut state = app.world_mut().resource_mut::<TestbedState>();
         state.query_lab_ray_length = DEFAULT_QUERY_RAY_LENGTH;
         state.query_lab_aabb_half_extent = DEFAULT_QUERY_AABB_HALF_EXTENT;
+        state.query_lab_shape_cast_length = DEFAULT_QUERY_SHAPE_CAST_LENGTH;
+        state.query_lab_shape_cast_radius = DEFAULT_QUERY_SHAPE_CAST_RADIUS;
+        state.query_lab_mover_cast_length = DEFAULT_QUERY_MOVER_CAST_LENGTH;
     }
     app.world_mut()
         .run_system_once(lab::update_lab_diagnostics)
@@ -394,6 +442,21 @@ fn query_lab_diagnostics_track_native_queries() {
         "QueryLab should report overlap hits from Box3D"
     );
     assert!(diagnostics.query_closest_fraction.is_some());
+    assert!(
+        diagnostics.query_shape_cast_supported,
+        "native QueryLab should support world shape casts"
+    );
+    assert!(
+        diagnostics.query_shape_cast_hit_count > 0,
+        "QueryLab should report shape-cast hits from Box3D"
+    );
+    assert!(diagnostics.query_shape_cast_closest_fraction.is_some());
+    assert!(
+        diagnostics
+            .query_mover_fraction
+            .is_some_and(|fraction| (0.0..=1.0).contains(&fraction)),
+        "QueryLab should report a valid mover cast fraction"
+    );
 }
 
 #[test]

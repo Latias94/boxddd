@@ -12,6 +12,15 @@ pub const DEFAULT_QUERY_RAY_LENGTH: f32 = 6.0;
 pub const MIN_QUERY_AABB_HALF_EXTENT: f32 = 0.25;
 pub const MAX_QUERY_AABB_HALF_EXTENT: f32 = 3.0;
 pub const DEFAULT_QUERY_AABB_HALF_EXTENT: f32 = 1.25;
+pub const MIN_QUERY_SHAPE_CAST_LENGTH: f32 = 1.0;
+pub const MAX_QUERY_SHAPE_CAST_LENGTH: f32 = 12.0;
+pub const DEFAULT_QUERY_SHAPE_CAST_LENGTH: f32 = 6.0;
+pub const MIN_QUERY_SHAPE_CAST_RADIUS: f32 = 0.1;
+pub const MAX_QUERY_SHAPE_CAST_RADIUS: f32 = 1.0;
+pub const DEFAULT_QUERY_SHAPE_CAST_RADIUS: f32 = 0.35;
+pub const MIN_QUERY_MOVER_CAST_LENGTH: f32 = 1.0;
+pub const MAX_QUERY_MOVER_CAST_LENGTH: f32 = 12.0;
+pub const DEFAULT_QUERY_MOVER_CAST_LENGTH: f32 = 6.0;
 pub const MIN_MATERIAL_FRICTION: f32 = 0.0;
 pub const MAX_MATERIAL_FRICTION: f32 = 2.0;
 pub const DEFAULT_MATERIAL_FRICTION: f32 = 0.35;
@@ -121,6 +130,9 @@ pub struct TestbedState {
     pub hertz: f64,
     pub query_lab_ray_length: f32,
     pub query_lab_aabb_half_extent: f32,
+    pub query_lab_shape_cast_length: f32,
+    pub query_lab_shape_cast_radius: f32,
+    pub query_lab_mover_cast_length: f32,
     pub material_lab_friction: f32,
     pub material_lab_restitution: f32,
     pub single_step_pending: bool,
@@ -142,6 +154,9 @@ impl Default for TestbedState {
             hertz: DEFAULT_HERTZ,
             query_lab_ray_length: DEFAULT_QUERY_RAY_LENGTH,
             query_lab_aabb_half_extent: DEFAULT_QUERY_AABB_HALF_EXTENT,
+            query_lab_shape_cast_length: DEFAULT_QUERY_SHAPE_CAST_LENGTH,
+            query_lab_shape_cast_radius: DEFAULT_QUERY_SHAPE_CAST_RADIUS,
+            query_lab_mover_cast_length: DEFAULT_QUERY_MOVER_CAST_LENGTH,
             material_lab_friction: DEFAULT_MATERIAL_FRICTION,
             material_lab_restitution: DEFAULT_MATERIAL_RESTITUTION,
             single_step_pending: false,
@@ -168,6 +183,15 @@ impl TestbedState {
         self.query_lab_aabb_half_extent = self
             .query_lab_aabb_half_extent
             .clamp(MIN_QUERY_AABB_HALF_EXTENT, MAX_QUERY_AABB_HALF_EXTENT);
+        self.query_lab_shape_cast_length = self
+            .query_lab_shape_cast_length
+            .clamp(MIN_QUERY_SHAPE_CAST_LENGTH, MAX_QUERY_SHAPE_CAST_LENGTH);
+        self.query_lab_shape_cast_radius = self
+            .query_lab_shape_cast_radius
+            .clamp(MIN_QUERY_SHAPE_CAST_RADIUS, MAX_QUERY_SHAPE_CAST_RADIUS);
+        self.query_lab_mover_cast_length = self
+            .query_lab_mover_cast_length
+            .clamp(MIN_QUERY_MOVER_CAST_LENGTH, MAX_QUERY_MOVER_CAST_LENGTH);
         self.material_lab_friction = self
             .material_lab_friction
             .clamp(MIN_MATERIAL_FRICTION, MAX_MATERIAL_FRICTION);

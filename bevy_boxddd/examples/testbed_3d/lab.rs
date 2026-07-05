@@ -1,7 +1,9 @@
 use crate::control::{
     MAX_MATERIAL_FRICTION, MAX_MATERIAL_RESTITUTION, MAX_QUERY_AABB_HALF_EXTENT,
-    MAX_QUERY_RAY_LENGTH, MIN_MATERIAL_FRICTION, MIN_MATERIAL_RESTITUTION,
-    MIN_QUERY_AABB_HALF_EXTENT, MIN_QUERY_RAY_LENGTH, TestbedState,
+    MAX_QUERY_MOVER_CAST_LENGTH, MAX_QUERY_RAY_LENGTH, MAX_QUERY_SHAPE_CAST_LENGTH,
+    MAX_QUERY_SHAPE_CAST_RADIUS, MIN_MATERIAL_FRICTION, MIN_MATERIAL_RESTITUTION,
+    MIN_QUERY_AABB_HALF_EXTENT, MIN_QUERY_MOVER_CAST_LENGTH, MIN_QUERY_RAY_LENGTH,
+    MIN_QUERY_SHAPE_CAST_LENGTH, MIN_QUERY_SHAPE_CAST_RADIUS, TestbedState,
 };
 use crate::scenes::{ALL_SCENES, MaterialLabTarget, TestbedScene};
 use bevy::prelude::*;
@@ -9,12 +11,22 @@ use bevy_boxddd::prelude::*;
 
 pub(crate) const QUERY_LAB_ORIGIN: Vec3 = Vec3::new(-4.0, 1.6, 0.0);
 pub(crate) const QUERY_LAB_AABB_CENTER: Vec3 = Vec3::new(0.0, 1.55, 0.0);
+pub(crate) const QUERY_LAB_SHAPE_CAST_ORIGIN: Vec3 = Vec3::new(-4.0, 1.6, 0.65);
+pub(crate) const QUERY_LAB_MOVER_ORIGIN: Vec3 = Vec3::new(-4.0, 0.05, 0.0);
+const QUERY_LAB_MOVER_POINT1: Vec3 = Vec3::new(0.0, 0.3, 0.0);
+const QUERY_LAB_MOVER_POINT2: Vec3 = Vec3::new(0.0, 1.3, 0.0);
+const QUERY_LAB_MOVER_RADIUS: f32 = 0.25;
 
 #[derive(Resource, Clone, Debug, Default, PartialEq)]
 pub(crate) struct LabDiagnostics {
     pub query_ray_hit_count: usize,
     pub query_overlap_hit_count: usize,
     pub query_closest_fraction: Option<f32>,
+    pub query_shape_cast_supported: bool,
+    pub query_shape_cast_hit_count: usize,
+    pub query_shape_cast_closest_fraction: Option<f32>,
+    pub query_mover_fraction: Option<f32>,
+    pub query_mover_plane_count: usize,
     pub debug_command_count: usize,
     pub debug_event_count: usize,
     pub debug_diagnostic_count: usize,
@@ -90,6 +102,36 @@ pub(crate) fn update_lab_diagnostics(
             )
             .map(|hits| hits.len())
             .unwrap_or(0);
+
+            match run_shape_cast(&context, &state) {
+                Ok(hits) => {
+                    diagnostics.query_shape_cast_supported = true;
+                    diagnostics.query_shape_cast_hit_count = hits.len();
+                    diagnostics.query_shape_cast_closest_fraction =
+                        hits.iter().map(|hit| hit.fraction).reduce(f32::min);
+                }
+                Err(boxddd::Error::UnsupportedOnWasm) => {
+                    diagnostics.query_shape_cast_supported = false;
+                    diagnostics.query_shape_cast_hit_count = 0;
+                    diagnostics.query_shape_cast_closest_fraction = None;
+                }
+                Err(_) => {
+                    diagnostics.query_shape_cast_supported = true;
+                    diagnostics.query_shape_cast_hit_count = 0;
+                    diagnostics.query_shape_cast_closest_fraction = None;
+                }
+            }
+
+            match run_mover_cast(&context, &state) {
+                Ok((fraction, planes)) => {
+                    diagnostics.query_mover_fraction = Some(fraction);
+                    diagnostics.query_mover_plane_count = planes.len();
+                }
+                Err(_) => {
+                    diagnostics.query_mover_fraction = None;
+                    diagnostics.query_mover_plane_count = 0;
+                }
+            }
         }
         TestbedScene::DebugDrawInspector => {
             diagnostics.clear_query_counts();
@@ -139,6 +181,34 @@ pub(crate) fn draw_lab_overlays(
             .with_scale(upper_bound - lower_bound),
         Color::srgb(0.36, 0.86, 0.48),
     );
+
+    let shape_translation = query_lab_shape_cast_translation(&state);
+    let shape_radius = query_lab_shape_cast_radius(&state);
+    draw_sphere_cast(
+        &mut gizmos,
+        QUERY_LAB_SHAPE_CAST_ORIGIN,
+        shape_translation,
+        shape_radius,
+    );
+
+    if let Ok(hits) = run_shape_cast(&context, &state) {
+        if let Some(hit) = hits.iter().min_by(|left, right| {
+            left.fraction
+                .partial_cmp(&right.fraction)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }) {
+            let hit_center = QUERY_LAB_SHAPE_CAST_ORIGIN + shape_translation * hit.fraction;
+            gizmos.sphere(hit_center, shape_radius, Color::srgb(0.98, 0.52, 0.18));
+            gizmos.sphere(to_bevy_pos(hit.point), 0.08, Color::srgb(0.98, 0.52, 0.18));
+            gizmos.line(
+                to_bevy_pos(hit.point),
+                to_bevy_pos(hit.point) + to_bevy_vec3(hit.normal) * 0.35,
+                Color::srgb(0.98, 0.52, 0.18),
+            );
+        }
+    }
+
+    draw_mover_cast(&mut gizmos, &context, &state);
 }
 
 impl LabDiagnostics {
@@ -146,6 +216,11 @@ impl LabDiagnostics {
         self.query_ray_hit_count = 0;
         self.query_overlap_hit_count = 0;
         self.query_closest_fraction = None;
+        self.query_shape_cast_supported = false;
+        self.query_shape_cast_hit_count = 0;
+        self.query_shape_cast_closest_fraction = None;
+        self.query_mover_fraction = None;
+        self.query_mover_plane_count = 0;
     }
 
     fn clear_debug_counts(&mut self) {
@@ -177,6 +252,26 @@ pub(crate) fn query_lab_aabb(state: &TestbedState) -> (Vec3, Vec3) {
     )
 }
 
+pub(crate) fn query_lab_shape_cast_translation(state: &TestbedState) -> Vec3 {
+    Vec3::X
+        * state
+            .query_lab_shape_cast_length
+            .clamp(MIN_QUERY_SHAPE_CAST_LENGTH, MAX_QUERY_SHAPE_CAST_LENGTH)
+}
+
+pub(crate) fn query_lab_shape_cast_radius(state: &TestbedState) -> f32 {
+    state
+        .query_lab_shape_cast_radius
+        .clamp(MIN_QUERY_SHAPE_CAST_RADIUS, MAX_QUERY_SHAPE_CAST_RADIUS)
+}
+
+pub(crate) fn query_lab_mover_cast_translation(state: &TestbedState) -> Vec3 {
+    Vec3::X
+        * state
+            .query_lab_mover_cast_length
+            .clamp(MIN_QUERY_MOVER_CAST_LENGTH, MAX_QUERY_MOVER_CAST_LENGTH)
+}
+
 pub(crate) fn material_friction(state: &TestbedState) -> f32 {
     state
         .material_lab_friction
@@ -187,4 +282,112 @@ pub(crate) fn material_restitution(state: &TestbedState) -> f32 {
     state
         .material_lab_restitution
         .clamp(MIN_MATERIAL_RESTITUTION, MAX_MATERIAL_RESTITUTION)
+}
+
+fn run_shape_cast(
+    context: &BoxdddPhysicsContext,
+    state: &TestbedState,
+) -> boxddd::Result<Vec<boxddd::RayHit>> {
+    let world = context.world().ok_or(boxddd::Error::InvalidWorldId)?;
+    let proxy = boxddd::ShapeProxy::sphere(query_lab_shape_cast_radius(state))?;
+    let input = boxddd::ShapeCastInput::new(
+        proxy,
+        to_boxddd_vec3(query_lab_shape_cast_translation(state)),
+    )?;
+    world.cast_shape(
+        to_boxddd_pos(QUERY_LAB_SHAPE_CAST_ORIGIN),
+        input,
+        boxddd::QueryFilter::default(),
+    )
+}
+
+fn run_mover_cast(
+    context: &BoxdddPhysicsContext,
+    state: &TestbedState,
+) -> boxddd::Result<(f32, Vec<boxddd::MoverPlane>)> {
+    let world = context.world().ok_or(boxddd::Error::InvalidWorldId)?;
+    let mover = query_lab_mover();
+    let translation = query_lab_mover_cast_translation(state);
+    let fraction = world.cast_mover(
+        to_boxddd_pos(QUERY_LAB_MOVER_ORIGIN),
+        &mover,
+        to_boxddd_vec3(translation),
+        boxddd::QueryFilter::default(),
+    )?;
+    let final_origin = QUERY_LAB_MOVER_ORIGIN + translation * fraction;
+    let planes = world
+        .collide_mover(
+            to_boxddd_pos(final_origin),
+            &mover,
+            boxddd::QueryFilter::default(),
+        )
+        .unwrap_or_default();
+    Ok((fraction, planes))
+}
+
+fn query_lab_mover() -> boxddd::Capsule {
+    boxddd::Capsule::new(
+        to_boxddd_vec3(QUERY_LAB_MOVER_POINT1),
+        to_boxddd_vec3(QUERY_LAB_MOVER_POINT2),
+        QUERY_LAB_MOVER_RADIUS,
+    )
+}
+
+fn draw_sphere_cast(gizmos: &mut Gizmos, origin: Vec3, translation: Vec3, radius: f32) {
+    let requested_end = origin + translation;
+    gizmos.line(origin, requested_end, Color::srgb(0.78, 0.44, 0.95));
+    gizmos.sphere(origin, radius, Color::srgb(0.78, 0.44, 0.95));
+    gizmos.sphere(requested_end, radius, Color::srgb(0.45, 0.36, 0.55));
+}
+
+fn draw_mover_cast(gizmos: &mut Gizmos, context: &BoxdddPhysicsContext, state: &TestbedState) {
+    let translation = query_lab_mover_cast_translation(state);
+    let requested_end = QUERY_LAB_MOVER_ORIGIN + translation;
+    draw_capsule(
+        gizmos,
+        QUERY_LAB_MOVER_ORIGIN,
+        Color::srgb(0.24, 0.78, 0.72),
+    );
+    draw_capsule(gizmos, requested_end, Color::srgb(0.25, 0.44, 0.46));
+    gizmos.line(
+        QUERY_LAB_MOVER_ORIGIN + Vec3::Y * 0.8,
+        requested_end + Vec3::Y * 0.8,
+        Color::srgb(0.24, 0.78, 0.72),
+    );
+
+    let Ok((fraction, planes)) = run_mover_cast(context, state) else {
+        return;
+    };
+    let safe_end = QUERY_LAB_MOVER_ORIGIN + translation * fraction;
+    draw_capsule(gizmos, safe_end, Color::srgb(0.98, 0.88, 0.20));
+
+    for plane in planes {
+        let point = to_bevy_vec3(plane.point);
+        let normal = to_bevy_vec3(plane.plane.normal);
+        gizmos.line(point, point + normal * 0.45, Color::srgb(0.98, 0.88, 0.20));
+    }
+}
+
+fn draw_capsule(gizmos: &mut Gizmos, origin: Vec3, color: Color) {
+    let point1 = origin + QUERY_LAB_MOVER_POINT1;
+    let point2 = origin + QUERY_LAB_MOVER_POINT2;
+    gizmos.line(point1, point2, color);
+    gizmos.sphere(point1, QUERY_LAB_MOVER_RADIUS, color);
+    gizmos.sphere(point2, QUERY_LAB_MOVER_RADIUS, color);
+}
+
+fn to_boxddd_vec3(value: Vec3) -> boxddd::Vec3 {
+    boxddd::Vec3::new(value.x, value.y, value.z)
+}
+
+fn to_boxddd_pos(value: Vec3) -> boxddd::Pos {
+    boxddd::Pos::new(value.x.into(), value.y.into(), value.z.into())
+}
+
+fn to_bevy_pos(value: boxddd::Pos) -> Vec3 {
+    Vec3::new(value.x as f32, value.y as f32, value.z as f32)
+}
+
+fn to_bevy_vec3(value: boxddd::Vec3) -> Vec3 {
+    Vec3::new(value.x, value.y, value.z)
 }

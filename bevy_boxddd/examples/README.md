@@ -34,7 +34,7 @@ The testbed is the primary visual learning surface. Use the left panel to switch
 
 Current official-parity scenes: Falling Stack, Advanced Colliders, Body Controls, Continuous Collision, Character Mover, Materials, Joints, Contacts And Sensors, Ray Picking, Debug Draw, Domino Run, Arch Stack, Wind Field, and Ragdoll Chain.
 
-Current boxddd showcase entries: Query Lab, Debug Draw Inspector, and Material Lab. They include live egui controls for Box3D queries, debug draw frame inspection, and native shape material tuning, and are not counted as official Box3D sample ports.
+Current boxddd showcase entries: Query Lab, Debug Draw Inspector, and Material Lab. They include live egui controls for Box3D ray casts, AABB overlaps, shape casts, mover casts, debug draw frame inspection, and native shape material tuning, and are not counted as official Box3D sample ports.
 
 The static demo hub at <https://frankorz.com/boxddd/> mirrors this scene registry.
 

@@ -185,6 +185,30 @@ fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &
                 )
                 .text("AABB half extent"),
             );
+            ui.add(
+                egui::Slider::new(
+                    &mut state.query_lab_shape_cast_length,
+                    crate::control::MIN_QUERY_SHAPE_CAST_LENGTH
+                        ..=crate::control::MAX_QUERY_SHAPE_CAST_LENGTH,
+                )
+                .text("Shape cast length"),
+            );
+            ui.add(
+                egui::Slider::new(
+                    &mut state.query_lab_shape_cast_radius,
+                    crate::control::MIN_QUERY_SHAPE_CAST_RADIUS
+                        ..=crate::control::MAX_QUERY_SHAPE_CAST_RADIUS,
+                )
+                .text("Shape radius"),
+            );
+            ui.add(
+                egui::Slider::new(
+                    &mut state.query_lab_mover_cast_length,
+                    crate::control::MIN_QUERY_MOVER_CAST_LENGTH
+                        ..=crate::control::MAX_QUERY_MOVER_CAST_LENGTH,
+                )
+                .text("Mover length"),
+            );
             ui.label(format!("Ray hits: {}", diagnostics.query_ray_hit_count));
             ui.label(format!(
                 "Overlap hits: {}",
@@ -194,6 +218,26 @@ fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &
                 Some(fraction) => format!("Closest fraction: {fraction:.3}"),
                 None => "Closest fraction: none".to_string(),
             });
+            if diagnostics.query_shape_cast_supported {
+                ui.label(format!(
+                    "Shape hits: {}",
+                    diagnostics.query_shape_cast_hit_count
+                ));
+                ui.label(match diagnostics.query_shape_cast_closest_fraction {
+                    Some(fraction) => format!("Shape fraction: {fraction:.3}"),
+                    None => "Shape fraction: none".to_string(),
+                });
+            } else {
+                ui.label("Shape cast: unavailable");
+            }
+            ui.label(match diagnostics.query_mover_fraction {
+                Some(fraction) => format!("Mover fraction: {fraction:.3}"),
+                None => "Mover fraction: none".to_string(),
+            });
+            ui.label(format!(
+                "Mover planes: {}",
+                diagnostics.query_mover_plane_count
+            ));
         }
         TestbedScene::DebugDrawInspector => {
             ui.separator();
