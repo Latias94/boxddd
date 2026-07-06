@@ -126,7 +126,7 @@ The visible examples complement the core headless examples and follow the case-l
 | `joint_gallery_3d` | `cargo run -p bevy_boxddd --example joint_gallery_3d` | Visible connected bodies using every public declarative joint variant. |
 | `debug_draw_overlay_3d` | `cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d` | Box3D debug draw commands rendered through Bevy `Gizmos`. |
 | `physics_picking_3d` | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera/cursor ray mapped through Box3D queries, not mesh picking. |
-| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for official Box3D teaching scenes plus Query Lab, Debug Draw Inspector, and Material Lab showcases. |
+| `testbed_3d` | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Egui-driven scene browser for official Box3D teaching scenes plus Query Lab, Debug Draw Inspector, Material Lab, and Stats Dashboard showcases. |
 
 The native testbed is the primary local teaching surface. Use the left panel to switch scenes and adjust pause, single-step, gravity, solver rate, substeps, sleeping, warm starting, continuous collision, and debug draw presets. The static demo hub at <https://frankorz.com/boxddd/> mirrors the same scene registry as direct Bevy + egui Web example pages, so a user can click straight into a scene without using the testbed scene switcher.
 

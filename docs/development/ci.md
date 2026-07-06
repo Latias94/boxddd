@@ -190,6 +190,7 @@ assert_root_readme_contains() {
 }
 
 tar -tf "$sys_crate" | grep -F '/third-party/box3d/LICENSE'
+tar -tf "$sys_crate" | grep -F '/provider/debug_callbacks.c'
 tar -tf "$sys_crate" | grep -F '/README.md'
 tar -tf "$core_crate" | grep -F '/README.md'
 tar -tf "$core_crate" | grep -F '/examples/README.md'

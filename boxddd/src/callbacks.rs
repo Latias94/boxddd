@@ -245,8 +245,8 @@ impl World {
 
     /// Tries to register a custom contact filter callback.
     ///
-    /// This cannot be called from inside another Box3D callback. On Emscripten
-    /// provider builds, custom Rust callbacks are reported as
+    /// Returns [`Error::InCallback`] if called from inside another Box3D
+    /// callback. On Emscripten provider builds, custom Rust callbacks return
     /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_custom_filter<F>(&mut self, callback: F) -> Result<()>
     where
@@ -291,7 +291,7 @@ impl World {
 
     /// Tries to clear the custom contact filter callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// Returns [`Error::InCallback`] if called from inside another Box3D callback.
     pub fn try_clear_custom_filter(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -329,8 +329,8 @@ impl World {
 
     /// Tries to register a pre-solve callback.
     ///
-    /// This cannot be called from inside another Box3D callback. On Emscripten
-    /// provider builds, custom Rust callbacks are reported as
+    /// Returns [`Error::InCallback`] if called from inside another Box3D
+    /// callback. On Emscripten provider builds, custom Rust callbacks return
     /// [`Error::UnsupportedOnWasm`].
     pub fn try_set_pre_solve<F>(&mut self, callback: F) -> Result<()>
     where
@@ -374,7 +374,7 @@ impl World {
 
     /// Tries to clear the pre-solve callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// Returns [`Error::InCallback`] if called from inside another Box3D callback.
     pub fn try_clear_pre_solve(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -453,7 +453,7 @@ impl World {
 
     /// Tries to clear the friction mixing callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// Returns [`Error::InCallback`] if called from inside another Box3D callback.
     pub fn try_clear_friction_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
@@ -534,7 +534,7 @@ impl World {
 
     /// Tries to clear the restitution mixing callback.
     ///
-    /// This cannot be called from inside another Box3D callback.
+    /// Returns [`Error::InCallback`] if called from inside another Box3D callback.
     pub fn try_clear_restitution_callback(&mut self) -> Result<()> {
         callback_state::check_not_in_callback()?;
         let _guard = box3d_lock::lock();
