@@ -62,6 +62,8 @@ Prerequisites:
 - `wasm-bindgen-cli` matching the workspace `wasm-bindgen` version
 - Emscripten SDK (`emcc` on `PATH`, or `EMSDK` set to the emsdk root) for the
   full provider build
+- Binaryen `wasm-opt` is optional; `build-pages-wasm` uses it automatically
+  from `PATH` or `EMSDK/upstream/bin` when available.
 
 Rust-side import check:
 
@@ -83,9 +85,15 @@ cargo install wasm-bindgen-cli --version 0.2.126 --locked
 cargo run -p xtask -- build-pages-wasm
 ```
 
+`build-pages-wasm` defaults the Bevy browser build to the `wasm-release`
+profile and then runs `wasm-opt -Oz` for the Bevy and provider wasm assets when
+Binaryen is available. Use `BOXDDD_PAGES_WASM_PROFILE=debug`, `release`, or
+`wasm-release` to choose another Rust profile, and set `BOXDDD_PAGES_WASM_OPT=0`
+when a local or CI environment must skip optional `wasm-opt` post-processing.
+
 `provider-smoke` builds `examples-wasm/provider-smoke` with
 `BOXDDD_SYS_WASM_MODE=provider` and `--import-memory`, extracts the exact
-`b3*` imports from the Rust wasm, builds `target/boxddd-provider-smoke/box3d-sys-v0.mjs`
+`b3*` imports from the Rust wasm, builds `target/boxddd-provider-smoke/box3d-sys-v0.js`
 with Emscripten, and runs `target/boxddd-provider-smoke/run-provider-smoke.mjs`
 under Node. The runner instantiates both modules with the same
 `WebAssembly.Memory` and calls `boxddd_provider_smoke`. The smoke proves ordinary
@@ -101,12 +109,13 @@ callback-heavy APIs instead of allowing a runtime table trap.
 mode, runs `wasm-bindgen`, extracts the Bevy bundle's actual Box3D imports, and
 generates a small JavaScript shim that forwards those imports to the shared
 Emscripten provider. The Pages Bevy entries are therefore real Bevy + egui
-applications selected by URL, not JavaScript-drawn core probes. Debug draw
-collection uses the provider callback bridge, and Query Lab can use the bridged
-AABB overlap and ray-cast visitor paths. Other callback-heavy tools remain
-blocked with `UnsupportedOnWasm` until their bridges are designed. Query Lab
-surfaces those limitations in its egui diagnostics instead of treating
-unsupported visitor queries as empty results.
+applications selected by URL, and the loader reports byte-level download
+progress for both the provider wasm and the Bevy wasm. Debug draw collection
+uses the provider callback bridge, and Query Lab can use the bridged AABB
+overlap and ray-cast visitor paths. Other callback-heavy tools remain blocked
+with `UnsupportedOnWasm` until their bridges are designed. Query Lab surfaces
+those limitations in its egui diagnostics instead of treating unsupported
+visitor queries as empty results.
 
 Expected output:
 

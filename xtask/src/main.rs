@@ -12,6 +12,8 @@ type Result<T> = std::result::Result<T, DynError>;
 
 const PROVIDER_MODULE: &str = "box3d-sys-v0";
 const TARGET: &str = "wasm32-unknown-unknown";
+const PAGES_WASM_PROFILE_ENV: &str = "BOXDDD_PAGES_WASM_PROFILE";
+const PAGES_WASM_OPT_ENV: &str = "BOXDDD_PAGES_WASM_OPT";
 const SMOKE_PACKAGE: &str = "boxddd-provider-smoke";
 const SMOKE_WASM: &str = "boxddd_provider_smoke.wasm";
 const PAGES_WASM_DIR: &str = "wasm/generated";
@@ -121,6 +123,7 @@ impl TryFrom<&str> for SampleParityMode {
 enum BuildProfile {
     Debug,
     Release,
+    WasmRelease,
 }
 
 #[derive(Debug)]
@@ -183,7 +186,7 @@ fn run() -> Result<()> {
 
 fn print_help() {
     eprintln!(
-        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build Bevy example WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site\n  sample-parity        Validate the official Box3D sample parity matrix"
+        "Commands:\n  provider-smoke-app   Build the Rust wasm provider-smoke app and export list\n  provider-smoke       Build the Rust app, build the Box3D provider with emcc, and run Node smoke\n  build-pages-wasm     Build Bevy example WASM artifacts into docs/pages/wasm/generated and docs/pages/bevy-testbed/generated\n  generate-pages       Generate static Bevy example entry pages from the Rust scene registry\n  validate-pages       Validate the static GitHub Pages site\n  sample-parity        Validate the official Box3D sample parity matrix\n\nEnvironment:\n  BOXDDD_PAGES_WASM_PROFILE=debug|release|wasm-release  Select the Rust profile for Pages wasm; default: wasm-release\n  BOXDDD_PAGES_WASM_OPT=0                                Disable optional wasm-opt -Oz post-processing"
     );
 }
 
@@ -549,7 +552,7 @@ fn validate_pages() -> Result<()> {
     let root = project_root();
     let pages_dir = root.join("docs").join("pages");
     let index = ensure_file(&pages_dir.join("index.html"), "Pages index")?;
-    ensure_file(
+    let testbed_index = ensure_file(
         &pages_dir.join("bevy-testbed").join("index.html"),
         "Bevy Web testbed page",
     )?;
@@ -568,6 +571,10 @@ fn validate_pages() -> Result<()> {
         &example_index_page(&registry_samples, ExampleIndexLocation::Root),
     )?;
     validate_html_links(&index, &html)?;
+
+    let testbed_html = fs::read_to_string(&testbed_index)?;
+    validate_generated_page(&testbed_index, &testbed_html, &bevy_testbed_page())?;
+    validate_html_links(&testbed_index, &testbed_html)?;
     validate_bevy_loader(&loader)?;
 
     eprintln!(
@@ -580,6 +587,13 @@ fn validate_pages() -> Result<()> {
 
 fn validate_bevy_loader(loader: &Path) -> Result<()> {
     let js = fs::read_to_string(loader)?;
+    if normalize_newlines(&js) != normalize_newlines(bevy_testbed_loader_js()) {
+        return Err(format!(
+            "{} is stale; run `cargo run -p xtask -- generate-pages`",
+            loader.display()
+        )
+        .into());
+    }
     for required in [
         "box3d-provider-shim.js",
         "setBox3dProvider",
@@ -599,7 +613,9 @@ fn validate_bevy_loader(loader: &Path) -> Result<()> {
 
 fn generate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> Result<()> {
     let examples_dir = pages_dir.join(BEVY_EXAMPLES_DIR);
+    let testbed_dir = pages_dir.join("bevy-testbed");
     fs::create_dir_all(&examples_dir)?;
+    fs::create_dir_all(&testbed_dir)?;
     fs::write(
         pages_dir.join("index.html"),
         example_index_page(samples, ExampleIndexLocation::Root),
@@ -608,6 +624,8 @@ fn generate_bevy_example_pages(pages_dir: &Path, samples: &[RegistrySample]) -> 
         examples_dir.join("index.html"),
         example_index_page(samples, ExampleIndexLocation::ExamplesDirectory),
     )?;
+    fs::write(testbed_dir.join("index.html"), bevy_testbed_page())?;
+    fs::write(testbed_dir.join("loader.js"), bevy_testbed_loader_js())?;
 
     for sample in samples {
         let dir = examples_dir.join(&sample.id);
@@ -745,6 +763,47 @@ fn example_index_page(samples: &[RegistrySample], location: ExampleIndexLocation
     )
 }
 
+fn bevy_testbed_page() -> String {
+    format!(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boxddd Bevy Testbed</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Bevy + egui WASM testbed for boxddd.">
+  <style>{example_page_css}</style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <a href="../">boxddd Examples</a>
+        <h1>Bevy Testbed</h1>
+        <p><span>All scenes</span> Switch scenes from the egui panel.</p>
+      </div>
+      <nav>
+        <a href="../examples/">All Bevy examples</a>
+        <a href="https://github.com/Latias94/boxddd/tree/main/bevy_boxddd/examples/testbed_3d">Source</a>
+      </nav>
+    </header>
+    <main id="bevy-app" data-scene-id="" data-scene-name="Bevy Testbed" data-scene-category="All scenes">
+      <canvas id="bevy-canvas" tabindex="0"></canvas>
+      <div id="bevy-status" role="status" aria-live="polite">
+        <strong>Loading Bevy Testbed</strong>
+        <span>Preparing the shared Box3D provider and the Rust Bevy wasm module.</span>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="loader.js"></script>
+</body>
+</html>
+"#,
+        example_page_css = example_page_css()
+    )
+}
+
 fn example_page(sample: &RegistrySample) -> String {
     format!(
         r#"<!doctype html>
@@ -790,6 +849,166 @@ fn example_page(sample: &RegistrySample) -> String {
         upstream = source_list_html(sample),
         example_page_css = example_page_css()
     )
+}
+
+fn bevy_testbed_loader_js() -> &'static str {
+    r##"const statusPanel = document.querySelector("#bevy-status");
+const appRoot = document.querySelector("#bevy-app");
+const sceneId = appRoot?.dataset.sceneId || "";
+const sceneName = appRoot?.dataset.sceneName || "Bevy testbed";
+const isExamplePage = Boolean(sceneId);
+
+function setStatus(state, title, detail, progress) {
+  statusPanel.dataset.state = state;
+  statusPanel.replaceChildren();
+
+  const titleNode = document.createElement("strong");
+  titleNode.textContent = title;
+  const detailNode = document.createElement("span");
+  detailNode.textContent = detail;
+  statusPanel.append(titleNode, detailNode);
+
+  if (progress) {
+    const progressNode = document.createElement("progress");
+    progressNode.value = progress.loaded;
+    if (progress.total) {
+      progressNode.max = progress.total;
+    } else {
+      progressNode.removeAttribute("value");
+    }
+
+    const progressText = document.createElement("small");
+    progressText.textContent = progressTextFor(progress.loaded, progress.total);
+    statusPanel.append(progressNode, progressText);
+  }
+}
+
+function generatedUrl(path) {
+  return new URL(path, import.meta.url);
+}
+
+function progressTextFor(loaded, total) {
+  if (total) {
+    const percent = Math.min(100, Math.round((loaded / total) * 100));
+    return `${formatBytes(loaded)} / ${formatBytes(total)} (${percent}%)`;
+  }
+  return `${formatBytes(loaded)} downloaded`;
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KiB", "MiB", "GiB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return unit === 0 ? `${value} ${units[unit]}` : `${value.toFixed(2)} ${units[unit]}`;
+}
+
+async function fetchArrayBufferWithProgress(url, label) {
+  setStatus("loading", `Downloading ${label}`, "Starting download.", { loaded: 0, total: 0 });
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`${label} download failed with HTTP ${response.status}`);
+  }
+
+  const total = Number(response.headers.get("Content-Length")) || 0;
+  if (!response.body) {
+    const buffer = await response.arrayBuffer();
+    setStatus("loading", `Downloading ${label}`, "Download complete.", {
+      loaded: buffer.byteLength,
+      total: total || buffer.byteLength,
+    });
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    loaded += value.byteLength;
+    setStatus("loading", `Downloading ${label}`, "Downloading runtime asset.", { loaded, total });
+  }
+
+  const bytes = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  setStatus("loading", `Downloading ${label}`, "Download complete.", { loaded, total: total || loaded });
+  return bytes.buffer;
+}
+
+async function main() {
+  const providerGenerated = new URL("../wasm/generated/", import.meta.url);
+  const providerWasmUrl = new URL("box3d-sys-v0.wasm", providerGenerated);
+  const bevyWasmUrl = generatedUrl("generated/bevy_boxddd_testbed_bg.wasm");
+
+  setStatus("loading", "Loading JavaScript modules", `Preparing the browser runtime for ${sceneName}.`);
+  const [
+    { default: createProvider },
+    { default: initBevyTestbed },
+    { setBox3dProvider, setBoxdddAppExports },
+  ] =
+    await Promise.all([
+      import(new URL("box3d-sys-v0.js", providerGenerated).href),
+      import(generatedUrl("generated/bevy_boxddd_testbed.js").href),
+      import(generatedUrl("generated/box3d-provider-shim.js").href),
+    ]);
+  const memory = new WebAssembly.Memory({ initial: 4096, maximum: 8192 });
+
+  const providerWasm = await fetchArrayBufferWithProgress(providerWasmUrl, "Box3D provider wasm");
+  setStatus("loading", "Starting Box3D provider", `Instantiating the shared Box3D C provider for ${sceneName}.`);
+  const provider = await createProvider({
+    wasmMemory: memory,
+    wasmBinary: providerWasm,
+    locateFile: (path) => new URL(path, providerGenerated).href,
+    print: (text) => console.log(`[box3d-sys-v0] ${text}`),
+    printErr: (text) => console.warn(`[box3d-sys-v0] ${text}`),
+  });
+
+  if (provider.wasmMemory && provider.wasmMemory !== memory) {
+    throw new Error("Box3D provider did not use the shared WebAssembly.Memory");
+  }
+
+  setBox3dProvider(provider);
+  const bevyWasm = await fetchArrayBufferWithProgress(bevyWasmUrl, `${sceneName} Bevy wasm`);
+  setStatus("loading", `Starting ${sceneName}`, "Instantiating the Rust Bevy + egui wasm module.");
+
+  const bevyExports = await initBevyTestbed({
+    module_or_path: bevyWasm,
+    memory,
+  });
+  setBoxdddAppExports(bevyExports);
+
+  window.BOXDDD_BEVY_TESTBED_READY = true;
+  window.BOXDDD_BEVY_EXAMPLE_READY = true;
+  window.BOXDDD_BEVY_SCENE_ID = sceneId;
+  setStatus(
+    "running",
+    `${sceneName} running`,
+    isExamplePage
+      ? "This dedicated example page is running the selected Box3D scene in Bevy."
+      : "The scene browser, egui controls, picking, and Box3D simulation are running in this canvas.",
+  );
+}
+
+main().catch((error) => {
+  console.error(error);
+  const message = error instanceof Error ? error.message : String(error);
+  setStatus("error", `${sceneName} failed`, message);
+});
+"##
 }
 
 fn source_summary(sample: &RegistrySample) -> String {
@@ -870,6 +1089,8 @@ a:hover { text-decoration: underline; text-underline-offset: 4px; }
 #bevy-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
 #bevy-status { position: absolute; left: 18px; bottom: 18px; max-width: min(560px, calc(100% - 36px)); border: 1px solid var(--border); border-radius: 8px; background: rgba(15, 15, 18, 0.94); padding: 12px 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
 #bevy-status strong { display: block; margin-bottom: 4px; color: var(--foreground); font-size: 15px; }
+#bevy-status progress { display: block; width: min(360px, 100%); height: 8px; margin-top: 10px; accent-color: var(--accent); }
+#bevy-status small { display: block; margin-top: 6px; color: #d4d4d8; font-size: 12px; }
 #bevy-status[data-state="error"] strong { color: var(--danger); }
 #bevy-status[data-state="running"] { opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
 .directory { min-height: 100%; }
@@ -1147,10 +1368,34 @@ impl BuildProfile {
         }
     }
 
+    fn for_pages() -> Result<Self> {
+        match env::var(PAGES_WASM_PROFILE_ENV) {
+            Ok(value) => Self::parse(&value).ok_or_else(|| {
+                format!(
+                    "invalid {PAGES_WASM_PROFILE_ENV} value `{value}`; expected debug, release, or wasm-release"
+                )
+                .into()
+            }),
+            Err(_) => Ok(Self::WasmRelease),
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "debug" | "Debug" | "DEBUG" => Some(Self::Debug),
+            "release" | "Release" | "RELEASE" => Some(Self::Release),
+            "wasm-release" | "WASM-RELEASE" | "wasm_release" | "WASM_RELEASE" => {
+                Some(Self::WasmRelease)
+            }
+            _ => None,
+        }
+    }
+
     fn cargo_args(self) -> &'static [&'static str] {
         match self {
             Self::Debug => &[],
             Self::Release => &["--release"],
+            Self::WasmRelease => &["--profile", "wasm-release"],
         }
     }
 
@@ -1158,6 +1403,15 @@ impl BuildProfile {
         match self {
             Self::Debug => "debug",
             Self::Release => "release",
+            Self::WasmRelease => "wasm-release",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Release => "release",
+            Self::WasmRelease => "wasm-release",
         }
     }
 }
@@ -1426,6 +1680,7 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
         "--version",
         "wasm-bindgen-cli is required for Bevy Web examples",
     )?;
+    let profile = BuildProfile::for_pages()?;
 
     let root = project_root();
     let out_dir = root.join("target").join("boxddd-bevy-testbed-web");
@@ -1442,15 +1697,18 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
         .arg(BEVY_WEB_EXAMPLE)
         .arg("--target")
         .arg(TARGET)
-        .arg("--release")
+        .args(profile.cargo_args())
         .env("BOXDDD_SYS_WASM_MODE", "provider");
     add_wasm_app_link_args(&mut command, &[DEBUG_BRIDGE_EXPORTS, QUERY_BRIDGE_EXPORTS]);
-    run_command(&mut command, "build Bevy testbed wasm")?;
+    run_command(
+        &mut command,
+        &format!("build Bevy testbed wasm ({})", profile.label()),
+    )?;
 
     let wasm = root
         .join("target")
         .join(TARGET)
-        .join("release")
+        .join(profile.target_dir())
         .join("examples")
         .join(format!("{BEVY_WEB_EXAMPLE}.wasm"));
     ensure_file(&wasm, "Bevy testbed wasm")?;
@@ -1468,6 +1726,7 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
 
     patch_bevy_bindgen_imports(&out_dir.join(BEVY_WEB_JS))?;
     let bevy_wasm = out_dir.join(BEVY_WEB_WASM);
+    optimize_wasm_if_available(&bevy_wasm, "Bevy testbed wasm")?;
     let imports = collect_provider_imports(&bevy_wasm)?;
     write_browser_provider_shim(&out_dir, &imports)?;
 
@@ -1498,7 +1757,18 @@ fn patch_bevy_bindgen_imports(js: &Path) -> Result<()> {
         )
         .into());
     }
-    fs::write(js, patched)?;
+    let decode_patched = patched.replace(
+        "cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len))",
+        "cachedTextDecoder.decode(getUint8ArrayMemory0().slice(ptr, ptr + len))",
+    );
+    if decode_patched == patched {
+        return Err(format!(
+            "wasm-bindgen output does not decode strings from wasm memory: {}",
+            js.display()
+        )
+        .into());
+    }
+    fs::write(js, decode_patched)?;
     Ok(())
 }
 
@@ -1602,11 +1872,12 @@ fn build_pages_wasm() -> Result<()> {
     let provider_wasm = provider.with_extension("wasm");
     ensure_file(&provider, "Box3D provider module")?;
     ensure_file(&provider_wasm, "Box3D provider wasm")?;
+    optimize_wasm_if_available(&provider_wasm, "Box3D provider wasm")?;
 
     let generated = pages_wasm_generated_dir();
     replace_dir_under(&generated, &project_root().join("docs").join("pages"))?;
 
-    fs::copy(&provider, generated.join("box3d-sys-v0.mjs"))?;
+    fs::copy(&provider, generated.join("box3d-sys-v0.js"))?;
     fs::copy(&provider_wasm, generated.join("box3d-sys-v0.wasm"))?;
     copy_bevy_web_artifacts(&bevy_artifacts)?;
 
@@ -1630,7 +1901,7 @@ fn build_box3d_provider(out_dir: &Path, exports_json: &Path) -> Result<PathBuf> 
         .join("boxddd-sys")
         .join("provider")
         .join("debug_callbacks.c");
-    let provider = out_dir.join("box3d-sys-v0.mjs");
+    let provider = out_dir.join("box3d-sys-v0.js");
 
     let mut c_files = Vec::new();
     collect_c_files(&src_dir, &mut c_files)?;
@@ -1646,6 +1917,8 @@ fn build_box3d_provider(out_dir: &Path, exports_json: &Path) -> Result<PathBuf> 
         .arg("EXPORT_ES6=1")
         .arg("-s")
         .arg("ENVIRONMENT=node,web")
+        .arg("-s")
+        .arg("INCOMING_MODULE_JS_API=['wasmMemory','wasmBinary','locateFile','print','printErr']")
         .arg("-s")
         .arg("GLOBAL_BASE=67108864")
         .arg("-s")
@@ -1793,6 +2066,7 @@ console.log(
 );
 "#
     );
+    fs::write(out_dir.join("package.json"), r#"{"type":"module"}"#)?;
     fs::write(out_dir.join("run-provider-smoke.mjs"), runner)?;
     Ok(())
 }
@@ -1820,6 +2094,98 @@ fn find_emcc() -> Result<PathBuf> {
     )
 }
 
+fn optimize_wasm_if_available(wasm: &Path, label: &str) -> Result<()> {
+    if !pages_wasm_opt_enabled() {
+        eprintln!("wasm-opt skipped for {label}: disabled by {PAGES_WASM_OPT_ENV}");
+        return Ok(());
+    }
+
+    let Some(wasm_opt) = find_wasm_opt() else {
+        eprintln!("wasm-opt skipped for {label}: install Binaryen or expose EMSDK/upstream/bin");
+        return Ok(());
+    };
+
+    let before = file_size(wasm)?;
+    let tmp = wasm.with_extension("wasm-opt.tmp");
+    let mut command = Command::new(wasm_opt);
+    command
+        .arg("-Oz")
+        .arg("--enable-bulk-memory")
+        .arg("--enable-bulk-memory-opt")
+        .arg("--enable-nontrapping-float-to-int")
+        .arg("--strip-debug")
+        .arg("--strip-producers")
+        .arg(wasm)
+        .arg("-o")
+        .arg(&tmp);
+    run_command(&mut command, &format!("optimize {label} with wasm-opt"))?;
+
+    fs::copy(&tmp, wasm)?;
+    fs::remove_file(&tmp)?;
+
+    let after = file_size(wasm)?;
+    let saved = before.saturating_sub(after);
+    let pct = if before == 0 {
+        0.0
+    } else {
+        saved as f64 * 100.0 / before as f64
+    };
+    eprintln!(
+        "{label} optimized: {} -> {} ({saved} bytes saved, {pct:.1}%)",
+        format_bytes(before),
+        format_bytes(after)
+    );
+    Ok(())
+}
+
+fn pages_wasm_opt_enabled() -> bool {
+    !matches!(
+        env::var(PAGES_WASM_OPT_ENV).ok().as_deref(),
+        Some("0" | "false" | "False" | "FALSE" | "off" | "OFF" | "no" | "NO")
+    )
+}
+
+fn file_size(path: &Path) -> Result<u64> {
+    fs::metadata(path)
+        .map(|metadata| metadata.len())
+        .map_err(Into::into)
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const KIB: f64 = 1024.0;
+    const MIB: f64 = KIB * 1024.0;
+    let bytes_f = bytes as f64;
+    if bytes_f >= MIB {
+        format!("{:.2} MiB", bytes_f / MIB)
+    } else if bytes_f >= KIB {
+        format!("{:.2} KiB", bytes_f / KIB)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+fn find_wasm_opt() -> Option<PathBuf> {
+    if let Some(path) = runnable_tool("wasm-opt", "--version") {
+        return Some(path);
+    }
+
+    let Ok(emsdk) = env::var("EMSDK") else {
+        return None;
+    };
+
+    let bin_dir = PathBuf::from(emsdk).join("upstream").join("bin");
+    for name in ["wasm-opt", "wasm-opt.exe"] {
+        let candidate = bin_dir.join(name);
+        if candidate.exists()
+            && let Some(path) = runnable_path(&candidate, "--version")
+        {
+            return Some(path);
+        }
+    }
+
+    None
+}
+
 fn ensure_tool(name: &str, arg: &str, message: &str) -> Result<()> {
     if runnable_tool(name, arg).is_some() {
         Ok(())
@@ -1829,14 +2195,18 @@ fn ensure_tool(name: &str, arg: &str, message: &str) -> Result<()> {
 }
 
 fn runnable_tool(name: &str, arg: &str) -> Option<PathBuf> {
-    Command::new(name)
+    runnable_path(Path::new(name), arg).map(|_| PathBuf::from(name))
+}
+
+fn runnable_path(path: &Path, arg: &str) -> Option<PathBuf> {
+    Command::new(path)
         .arg(arg)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
         .ok()
         .filter(|status| status.success())
-        .map(|_| PathBuf::from(name))
+        .map(|_| path.to_path_buf())
 }
 
 fn run_command(command: &mut Command, label: &str) -> Result<()> {
@@ -1916,6 +2286,43 @@ mod tests {
             upstream,
             showcase_lesson: lesson.map(ToOwned::to_owned),
         }
+    }
+
+    #[test]
+    fn build_profile_parses_supported_values() {
+        assert!(matches!(
+            BuildProfile::parse("debug"),
+            Some(BuildProfile::Debug)
+        ));
+        assert!(matches!(
+            BuildProfile::parse("release"),
+            Some(BuildProfile::Release)
+        ));
+        assert!(matches!(
+            BuildProfile::parse("wasm-release"),
+            Some(BuildProfile::WasmRelease)
+        ));
+        assert!(matches!(
+            BuildProfile::parse("WASM_RELEASE"),
+            Some(BuildProfile::WasmRelease)
+        ));
+        assert!(BuildProfile::parse("fast").is_none());
+    }
+
+    #[test]
+    fn wasm_release_profile_uses_custom_cargo_profile() {
+        assert_eq!(
+            BuildProfile::WasmRelease.cargo_args(),
+            &["--profile", "wasm-release"]
+        );
+        assert_eq!(BuildProfile::WasmRelease.target_dir(), "wasm-release");
+    }
+
+    #[test]
+    fn format_bytes_uses_binary_units() {
+        assert_eq!(format_bytes(31), "31 B");
+        assert_eq!(format_bytes(1536), "1.50 KiB");
+        assert_eq!(format_bytes(2 * 1024 * 1024), "2.00 MiB");
     }
 
     #[test]

@@ -46,6 +46,8 @@ The vendored source includes a local single-thread WASM timer portability patch.
 
 `0.2.0` has a few intentional breaks, tracked in [`CHANGELOG.md`](https://github.com/Latias94/boxddd/blob/main/CHANGELOG.md): debug draw renderers should move from `DebugDrawCommand::Shape { shape, .. }` to the `DebugDrawFrame` asset/handle model, exhaustive `boxddd::Error` matches need the provider-callback arm, and exhaustive `bevy_boxddd::HullDescriptor` matches need a wildcard arm.
 
+The GitHub Pages examples are real Bevy + egui WASM scenes built through `cargo run -p xtask -- build-pages-wasm`; Pages builds default to the size-focused `wasm-release` profile, use `wasm-opt -Oz` when available, and show download progress while loading the provider and Bevy wasm assets.
+
 ## Crates
 
 | Crate | Purpose |

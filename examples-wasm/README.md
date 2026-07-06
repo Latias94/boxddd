@@ -41,6 +41,7 @@ cargo run -p xtask -- provider-smoke-app
 
 # Requires Emscripten SDK (`emcc`) on PATH or EMSDK set.
 # Requires wasm-bindgen-cli for the Bevy Web testbed in build-pages-wasm.
+# Uses wasm-opt automatically from PATH or EMSDK/upstream/bin when available.
 cargo install wasm-bindgen-cli --version 0.2.126 --locked
 cargo run -p xtask -- provider-smoke
 cargo run -p xtask -- build-pages-wasm
@@ -63,11 +64,11 @@ instead of trapping across wasm module tables.
 
 - a real `bevy_boxddd/examples/testbed_3d` Bevy + egui app compiled with
   `wasm-bindgen`;
-- smaller core provider probes that run falling-body, closest-ray, shape-cast,
-  and distance-joint checks and draw JavaScript diagnostics from returned metrics.
+- direct per-scene Pages entries that select the matching Bevy scene by URL and
+  share the same Box3D provider runtime.
 
-The core probe canvas is not the Bevy renderer. It stays in the site as a compact
-runtime diagnostic while the Bevy page is the user-facing visual example. The
+The Bevy loader reports byte-level download progress for the provider wasm and
+the Bevy wasm before instantiating them with a shared `WebAssembly.Memory`. The
 Bevy page uses the provider-backed debug draw bridge; other callback-heavy
 features still keep their explicit `UnsupportedOnWasm` guardrails until each
 bridge is designed and tested.

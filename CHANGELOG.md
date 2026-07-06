@@ -10,7 +10,14 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ## [Unreleased]
 
-No unreleased changes.
+### Changed
+
+- GitHub Pages WASM demos now default to the size-focused `wasm-release` profile, run `wasm-opt -Oz` when Binaryen is available, and show byte-level download progress while loading the Box3D provider and Bevy wasm assets.
+- `generate-pages` now owns the Bevy testbed entry page and loader script, so `validate-pages` catches stale runtime markup before publishing.
+
+### Migration Notes
+
+- Pages builders that need a different Rust profile can set `BOXDDD_PAGES_WASM_PROFILE=debug`, `release`, or `wasm-release`; set `BOXDDD_PAGES_WASM_OPT=0` to skip optional `wasm-opt` post-processing.
 
 ## [0.2.0] - 2026-07-06
 
