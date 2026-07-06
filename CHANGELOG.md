@@ -10,7 +10,11 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 ## [Unreleased]
 
-This section describes changes on `main` after the published `0.1.0` release. The workspace is now on the `0.2.0` development line because the debug draw frame model and Bevy hull descriptor API have breaking changes, but `0.2.0` is not release-ready yet.
+No unreleased changes.
+
+## [0.2.0] - 2026-07-06
+
+This release focuses on browser demo support, Bevy teaching examples, debug draw renderer integration, release preflight coverage, and the first breaking API cleanup after `0.1.0`.
 
 ### Added
 
