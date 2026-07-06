@@ -46,7 +46,7 @@ explicit raw interop or intentionally omitted from the safe ownership model.
 
 - Safe APIs must validate handles and scalar/vector inputs before crossing FFI when validation is possible.
 - Safe APIs must not expose borrowed Box3D-owned memory beyond the owning `World` or native resource lifetime.
-- Callback APIs must follow the existing callback guard pattern: do not unwind through C, return `Error::CallbackPanicked` where panic containment is possible, and return `Error::UnsupportedOnWasm` for provider-mode WASM callback paths that are not sound yet.
+- Callback APIs must follow the existing callback guard pattern: do not unwind through C, return `Error::CallbackPanicked` where panic containment is possible, and return `Error::UnsupportedOnWasm` for provider-mode WASM callback paths that are not sound yet, including standalone mesh, height-field, and compound geometry visitors until their bridges land.
 - Process-global hooks are not ordinary safe convenience APIs. Allocator, assert, log, timer, low-level binary file helpers, native dump helpers, and the upstream native recording save helper stay in `boxddd_sys::ffi`; length-unit and stall-threshold tuning is exposed only through `boxddd::raw` with validation and process-global docs.
 - Raw `void*` user data is not a typed Rust ownership mechanism. Storage and retrieval live behind `boxddd::raw` `unsafe fn try_*_raw_user_data` functions; event snapshots may expose `raw_user_data` pointer values but never typed references.
 - `CompoundBytes` is an owner for Box3D-created compound allocations only. Its byte slice is for inspection or caller-side copying, not a stable safe deserialization format, and there is no safe `from_slice` or `from_vec` path for arbitrary bytes.

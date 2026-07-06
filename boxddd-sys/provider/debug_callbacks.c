@@ -320,3 +320,91 @@ int boxddd_provider_debug_take_error(uint32_t token)
 {
     return boxddd_js_debug_take_error(token);
 }
+
+EM_JS(int, boxddd_js_query_take_error, (uint32_t token), {
+  const errors = Module.boxdddQueryErrors;
+  if (!errors) return 0;
+  const key = token >>> 0;
+  const error = errors.get(key) | 0;
+  errors.delete(key);
+  return error;
+});
+
+EM_JS(int, boxddd_js_query_overlap, (uint32_t token, const b3ShapeId* shape), {
+  const exports = Module.boxdddAppExports;
+  const setError = (code) => {
+    const key = token >>> 0;
+    const errors = Module.boxdddQueryErrors || (Module.boxdddQueryErrors = new Map());
+    if (!errors.has(key)) errors.set(key, code | 0);
+  };
+  if (!exports || typeof exports.boxddd_query_overlap !== 'function') {
+    setError(1);
+    return 0;
+  }
+  try {
+    return exports.boxddd_query_overlap(token >>> 0, shape >>> 0) ? 1 : 0;
+  } catch (error) {
+    setError(2);
+    if (Module.printErr) Module.printErr(`boxddd query overlap failed: ${error}`);
+    return 0;
+  }
+});
+
+EM_JS(float, boxddd_js_query_cast,
+      (uint32_t token, const b3ShapeId* shape, const b3Pos* point, const b3Vec3* normal, float fraction,
+       const uint64_t* userMaterialId, int triangleIndex, int childIndex), {
+  const exports = Module.boxdddAppExports;
+  const setError = (code) => {
+    const key = token >>> 0;
+    const errors = Module.boxdddQueryErrors || (Module.boxdddQueryErrors = new Map());
+    if (!errors.has(key)) errors.set(key, code | 0);
+  };
+  if (!exports || typeof exports.boxddd_query_cast !== 'function') {
+    setError(1);
+    return 0.0;
+  }
+  try {
+    return exports.boxddd_query_cast(
+      token >>> 0,
+      shape >>> 0,
+      point >>> 0,
+      normal >>> 0,
+      fraction,
+      userMaterialId >>> 0,
+      triangleIndex | 0,
+      childIndex | 0
+    );
+  } catch (error) {
+    setError(2);
+    if (Module.printErr) Module.printErr(`boxddd query cast failed: ${error}`);
+    return 0.0;
+  }
+});
+
+static bool boxddd_query_overlap(b3ShapeId shapeId, void* context)
+{
+    uint32_t token = (uint32_t)(uintptr_t)context;
+    return boxddd_js_query_overlap(token, &shapeId) != 0;
+}
+
+static float boxddd_query_cast(b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+                               int triangleIndex, int childIndex, void* context)
+{
+    uint32_t token = (uint32_t)(uintptr_t)context;
+    return boxddd_js_query_cast(token, &shapeId, &point, &normal, fraction, &userMaterialId, triangleIndex, childIndex);
+}
+
+int boxddd_provider_query_take_error(uint32_t token)
+{
+    return boxddd_js_query_take_error(token);
+}
+
+b3TreeStats boxddd_provider_world_overlap_aabb(b3WorldId worldId, b3AABB aabb, b3QueryFilter filter, uint32_t token)
+{
+    return b3World_OverlapAABB(worldId, aabb, filter, boxddd_query_overlap, (void*)(uintptr_t)token);
+}
+
+b3TreeStats boxddd_provider_world_cast_ray(b3WorldId worldId, b3Pos origin, b3Vec3 translation, b3QueryFilter filter, uint32_t token)
+{
+    return b3World_CastRay(worldId, origin, translation, filter, boxddd_query_cast, (void*)(uintptr_t)token);
+}

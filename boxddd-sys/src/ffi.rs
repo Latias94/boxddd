@@ -13,6 +13,20 @@ unsafe extern "C" {
     pub fn boxddd_provider_debug_install_world_def(def: *mut b3WorldDef, token: u32);
     pub fn boxddd_provider_debug_init_draw(draw: *mut b3DebugDraw, token: u32);
     pub fn boxddd_provider_debug_take_error(token: u32) -> i32;
+    pub fn boxddd_provider_query_take_error(token: u32) -> i32;
+    pub fn boxddd_provider_world_overlap_aabb(
+        world_id: b3WorldId,
+        aabb: b3AABB,
+        filter: b3QueryFilter,
+        token: u32,
+    ) -> b3TreeStats;
+    pub fn boxddd_provider_world_cast_ray(
+        world_id: b3WorldId,
+        origin: b3Pos,
+        translation: b3Vec3,
+        filter: b3QueryFilter,
+        token: u32,
+    ) -> b3TreeStats;
 }
 
 #[cfg(all(

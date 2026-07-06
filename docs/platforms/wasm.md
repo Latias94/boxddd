@@ -89,19 +89,24 @@ cargo run -p xtask -- build-pages-wasm
 with Emscripten, and runs `target/boxddd-provider-smoke/run-provider-smoke.mjs`
 under Node. The runner instantiates both modules with the same
 `WebAssembly.Memory` and calls `boxddd_provider_smoke`. The smoke proves ordinary
-provider calls and the debug draw callback bridge. Query visitors, dynamic-tree
-visitors, contact/material callbacks, and task callbacks still need their own
-provider bridge before they are claimed for browser provider mode. The safe
-wrapper returns `Error::UnsupportedOnWasm` for those remaining callback-heavy APIs
-instead of allowing a runtime table trap.
+provider calls, the debug draw callback bridge, and the minimal world-query
+bridge for AABB overlap and ray-cast visitors. Shape overlap, shape cast,
+mover collision, dynamic-tree visitors, standalone mesh/height-field/compound
+geometry visitors, contact/material callbacks, and task callbacks still need
+their own provider bridge before they are claimed for browser provider mode.
+The safe wrapper returns `Error::UnsupportedOnWasm` for those remaining
+callback-heavy APIs instead of allowing a runtime table trap.
 
 `build-pages-wasm` also builds `bevy_boxddd/examples/testbed_3d` in provider
 mode, runs `wasm-bindgen`, extracts the Bevy bundle's actual Box3D imports, and
 generates a small JavaScript shim that forwards those imports to the shared
 Emscripten provider. The Pages Bevy entries are therefore real Bevy + egui
 applications selected by URL, not JavaScript-drawn core probes. Debug draw
-collection uses the provider callback bridge; other callback-heavy tools remain
-blocked with `UnsupportedOnWasm` until their bridges are designed.
+collection uses the provider callback bridge, and Query Lab can use the bridged
+AABB overlap and ray-cast visitor paths. Other callback-heavy tools remain
+blocked with `UnsupportedOnWasm` until their bridges are designed. Query Lab
+surfaces those limitations in its egui diagnostics instead of treating
+unsupported visitor queries as empty results.
 
 Expected output:
 
@@ -111,11 +116,12 @@ boxddd provider smoke passed: drop_mm=4002, ray_hit_mm=1500, shape_cast_permyria
 
 Provider mode currently supports non-callback calls such as world/body/shape
 creation, stepping, body inspection, closest-ray casts, standalone collision
-helpers, distance joint solving, and debug draw frame collection. Visitor-style
-queries (`overlap_aabb`, `overlap_shape`, `cast_ray`, `cast_shape`),
-`DynamicTree` visitor queries/casts, contact/material callbacks, and Rust-owned
-task callbacks are blocked with `Error::UnsupportedOnWasm` until cross-module
-function-table ownership is designed for each surface.
+helpers, distance joint solving, debug draw frame collection, world AABB overlap
+visitors, and world ray-cast visitors. Shape overlap, shape cast, mover
+collision planes, `DynamicTree` visitor queries/casts, standalone
+mesh/height-field/compound geometry visitors, contact/material callbacks, and
+Rust-owned task callbacks are blocked with `Error::UnsupportedOnWasm` until
+cross-module function-table ownership is designed for each surface.
 
 ## C-Backed WASI Runtime Smoke
 

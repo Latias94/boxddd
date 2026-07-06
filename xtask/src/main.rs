@@ -46,6 +46,7 @@ const DEBUG_BRIDGE_EXPORTS: &[&str] = &[
     "boxddd_debug_draw_box",
     "boxddd_debug_draw_string",
 ];
+const QUERY_BRIDGE_EXPORTS: &[&str] = &["boxddd_query_overlap", "boxddd_query_cast"];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RegistrySample {
@@ -1329,7 +1330,11 @@ fn build_provider_smoke_app_for(profile: BuildProfile) -> Result<PathBuf> {
         .env("BOXDDD_SYS_WASM_MODE", "provider");
     add_wasm_app_link_args(
         &mut command,
-        &[PROVIDER_SMOKE_EXPORTS, DEBUG_BRIDGE_EXPORTS],
+        &[
+            PROVIDER_SMOKE_EXPORTS,
+            DEBUG_BRIDGE_EXPORTS,
+            QUERY_BRIDGE_EXPORTS,
+        ],
     );
     run_command(&mut command, "build provider-smoke Rust wasm")?;
 
@@ -1439,7 +1444,7 @@ fn build_bevy_web_app() -> Result<BevyWebArtifacts> {
         .arg(TARGET)
         .arg("--release")
         .env("BOXDDD_SYS_WASM_MODE", "provider");
-    add_wasm_app_link_args(&mut command, &[DEBUG_BRIDGE_EXPORTS]);
+    add_wasm_app_link_args(&mut command, &[DEBUG_BRIDGE_EXPORTS, QUERY_BRIDGE_EXPORTS]);
     run_command(&mut command, "build Bevy testbed wasm")?;
 
     let wasm = root

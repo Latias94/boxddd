@@ -209,11 +209,19 @@ fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &
                 )
                 .text("Mover length"),
             );
-            ui.label(format!("Ray hits: {}", diagnostics.query_ray_hit_count));
-            ui.label(format!(
-                "Overlap hits: {}",
-                diagnostics.query_overlap_hit_count
-            ));
+            if diagnostics.query_ray_supported {
+                ui.label(format!("Ray hits: {}", diagnostics.query_ray_hit_count));
+            } else {
+                ui.label("Ray hits: unavailable in browser provider mode");
+            }
+            if diagnostics.query_overlap_supported {
+                ui.label(format!(
+                    "Overlap hits: {}",
+                    diagnostics.query_overlap_hit_count
+                ));
+            } else {
+                ui.label("Overlap hits: unavailable in browser provider mode");
+            }
             ui.label(match diagnostics.query_closest_fraction {
                 Some(fraction) => format!("Closest fraction: {fraction:.3}"),
                 None => "Closest fraction: none".to_string(),
@@ -228,16 +236,24 @@ fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &
                     None => "Shape fraction: none".to_string(),
                 });
             } else {
-                ui.label("Shape cast: unavailable");
+                ui.label("Shape cast: unavailable in browser provider mode");
             }
-            ui.label(match diagnostics.query_mover_fraction {
-                Some(fraction) => format!("Mover fraction: {fraction:.3}"),
-                None => "Mover fraction: none".to_string(),
-            });
-            ui.label(format!(
-                "Mover planes: {}",
-                diagnostics.query_mover_plane_count
-            ));
+            if diagnostics.query_mover_supported {
+                ui.label(match diagnostics.query_mover_fraction {
+                    Some(fraction) => format!("Mover fraction: {fraction:.3}"),
+                    None => "Mover fraction: none".to_string(),
+                });
+            } else {
+                ui.label("Mover fraction: unavailable in browser provider mode");
+            }
+            if diagnostics.query_mover_planes_supported {
+                ui.label(format!(
+                    "Mover planes: {}",
+                    diagnostics.query_mover_plane_count
+                ));
+            } else {
+                ui.label("Mover planes: unavailable in browser provider mode");
+            }
         }
         TestbedScene::DebugDrawInspector => {
             ui.separator();

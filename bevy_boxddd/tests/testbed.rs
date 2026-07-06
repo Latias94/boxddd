@@ -426,8 +426,16 @@ fn query_lab_diagnostics_track_native_queries() {
 
     let diagnostics = app.world().resource::<lab::LabDiagnostics>();
     assert!(
+        diagnostics.query_ray_supported,
+        "native QueryLab should support full ray visitors"
+    );
+    assert!(
         diagnostics.query_ray_hit_count > 0,
         "QueryLab should report ray hits from Box3D"
+    );
+    assert!(
+        diagnostics.query_overlap_supported,
+        "native QueryLab should support overlap visitors"
     );
     assert!(
         diagnostics.query_overlap_hit_count > 0,
@@ -443,6 +451,14 @@ fn query_lab_diagnostics_track_native_queries() {
         "QueryLab should report shape-cast hits from Box3D"
     );
     assert!(diagnostics.query_shape_cast_closest_fraction.is_some());
+    assert!(
+        diagnostics.query_mover_supported,
+        "native QueryLab should support mover casts"
+    );
+    assert!(
+        diagnostics.query_mover_planes_supported,
+        "native QueryLab should support mover collision planes"
+    );
     assert!(
         diagnostics
             .query_mover_fraction

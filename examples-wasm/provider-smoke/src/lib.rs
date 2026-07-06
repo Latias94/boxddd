@@ -6,8 +6,9 @@ use boxddd::{
 
 #[cfg(target_arch = "wasm32")]
 use boxddd::{
-    Aabb, BoxCastInput, DebugDrawOptions, DynamicTree, DynamicTreeCastControl, DynamicTreeFilter,
-    Error, RayCastInput, TaskSystem, validate_replay_bytes,
+    Aabb, BoxCastInput, Compound, DebugDrawOptions, DynamicTree, DynamicTreeCastControl,
+    DynamicTreeFilter, Error, HeightField, MeshData, RayCastInput, SurfaceMaterial, TaskSystem,
+    validate_replay_bytes,
 };
 
 const OK: i32 = 0;
@@ -290,7 +291,20 @@ fn assert_provider_callback_guardrails(world: &mut World) -> Result<(), i32> {
         lower_bound: Vec3::new(-2.0, -2.0, -2.0),
         upper_bound: Vec3::new(2.0, 5.0, 2.0),
     };
-    if !is_unsupported_on_wasm(world.overlap_aabb(aabb, QueryFilter::default())) {
+    let overlaps = world
+        .overlap_aabb(aabb, QueryFilter::default())
+        .map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if overlaps.is_empty() {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+    let ray_hits = world
+        .cast_ray(
+            Vec3::new(0.0, 8.0, 0.0),
+            Vec3::new(0.0, -16.0, 0.0),
+            QueryFilter::default(),
+        )
+        .map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if ray_hits.is_empty() {
         return Err(ERR_CALLBACK_GUARDRAIL);
     }
     let frame = world
@@ -353,6 +367,26 @@ fn assert_provider_callback_guardrails(world: &mut World) -> Result<(), i32> {
     if !is_unsupported_on_wasm(tree.box_cast(box_cast, DynamicTreeFilter::default(), |_| {
         DynamicTreeCastControl::Continue
     })) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+
+    let unit_scale = Vec3::new(1.0, 1.0, 1.0);
+    let mesh =
+        MeshData::box_mesh(Vec3::ZERO, unit_scale, true).map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(mesh.query_triangles(aabb, unit_scale)) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+
+    let height_field =
+        HeightField::grid(3, 3, unit_scale, false).map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(height_field.query_triangles(aabb)) {
+        return Err(ERR_CALLBACK_GUARDRAIL);
+    }
+
+    let compound =
+        Compound::single_sphere(Sphere::new(Vec3::ZERO, 0.5), SurfaceMaterial::default())
+            .map_err(|_| ERR_CALLBACK_GUARDRAIL)?;
+    if !is_unsupported_on_wasm(compound.query_aabb(aabb)) {
         return Err(ERR_CALLBACK_GUARDRAIL);
     }
     Ok(())

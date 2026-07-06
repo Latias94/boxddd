@@ -1,10 +1,14 @@
-use crate::core::{box3d_lock, callback_state};
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+use crate::core::box3d_lock;
+use crate::core::callback_state;
 use crate::error::{Error, Result};
 use crate::types::{Aabb, Filter, Transform, Vec3};
 use boxddd_sys::ffi;
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::{ManuallyDrop, forget};
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr::NonNull;
 use std::rc::Rc;
@@ -486,6 +490,7 @@ fn raw_aabb_eq(a: &ffi::b3AABB, b: &ffi::b3AABB) -> bool {
     raw_vec3_eq(a.lowerBound, b.lowerBound) && raw_vec3_eq(a.upperBound, b.upperBound)
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 fn clamp_height_field_query_bounds(a: Aabb, b: ffi::b3AABB) -> Result<Option<Aabb>> {
     let b = Aabb::from_raw(b).validate()?;
     if a.upper_bound.x < b.lower_bound.x
@@ -1151,29 +1156,37 @@ impl MeshData {
         F: FnMut(MeshTriangleHit) -> bool,
     {
         callback_state::check_not_in_callback()?;
-        let bounds = bounds.validate()?;
-        let scale = validate_mesh_scale(scale.into())?;
-        let raw_mesh = ffi::b3Mesh {
-            data: self.as_ptr(),
-            scale: scale.into_raw(),
-        };
-        let mut ctx = MeshTriangleQueryContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        unsafe {
-            ffi::b3QueryMesh(
-                &raw_mesh,
-                bounds.into_raw(),
-                Some(mesh_triangle_query_trampoline::<F>),
-                (&mut ctx as *mut MeshTriangleQueryContext<_>).cast(),
-            );
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (bounds, scale, visitor);
+            Err(Error::UnsupportedOnWasm)
         }
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(())
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let bounds = bounds.validate()?;
+            let scale = validate_mesh_scale(scale.into())?;
+            let raw_mesh = ffi::b3Mesh {
+                data: self.as_ptr(),
+                scale: scale.into_raw(),
+            };
+            let mut ctx = MeshTriangleQueryContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            unsafe {
+                ffi::b3QueryMesh(
+                    &raw_mesh,
+                    bounds.into_raw(),
+                    Some(mesh_triangle_query_trampoline::<F>),
+                    (&mut ctx as *mut MeshTriangleQueryContext<_>).cast(),
+                );
+            }
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -1412,28 +1425,37 @@ impl HeightField {
         F: FnMut(MeshTriangleHit),
     {
         callback_state::check_not_in_callback()?;
-        let Some(bounds) =
-            clamp_height_field_query_bounds(bounds.validate()?, unsafe { self.raw.as_ref().aabb })?
-        else {
-            return Ok(());
-        };
-        let mut ctx = HeightFieldTriangleQueryContext {
-            visitor,
-            panicked: false,
-        };
-        let _guard = box3d_lock::lock();
-        unsafe {
-            ffi::b3QueryHeightField(
-                self.as_ptr(),
-                bounds.into_raw(),
-                Some(height_field_triangle_query_trampoline::<F>),
-                (&mut ctx as *mut HeightFieldTriangleQueryContext<_>).cast(),
-            );
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (bounds, visitor);
+            Err(Error::UnsupportedOnWasm)
         }
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else {
-            Ok(())
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let Some(bounds) = clamp_height_field_query_bounds(bounds.validate()?, unsafe {
+                self.raw.as_ref().aabb
+            })?
+            else {
+                return Ok(());
+            };
+            let mut ctx = HeightFieldTriangleQueryContext {
+                visitor,
+                panicked: false,
+            };
+            let _guard = box3d_lock::lock();
+            unsafe {
+                ffi::b3QueryHeightField(
+                    self.as_ptr(),
+                    bounds.into_raw(),
+                    Some(height_field_triangle_query_trampoline::<F>),
+                    (&mut ctx as *mut HeightFieldTriangleQueryContext<_>).cast(),
+                );
+            }
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -1458,11 +1480,13 @@ impl Drop for HeightField {
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 struct MeshTriangleQueryContext<F> {
     visitor: F,
     panicked: bool,
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 unsafe extern "C" fn mesh_triangle_query_trampoline<F>(
     a: ffi::b3Vec3,
     b: ffi::b3Vec3,
@@ -1493,11 +1517,13 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 struct HeightFieldTriangleQueryContext<F> {
     visitor: F,
     panicked: bool,
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 unsafe extern "C" fn height_field_triangle_query_trampoline<F>(
     a: ffi::b3Vec3,
     b: ffi::b3Vec3,
@@ -1931,28 +1957,36 @@ impl Compound {
         F: FnMut(CompoundQueryHit<'a>) -> bool,
     {
         callback_state::check_not_in_callback()?;
-        let aabb = aabb.validate()?;
-        let mut ctx = CompoundQueryContext {
-            visitor,
-            error: None,
-            panicked: false,
-            _lifetime: PhantomData,
-        };
-        let _guard = box3d_lock::lock();
-        unsafe {
-            ffi::b3QueryCompound(
-                self.raw.as_ptr(),
-                aabb.into_raw(),
-                Some(compound_query_trampoline::<F>),
-                (&mut ctx as *mut CompoundQueryContext<'a, F>).cast(),
-            );
+        #[cfg(all(target_arch = "wasm32", boxddd_wasm_provider))]
+        {
+            let _ = (aabb, visitor);
+            Err(Error::UnsupportedOnWasm)
         }
-        if ctx.panicked {
-            Err(Error::CallbackPanicked)
-        } else if let Some(error) = ctx.error {
-            Err(error)
-        } else {
-            Ok(())
+        #[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
+        {
+            let aabb = aabb.validate()?;
+            let mut ctx = CompoundQueryContext {
+                visitor,
+                error: None,
+                panicked: false,
+                _lifetime: PhantomData,
+            };
+            let _guard = box3d_lock::lock();
+            unsafe {
+                ffi::b3QueryCompound(
+                    self.raw.as_ptr(),
+                    aabb.into_raw(),
+                    Some(compound_query_trampoline::<F>),
+                    (&mut ctx as *mut CompoundQueryContext<'a, F>).cast(),
+                );
+            }
+            if ctx.panicked {
+                Err(Error::CallbackPanicked)
+            } else if let Some(error) = ctx.error {
+                Err(error)
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -2459,6 +2493,7 @@ pub struct CompoundQueryHit<'a> {
     pub child: CompoundChild<'a>,
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 struct CompoundQueryContext<'a, F> {
     visitor: F,
     error: Option<Error>,
@@ -2466,6 +2501,7 @@ struct CompoundQueryContext<'a, F> {
     _lifetime: PhantomData<&'a Compound>,
 }
 
+#[cfg(not(all(target_arch = "wasm32", boxddd_wasm_provider)))]
 unsafe extern "C" fn compound_query_trampoline<'a, F>(
     compound: *const ffi::b3CompoundData,
     child_index: i32,

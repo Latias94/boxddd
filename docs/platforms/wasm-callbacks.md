@@ -2,8 +2,9 @@
 
 `boxddd` browser provider mode currently supports Box3D calls where the Rust
 wasm module imports C symbols from an Emscripten-built Box3D provider module and
-both modules share one `WebAssembly.Memory`. Debug draw collection is the first
-callback-heavy API bridged across that boundary.
+both modules share one `WebAssembly.Memory`. Debug draw collection was the first
+callback-heavy API bridged across that boundary; world AABB overlap and ray-cast
+visitors now use the same provider-dispatch model.
 
 Callback-heavy APIs need a stricter bridge. A Rust function pointer or closure
 token from the app module cannot be treated as a callable function pointer inside
@@ -15,8 +16,11 @@ ownership, and panic policy.
 The affected Box3D surfaces are:
 
 - debug draw callbacks, implemented through the data-frame bridge;
-- world query visitors with early-stop return values;
+- world query visitors with early-stop return values, with AABB overlap and
+  ray-cast visitors implemented first;
 - dynamic-tree query, ray-cast, box-cast, and closest visitors;
+- standalone geometry visitors for mesh triangle queries, height-field triangle
+  queries, and compound child AABB queries;
 - world callbacks such as custom filtering, pre-solve, friction, and restitution
   mix callbacks;
 - recording replay debug-shape callbacks;
@@ -67,13 +71,16 @@ The bridge must preserve the native safe-wrapper guarantees:
 
 1. Debug draw collection: implemented through provider-local trampolines and
    exported Rust frame dispatchers.
-2. World query visitors: boolean or fraction return values, early-stop behavior,
-   and reusable result buffers.
+2. World query visitors: AABB overlap and ray-cast visitors are implemented;
+   shape overlap, shape cast, and mover collision visitors remain future bridge
+   work.
 3. Dynamic tree visitors: standalone owner with the same token lifetime rules.
-4. Contact, filter, and material callbacks: registration lifetime plus
+4. Standalone geometry visitors: mesh, height-field, and compound query
+   callbacks that are not tied to a `World`.
+5. Contact, filter, and material callbacks: registration lifetime plus
    simulation-step reentrancy.
-5. Recording replay debug-shape callbacks.
-6. Task-system callbacks: last, because Box3D requires `finishTask` to block
+6. Recording replay debug-shape callbacks.
+7. Task-system callbacks: last, because Box3D requires `finishTask` to block
    until work completes. Browser workers need a separate policy for pthreads,
    `SharedArrayBuffer`, COOP/COEP headers, and Atomics.
 

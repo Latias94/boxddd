@@ -19,13 +19,17 @@ const QUERY_LAB_MOVER_RADIUS: f32 = 0.25;
 
 #[derive(Resource, Clone, Debug, Default, PartialEq)]
 pub(crate) struct LabDiagnostics {
+    pub query_ray_supported: bool,
     pub query_ray_hit_count: usize,
+    pub query_overlap_supported: bool,
     pub query_overlap_hit_count: usize,
     pub query_closest_fraction: Option<f32>,
     pub query_shape_cast_supported: bool,
     pub query_shape_cast_hit_count: usize,
     pub query_shape_cast_closest_fraction: Option<f32>,
+    pub query_mover_supported: bool,
     pub query_mover_fraction: Option<f32>,
+    pub query_mover_planes_supported: bool,
     pub query_mover_plane_count: usize,
     pub debug_command_count: usize,
     pub debug_event_count: usize,
@@ -75,14 +79,25 @@ pub(crate) fn update_lab_diagnostics(
         TestbedScene::QueryLab => {
             diagnostics.clear_debug_counts();
             let translation = query_lab_ray_translation(&state);
-            diagnostics.query_ray_hit_count = cast_ray(
+            match cast_ray(
                 &context,
                 QUERY_LAB_ORIGIN,
                 translation,
                 boxddd::QueryFilter::default(),
-            )
-            .map(|hits| hits.len())
-            .unwrap_or(0);
+            ) {
+                Ok(hits) => {
+                    diagnostics.query_ray_supported = true;
+                    diagnostics.query_ray_hit_count = hits.len();
+                }
+                Err(boxddd::Error::UnsupportedOnWasm) => {
+                    diagnostics.query_ray_supported = false;
+                    diagnostics.query_ray_hit_count = 0;
+                }
+                Err(_) => {
+                    diagnostics.query_ray_supported = true;
+                    diagnostics.query_ray_hit_count = 0;
+                }
+            }
             diagnostics.query_closest_fraction = cast_ray_closest(
                 &context,
                 QUERY_LAB_ORIGIN,
@@ -94,14 +109,25 @@ pub(crate) fn update_lab_diagnostics(
             .map(|hit| hit.fraction);
 
             let (lower_bound, upper_bound) = query_lab_aabb(&state);
-            diagnostics.query_overlap_hit_count = overlap_aabb(
+            match overlap_aabb(
                 &context,
                 lower_bound,
                 upper_bound,
                 boxddd::QueryFilter::default(),
-            )
-            .map(|hits| hits.len())
-            .unwrap_or(0);
+            ) {
+                Ok(hits) => {
+                    diagnostics.query_overlap_supported = true;
+                    diagnostics.query_overlap_hit_count = hits.len();
+                }
+                Err(boxddd::Error::UnsupportedOnWasm) => {
+                    diagnostics.query_overlap_supported = false;
+                    diagnostics.query_overlap_hit_count = 0;
+                }
+                Err(_) => {
+                    diagnostics.query_overlap_supported = true;
+                    diagnostics.query_overlap_hit_count = 0;
+                }
+            };
 
             match run_shape_cast(&context, &state) {
                 Ok(hits) => {
@@ -123,11 +149,21 @@ pub(crate) fn update_lab_diagnostics(
             }
 
             match run_mover_cast(&context, &state) {
-                Ok((fraction, planes)) => {
-                    diagnostics.query_mover_fraction = Some(fraction);
-                    diagnostics.query_mover_plane_count = planes.len();
+                Ok(result) => {
+                    diagnostics.query_mover_supported = true;
+                    diagnostics.query_mover_planes_supported = result.planes_supported;
+                    diagnostics.query_mover_fraction = Some(result.fraction);
+                    diagnostics.query_mover_plane_count = result.planes.len();
+                }
+                Err(boxddd::Error::UnsupportedOnWasm) => {
+                    diagnostics.query_mover_supported = false;
+                    diagnostics.query_mover_planes_supported = false;
+                    diagnostics.query_mover_fraction = None;
+                    diagnostics.query_mover_plane_count = 0;
                 }
                 Err(_) => {
+                    diagnostics.query_mover_supported = true;
+                    diagnostics.query_mover_planes_supported = true;
                     diagnostics.query_mover_fraction = None;
                     diagnostics.query_mover_plane_count = 0;
                 }
@@ -217,13 +253,17 @@ pub(crate) fn draw_lab_overlays(
 
 impl LabDiagnostics {
     fn clear_query_counts(&mut self) {
+        self.query_ray_supported = false;
         self.query_ray_hit_count = 0;
+        self.query_overlap_supported = false;
         self.query_overlap_hit_count = 0;
         self.query_closest_fraction = None;
         self.query_shape_cast_supported = false;
         self.query_shape_cast_hit_count = 0;
         self.query_shape_cast_closest_fraction = None;
+        self.query_mover_supported = false;
         self.query_mover_fraction = None;
+        self.query_mover_planes_supported = false;
         self.query_mover_plane_count = 0;
     }
 
@@ -308,7 +348,7 @@ fn run_shape_cast(
 fn run_mover_cast(
     context: &BoxdddPhysicsContext,
     state: &TestbedState,
-) -> boxddd::Result<(f32, Vec<boxddd::MoverPlane>)> {
+) -> boxddd::Result<MoverCastResult> {
     let world = context.world().ok_or(boxddd::Error::InvalidWorldId)?;
     let mover = query_lab_mover();
     let translation = query_lab_mover_cast_translation(state);
@@ -319,14 +359,26 @@ fn run_mover_cast(
         boxddd::QueryFilter::default(),
     )?;
     let final_origin = QUERY_LAB_MOVER_ORIGIN + translation * fraction;
-    let planes = world
-        .collide_mover(
-            final_origin.to_boxddd_pos(),
-            &mover,
-            boxddd::QueryFilter::default(),
-        )
-        .unwrap_or_default();
-    Ok((fraction, planes))
+    let (planes, planes_supported) = match world.collide_mover(
+        final_origin.to_boxddd_pos(),
+        &mover,
+        boxddd::QueryFilter::default(),
+    ) {
+        Ok(planes) => (planes, true),
+        Err(boxddd::Error::UnsupportedOnWasm) => (Vec::new(), false),
+        Err(error) => return Err(error),
+    };
+    Ok(MoverCastResult {
+        fraction,
+        planes,
+        planes_supported,
+    })
+}
+
+struct MoverCastResult {
+    fraction: f32,
+    planes: Vec<boxddd::MoverPlane>,
+    planes_supported: bool,
 }
 
 fn query_lab_mover() -> boxddd::Capsule {
@@ -359,13 +411,13 @@ fn draw_mover_cast(gizmos: &mut Gizmos, context: &BoxdddPhysicsContext, state: &
         Color::srgb(0.24, 0.78, 0.72),
     );
 
-    let Ok((fraction, planes)) = run_mover_cast(context, state) else {
+    let Ok(result) = run_mover_cast(context, state) else {
         return;
     };
-    let safe_end = QUERY_LAB_MOVER_ORIGIN + translation * fraction;
+    let safe_end = QUERY_LAB_MOVER_ORIGIN + translation * result.fraction;
     draw_capsule(gizmos, safe_end, Color::srgb(0.98, 0.88, 0.20));
 
-    for plane in planes {
+    for plane in result.planes {
         let point = plane.point.to_bevy_vec3();
         let normal = plane.plane.normal.to_bevy_vec3();
         gizmos.line(point, point + normal * 0.45, Color::srgb(0.98, 0.88, 0.20));
