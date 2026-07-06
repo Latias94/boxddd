@@ -12,6 +12,7 @@ need an engine/render-loop shape.
 - `error_handling.rs`: `anyhow::Context` at app boundaries plus recoverable `try_*` errors for invalid user/tooling input.
 - `events.rs`: sensor begin/end events, contact and hit events, and closure-scoped event views.
 - `body_controls.rs`: dynamic, kinematic, disabled/enabled, force, impulse, motion-lock, and transform-sync body APIs.
+- `stats_profile.rs`: world counters, awake-body counts, capacity snapshots, and per-step profile timings.
 - `shape_queries.rs`: world, body, and shape-scoped query APIs for editor tools, picking, and gameplay probes.
 - `compound_query.rs`: compound child AABB queries, reusable buffers, visitor early-stop, and owned byte transfer.
 - `mesh_height_field_query.rs`: mesh and height-field triangle queries for editor tooling and broad-phase probes.
@@ -31,6 +32,7 @@ need an engine/render-loop shape.
 
 - `events.rs`: reads sensor, contact, hit, and body-move events through owned snapshots and safe closure-scoped views.
 - `body_controls.rs`: demonstrates the body lifecycle knobs most engines expose to gameplay and editor tools.
+- `stats_profile.rs`: prints the runtime counters and profile fields most tools surface in debug overlays.
 
 ## Joints
 
@@ -110,6 +112,7 @@ cargo run -p boxddd --example character_mover
 cargo run -p boxddd --example dynamic_tree
 cargo run -p boxddd --example events
 cargo run -p boxddd --example body_controls
+cargo run -p boxddd --example stats_profile
 cargo run -p boxddd --example wasm_smoke
 cargo run -p boxddd --example joints
 cargo run -p boxddd --example recording_replay

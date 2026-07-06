@@ -302,6 +302,37 @@ fn draw_scene_lab_controls(ui: &mut Ui, state: &mut TestbedState, diagnostics: &
                 diagnostics.material_shape_count
             ));
         }
+        TestbedScene::StatsDashboard => {
+            ui.separator();
+            ui.label(egui::RichText::new("Stats Dashboard").strong());
+            ui.label(format!("Fixed step: {:.1} Hz", state.hertz));
+            ui.label(format!("Substeps: {}", state.sub_step_count));
+            if diagnostics.stats_available {
+                ui.label(format!(
+                    "Bodies: {} awake {}",
+                    diagnostics.stats_body_count, diagnostics.stats_awake_body_count
+                ));
+                ui.label(format!(
+                    "Shapes: {} contacts {} islands {}",
+                    diagnostics.stats_shape_count,
+                    diagnostics.stats_contact_count,
+                    diagnostics.stats_island_count
+                ));
+                ui.label(format!(
+                    "Tree height: {} tasks {}",
+                    diagnostics.stats_tree_height, diagnostics.stats_task_count
+                ));
+                ui.label(format!(
+                    "Profile: step {:.3} collide {:.3} solve {:.3}",
+                    diagnostics.stats_profile_step,
+                    diagnostics.stats_profile_collide,
+                    diagnostics.stats_profile_solve
+                ));
+                ui.label(format!("Pairs: {:.3}", diagnostics.stats_profile_pairs));
+            } else {
+                ui.label("World stats: unavailable");
+            }
+        }
         _ => {}
     }
 }

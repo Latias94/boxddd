@@ -26,7 +26,7 @@ On Windows, examples default to DX12. Set `WGPU_BACKEND=vulkan` only when you in
 | Debug gizmos | `cargo run -p bevy_boxddd --example debug_gizmos_3d` | App-authored collider gizmos without Box3D debug draw collection |
 | Debug draw overlay | `cargo run -p bevy_boxddd --features debug-gizmos --example debug_draw_overlay_3d` | Box3D debug draw commands rendered through Bevy `Gizmos` |
 | Physics picking | `cargo run -p bevy_boxddd --features physics-picking --example physics_picking_3d` | Camera cursor rays resolved through Box3D queries |
-| Testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable scene browser with egui controls, picking, debug draw, and representative Box3D sample concepts |
+| Testbed | `cargo run -p bevy_boxddd --features "debug-gizmos physics-picking" --example testbed_3d` | Switchable scene browser with egui controls, picking, debug draw, stats, and representative Box3D sample concepts |
 
 ## Testbed Scenes
 
@@ -34,7 +34,7 @@ The testbed is the primary visual learning surface. Use the left panel to switch
 
 Current official-parity scenes: Falling Stack, Advanced Colliders, Body Controls, Continuous Collision, Character Mover, Materials, Joints, Contacts And Sensors, Ray Picking, Debug Draw, Domino Run, Arch Stack, Wind Field, and Ragdoll Chain.
 
-Current boxddd showcase entries: Query Lab, Debug Draw Inspector, and Material Lab. They include live egui controls for Box3D ray casts, AABB overlaps, shape casts, mover casts, debug draw frame inspection, and native shape material tuning, and are not counted as official Box3D sample ports. Browser Query Lab entries label unbridged provider-mode visitor queries as unavailable instead of reporting misleading zero-hit results.
+Current boxddd showcase entries: Query Lab, Debug Draw Inspector, Material Lab, and Stats Dashboard. They include live egui controls for Box3D ray casts, AABB overlaps, shape casts, mover casts, debug draw frame inspection, native shape material tuning, and runtime counters/profile snapshots, and are not counted as official Box3D sample ports. Browser Query Lab entries label unbridged provider-mode visitor queries as unavailable instead of reporting misleading zero-hit results.
 
 The static demo hub at <https://frankorz.com/boxddd/> mirrors this scene registry.
 

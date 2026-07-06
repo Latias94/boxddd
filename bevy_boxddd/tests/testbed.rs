@@ -530,6 +530,7 @@ fn original_showcase_scenes_are_not_counted_as_upstream_ports() {
         TestbedScene::QueryLab,
         TestbedScene::DebugDrawInspector,
         TestbedScene::MaterialLab,
+        TestbedScene::StatsDashboard,
     ] {
         let metadata = scene.metadata();
         assert!(
@@ -542,6 +543,27 @@ fn original_showcase_scenes_are_not_counted_as_upstream_ports() {
         );
         assert_eq!(metadata.source_label(), "boxddd showcase");
     }
+}
+
+#[test]
+fn stats_dashboard_reports_world_counters_and_profile() {
+    let mut app = physics_app(TestbedScene::StatsDashboard);
+    spawn_scene_once(&mut app, TestbedScene::StatsDashboard);
+    run_fixed_frames(&mut app, 20);
+
+    app.world_mut()
+        .run_system_once(lab::update_lab_diagnostics)
+        .unwrap();
+
+    let diagnostics = app.world().resource::<lab::LabDiagnostics>();
+    assert!(diagnostics.stats_available);
+    assert!(diagnostics.stats_body_count >= 2);
+    assert!(diagnostics.stats_shape_count >= 2);
+    assert!(diagnostics.stats_awake_body_count > 0);
+    assert!(diagnostics.stats_tree_height >= 0);
+    assert!(diagnostics.stats_profile_step >= 0.0);
+    assert_eq!(diagnostics.query_ray_hit_count, 0);
+    assert_eq!(diagnostics.debug_command_count, 0);
 }
 
 #[test]

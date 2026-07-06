@@ -17,6 +17,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 - Browser demo pages now expose direct Bevy + egui examples from the shared `testbed_3d` scene registry at <https://frankorz.com/boxddd/>.
 - Query Lab, Debug Draw Inspector, and Material Lab now have live Bevy + egui controls and diagnostics instead of acting as static showcase routes.
 - Query Lab now visualizes ray casts, AABB overlaps, sphere shape casts, and capsule mover casts from one Bevy scene.
+- Added a `stats_profile` core example and a Bevy Stats Dashboard scene for world counters, awake body counts, capacity, and per-step profile diagnostics.
 - `bevy_boxddd` now exposes Bevy math adapters and prelude extension traits for converting Bevy `Vec3`, `Quat`, and `Transform` values to and from `boxddd` math types.
 - The Bevy testbed now includes `boxddd` showcase entries for query integration, debug draw inspection, and material comparison.
 - Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics. This makes renderer integration more practical than consuming command lists alone.

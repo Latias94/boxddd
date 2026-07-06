@@ -65,6 +65,10 @@ name = "body_controls"
 path = "examples/body_controls.rs"
 
 [[example]]
+name = "stats_profile"
+path = "examples/stats_profile.rs"
+
+[[example]]
 name = "continuous_collision"
 path = "examples/continuous_collision.rs"
 

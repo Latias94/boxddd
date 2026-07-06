@@ -35,6 +35,18 @@ pub(crate) struct LabDiagnostics {
     pub debug_event_count: usize,
     pub debug_diagnostic_count: usize,
     pub material_shape_count: usize,
+    pub stats_available: bool,
+    pub stats_body_count: i32,
+    pub stats_shape_count: i32,
+    pub stats_contact_count: i32,
+    pub stats_awake_body_count: i32,
+    pub stats_island_count: i32,
+    pub stats_tree_height: i32,
+    pub stats_task_count: i32,
+    pub stats_profile_step: f32,
+    pub stats_profile_collide: f32,
+    pub stats_profile_solve: f32,
+    pub stats_profile_pairs: f32,
 }
 
 pub(crate) fn apply_material_lab_controls(
@@ -78,6 +90,7 @@ pub(crate) fn update_lab_diagnostics(
     match current_scene(&state) {
         TestbedScene::QueryLab => {
             diagnostics.clear_debug_counts();
+            diagnostics.clear_stats_counts();
             let translation = query_lab_ray_translation(&state);
             match cast_ray(
                 &context,
@@ -171,13 +184,47 @@ pub(crate) fn update_lab_diagnostics(
         }
         TestbedScene::DebugDrawInspector => {
             diagnostics.clear_query_counts();
+            diagnostics.clear_stats_counts();
             diagnostics.debug_command_count = debug_frame.commands().len();
             diagnostics.debug_event_count = debug_frame.events().len();
             diagnostics.debug_diagnostic_count = debug_frame.diagnostics().len();
         }
+        TestbedScene::StatsDashboard => {
+            diagnostics.clear_query_counts();
+            diagnostics.clear_debug_counts();
+            let Some(world) = context.world() else {
+                diagnostics.clear_stats_counts();
+                return;
+            };
+            let Ok(counters) = world.try_counters() else {
+                diagnostics.clear_stats_counts();
+                return;
+            };
+            let Ok(profile) = world.try_profile() else {
+                diagnostics.clear_stats_counts();
+                return;
+            };
+            let Ok(awake_body_count) = world.try_awake_body_count() else {
+                diagnostics.clear_stats_counts();
+                return;
+            };
+            diagnostics.stats_available = true;
+            diagnostics.stats_body_count = counters.body_count;
+            diagnostics.stats_shape_count = counters.shape_count;
+            diagnostics.stats_contact_count = counters.contact_count;
+            diagnostics.stats_awake_body_count = awake_body_count;
+            diagnostics.stats_island_count = counters.island_count;
+            diagnostics.stats_tree_height = counters.tree_height;
+            diagnostics.stats_task_count = counters.task_count;
+            diagnostics.stats_profile_step = profile.step;
+            diagnostics.stats_profile_collide = profile.collide;
+            diagnostics.stats_profile_solve = profile.solve;
+            diagnostics.stats_profile_pairs = profile.pairs;
+        }
         _ => {
             diagnostics.clear_query_counts();
             diagnostics.clear_debug_counts();
+            diagnostics.clear_stats_counts();
         }
     }
 }
@@ -271,6 +318,21 @@ impl LabDiagnostics {
         self.debug_command_count = 0;
         self.debug_event_count = 0;
         self.debug_diagnostic_count = 0;
+    }
+
+    fn clear_stats_counts(&mut self) {
+        self.stats_available = false;
+        self.stats_body_count = 0;
+        self.stats_shape_count = 0;
+        self.stats_contact_count = 0;
+        self.stats_awake_body_count = 0;
+        self.stats_island_count = 0;
+        self.stats_tree_height = 0;
+        self.stats_task_count = 0;
+        self.stats_profile_step = 0.0;
+        self.stats_profile_collide = 0.0;
+        self.stats_profile_solve = 0.0;
+        self.stats_profile_pairs = 0.0;
     }
 }
 

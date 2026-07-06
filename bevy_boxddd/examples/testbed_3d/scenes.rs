@@ -31,6 +31,7 @@ pub enum TestbedScene {
     QueryLab,
     DebugDrawInspector,
     MaterialLab,
+    StatsDashboard,
     DominoRun,
     ArchStack,
     WindField,
@@ -122,7 +123,7 @@ impl TestbedScene {
     }
 }
 
-pub const ALL_SCENES: [TestbedScene; 17] = [
+pub const ALL_SCENES: [TestbedScene; 18] = [
     TestbedScene::FallingStack,
     TestbedScene::AdvancedColliders,
     TestbedScene::BodyControls,
@@ -136,13 +137,14 @@ pub const ALL_SCENES: [TestbedScene; 17] = [
     TestbedScene::QueryLab,
     TestbedScene::DebugDrawInspector,
     TestbedScene::MaterialLab,
+    TestbedScene::StatsDashboard,
     TestbedScene::DominoRun,
     TestbedScene::ArchStack,
     TestbedScene::WindField,
     TestbedScene::RagdollChain,
 ];
 
-pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
+pub const SCENE_REGISTRY: [TestbedSceneMetadata; 18] = [
     TestbedSceneMetadata {
         scene: TestbedScene::FallingStack,
         id: "falling-stack",
@@ -497,6 +499,19 @@ pub const SCENE_REGISTRY: [TestbedSceneMetadata; 17] = [
         ),
         camera: TestbedCamera::new([-7.0, 5.0, 9.0], [0.0, 1.2, 0.0]),
         spawn: spawn_materials,
+    },
+    TestbedSceneMetadata {
+        scene: TestbedScene::StatsDashboard,
+        id: "stats-dashboard",
+        category: "Showcase",
+        name: "Stats Dashboard",
+        description: "World counters, awake body counts, and profile timings surfaced in egui.",
+        upstream: &[],
+        showcase_lesson: Some(
+            "Surface Box3D counters and per-step profile snapshots as ordinary Bevy diagnostics.",
+        ),
+        camera: TestbedCamera::new([-7.4, 5.2, 8.8], [0.0, 1.4, 0.0]),
+        spawn: spawn_stats_dashboard,
     },
     TestbedSceneMetadata {
         scene: TestbedScene::DominoRun,
@@ -1179,6 +1194,80 @@ fn spawn_debug_draw(
         Transform::from_xyz(2.6, 3.6, 0.0),
         RigidBody::Dynamic,
         Collider::sphere(0.4),
+        TestbedEntity,
+    ));
+}
+
+fn spawn_stats_dashboard(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let platform_material = materials.add(Color::srgb(0.27, 0.32, 0.34));
+    let cube_material = materials.add(Color::srgb(0.20, 0.52, 0.86));
+    let sphere_material = materials.add(Color::srgb(0.88, 0.50, 0.22));
+    let guide_material = materials.add(Color::srgb(0.42, 0.58, 0.72));
+
+    for (x, z, rotation) in [(-2.8, -1.8, 0.18), (1.9, 1.9, -0.22)] {
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::new(3.0, 0.25, 1.2))),
+            MeshMaterial3d(platform_material.clone()),
+            Transform::from_xyz(x, 0.55, z).with_rotation(Quat::from_rotation_z(rotation)),
+            RigidBody::Static,
+            Collider::cuboid(1.5, 0.125, 0.6),
+            PhysicsMaterial {
+                friction: 0.65,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+
+    let cube_mesh = meshes.add(Cuboid::new(0.48, 0.48, 0.48));
+    for layer in 0..5 {
+        for column in 0..7 {
+            commands.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(cube_material.clone()),
+                Transform::from_xyz(
+                    -2.4 + column as f32 * 0.55 + layer as f32 * 0.04,
+                    0.55 + layer as f32 * 0.52,
+                    -0.45 + (column % 3) as f32 * 0.38,
+                )
+                .with_rotation(Quat::from_rotation_y(0.12 * layer as f32)),
+                RigidBody::Dynamic,
+                Collider::cube(0.24),
+                PhysicsMaterial {
+                    friction: 0.55,
+                    restitution: 0.04,
+                    ..default()
+                },
+                TestbedEntity,
+            ));
+        }
+    }
+
+    let sphere_mesh = meshes.add(Sphere::new(0.28).mesh().uv(24, 12));
+    for index in 0..6 {
+        commands.spawn((
+            Mesh3d(sphere_mesh.clone()),
+            MeshMaterial3d(sphere_material.clone()),
+            Transform::from_xyz(1.0 + index as f32 * 0.45, 2.0 + index as f32 * 0.2, 1.7),
+            RigidBody::Dynamic,
+            Collider::sphere(0.28),
+            PhysicsMaterial {
+                friction: 0.25,
+                restitution: 0.25,
+                ..default()
+            },
+            TestbedEntity,
+        ));
+    }
+
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(6.8, 0.04, 0.04))),
+        MeshMaterial3d(guide_material),
+        Transform::from_xyz(0.0, 2.8, 0.0),
         TestbedEntity,
     ));
 }
