@@ -15,12 +15,11 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 ### Added
 
 - Browser demo pages now expose direct Bevy + egui examples from the shared `testbed_3d` scene registry at <https://frankorz.com/boxddd/>.
-- Query Lab, Debug Draw Inspector, and Material Lab now have live Bevy + egui controls and diagnostics instead of acting as static showcase routes.
-- Query Lab now visualizes ray casts, AABB overlaps, sphere shape casts, and capsule mover casts from one Bevy scene.
+- The Bevy testbed now includes `boxddd` showcase scenes for Query Lab, Debug Draw Inspector, Material Lab, and Stats Dashboard.
+- Query Lab visualizes ray casts, AABB overlaps, sphere shape casts, and capsule mover casts from one Bevy scene; browser provider mode currently supports the ray and AABB visitor paths and labels the remaining visitor paths as unavailable.
 - Added a `stats_profile` core example and a Bevy Stats Dashboard scene for world counters, awake body counts, capacity, and per-step profile diagnostics.
 - `bevy_boxddd` now exposes Bevy math adapters and prelude extension traits for converting Bevy `Vec3`, `Quat`, and `Transform` values to and from `boxddd` math types.
-- The Bevy testbed now includes `boxddd` showcase entries for query integration, debug draw inspection, and material comparison.
-- Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics. This makes renderer integration more practical than consuming command lists alone.
+- Debug draw can now collect lifecycle-aware frames with persistent shape assets, shape create/destroy events, and diagnostics, making renderer integration more practical than consuming command lists alone.
 - The Bevy testbed now covers more official Box3D teaching scenarios, including dominoes, arch stacks, wind fields, ragdoll-style joint chains, and cylinder stacks.
 - The official Box3D sample matrix is now case-level. Every vendored upstream sample registration, including `Replay / Viewer`, is classified as a faithful port, teaching adaptation, test-only proof, deferred case, or upstream reference.
 - `bevy_boxddd` now supports procedural cylinder hull colliders through `HullDescriptor::cylinder` and `Collider::cylinder_hull`.
@@ -35,6 +34,7 @@ This section describes changes on `main` after the published `0.1.0` release. Th
 ### Fixed
 
 - WASM provider-mode debug draw can bridge Box3D debug callbacks for the browser demo bundle instead of reporting all debug draw collection as unsupported.
+- WASM provider-mode world ray-cast and AABB-overlap visitors now work in browser demos instead of reporting misleading zero-hit results.
 - The browser demo path now handles Box3D timer portability correctly.
 - Procedural cylinder hull validation now rejects invalid side counts outside Box3D's supported `3..=32` range before reaching FFI.
 
